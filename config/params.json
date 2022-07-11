@@ -1,0 +1,48 @@
+{
+  "run_id": 1,
+  "ftype": "fitacf",
+  "filter": {
+    "gflg_key": "gflg",
+    "gflg_type": 1,
+    "w_mins": 10,
+    "params": [
+      {
+        "name": "v",
+        "vmax": 30
+      },
+      {
+        "name": "p_l",
+        "vmin": 3
+      }
+    ]
+  },
+  "periodograms": {
+    "pname": "p_l",
+    "freq": {
+      "min_window_hour": 2,
+      "min_no_echoes": 60,
+      "ls": {
+        "fit_mean": true,
+        "center_data": true,
+        "nterms": 1,
+        "normalization": "standard"
+      }
+    },
+    "wv": {
+      "dtau_mins": 2,
+      "min_no_echoes": 10,
+      "ls": {
+        "fit_mean": true,
+        "center_data": true,
+        "nterms": 1,
+        "normalization": "standard"
+      }
+    }
+  },
+  "files": {
+    "base": "tmp/sd.run.{run_id}/{date}/",
+    "csv": "{rad}_{stime}_{etime}_{kind}.csv",
+    "pkl": "{rad}_{stime}_{etime}.pickle",
+    "png": "{rad}_{stime}_{etime}_{kind}.png"
+  }
+}
