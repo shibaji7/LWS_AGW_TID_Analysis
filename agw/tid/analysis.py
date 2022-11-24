@@ -16,10 +16,11 @@ __status__ = "Research"
 import datetime as dt
 import os
 import pickle
-from loguru import logger
 
 import numpy as np
 from astropy.timeseries import LombScargle
+from loguru import logger
+from scipy.signal import find_peaks
 from tqdm import tqdm
 
 
@@ -32,7 +33,7 @@ class Periodograms(object):
     def __init__(self, rad, dates, conf, df, file):
         """
         First estimate avalibale frequencies in each
-        2-hour window. Then calculate possible wavelengths.
+        1-hour window. Then calculate possible wavelengths.
 
         Parameters
         ----------
@@ -55,6 +56,7 @@ class Periodograms(object):
             self._save_()
         else:
             self._load_()
+        self._run_identification_()
         return
 
     def _compute_freq_(self):
@@ -67,7 +69,7 @@ class Periodograms(object):
         for bm in tqdm(beams, desc="On beams"):
             if bm not in result.keys():
                 result[bm] = {}
-            for gate in tqdm(slist, desc="On gate"):                
+            for gate in tqdm(slist, desc="On gate"):
                 u = self.df[(self.df.bmnum == bm) & (self.df.slist == gate)]
                 if self.__check_eligibility__(u, conf, ty="f"):
                     logger.info(f"Beam, Gate : {bm},{gate}")
@@ -113,7 +115,7 @@ class Periodograms(object):
                     & (self.df.time <= t_end)
                 ]
                 if self.__check_eligibility__(u, conf, ty="w"):
-                    l, y = np.array(u["srange"])*1e3, np.array(u[self.pname])
+                    l, y = np.array(u["srange"]) * 1e3, np.array(u[self.pname])
                     LS = LombScargle(
                         l,
                         y,
@@ -156,11 +158,38 @@ class Periodograms(object):
         with open(self.file, "wb") as h:
             pickle.dump(self.results, h, protocol=pickle.HIGHEST_PROTOCOL)
         return
-    
+
     def _load_(self):
         """
         Load all dataset from local
         """
         with open(self.file, "rb") as h:
             self.results = pickle.load(h)
+        return
+
+    def _run_identification_(self):
+        """
+        Run identification using peak_detectors
+        """
+        self.frequencies, self.wavelengths = [], []
+        fmin, fmax = self.conf.periodograms.freq.fmin, self.conf.periodograms.freq.fmax
+        for bm in self.results["freq"].keys():
+            for gate in self.results["freq"][bm].keys():
+                o = self.results["freq"][bm][gate]
+                f, power = o["f"], o["pow"]
+                peaks, _ = find_peaks(power)
+                for ind_p in peaks:
+                    fx = f[ind_p]
+                    if fx >= fmin and fx <= fmax:
+                        self.frequencies.append(fx)
+        wmin, wmax = self.conf.periodograms.wv.wmin, self.conf.periodograms.wv.wmax
+        for bm in self.results["wv"].keys():
+            for tm in self.results["wv"][bm].keys():
+                o = self.results["wv"][bm][tm]
+                w, power = o["wvn"], o["pow"]
+                peaks, _ = find_peaks(power)
+                for ind_p in peaks:
+                    wx = w[ind_p]
+                    if wx >= wmin and wx <= wmax:
+                        self.wavelengths.append(wx)
         return

@@ -19,8 +19,8 @@ import matplotlib.pyplot as plt
 plt.style.use(["science", "ieee"])
 import matplotlib.dates as mdates
 import numpy as np
-import utils
 import swifter
+import utils
 
 
 class RTI(object):
@@ -57,9 +57,8 @@ class RTI(object):
     ):
         ax = self._add_axis()
         df = df[df.bmnum == beam]
-        df["mdates"] = df.time.swifter.apply(lambda x: mdates.date2num(x))
         X, Y, Z = utils.get_gridded_parameters(
-            df, xparam="mdates", yparam="slist", zparam=zparam, rounding=False
+            df, xparam="time", yparam="slist", zparam=zparam, rounding=False
         )
         bounds = list(range(p_min, p_max + 1, p_step))
         cmap = plt.cm.jet
@@ -67,7 +66,7 @@ class RTI(object):
         # cmap.set_bad("w", alpha=0.0)
         # Configure axes
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H:%M"))
-        hours = mdates.HourLocator(byhour=range(0, 24, 4))
+        hours = mdates.HourLocator(byhour=range(0, 24, 1))
         ax.xaxis.set_major_locator(hours)
         ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
         ax.set_xlim([mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])])
@@ -145,6 +144,7 @@ class IntervalPlots(object):
         self.fig = plt.figure(figsize=(6, 3 * self.num_subplots), dpi=180)
         for f in self.fq:
             ax = self._add_axis()
+            print(self.o["freq"][13].keys())
             x = self.o["freq"][f[0]][f[1]]
             ax.semilogx(x["f"], x["pow"], "k-", lw=0.8)
             ax.set_xlim(1e-6, 1e0)
@@ -157,7 +157,7 @@ class IntervalPlots(object):
             ax.semilogx(x["wvn"], x["pow"], "k-", lw=0.8)
             ax.set_xlim(1e-10, 1e-4)
             ax.set_ylim(0, 1)
-            ax.set_xlabel(r"$\lambda^{-1}$, $rad/m$")
+            ax.set_xlabel(r"$\lambda^{-1}$, $/m$")
             ax.set_ylabel("Power")
         self.fig.subplots_adjust(hspace=0.5, wspace=0.5)
         return
@@ -175,3 +175,23 @@ class IntervalPlots(object):
         self.fig.clf()
         plt.close()
         return
+
+
+def histogram_plots(fqs, wvs, filepath):
+    """
+    Plot histograms
+    """
+    fig = plt.figure(figsize=(6, 3), dpi=180)
+    ax = fig.add_subplot(121)
+    ax.hist(np.array(fqs) * 1e3, bins=20, histtype="step", color="r")
+    ax.set_yscale("log")
+    ax.set_ylabel("Counts")
+    ax.set_xlabel(r"$f_0$, mHz")
+    ax = fig.add_subplot(122)
+    ax.hist(np.array(wvs) * 1e3, bins=20, histtype="step", color="r")
+    ax.set_yscale("log")
+    ax.set_ylabel("Counts")
+    ax.set_xlabel(r"$\lambda^{-1}$, /km")
+    fig.subplots_adjust(hspace=0.5, wspace=0.5)
+    fig.savefig(filepath, bbox_inches="tight")
+    return

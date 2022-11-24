@@ -24,7 +24,6 @@ import os
 import time
 import traceback
 from functools import partial
-from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -33,7 +32,7 @@ import utils
 from analysis import Periodograms
 from fetch_fit_data import FetchData
 from loguru import logger
-from plots import RTI, IntervalPlots
+from plots import RTI, IntervalPlots, histogram_plots
 from tqdm import tqdm
 
 
@@ -132,15 +131,19 @@ class StagingUnit(object):
             else:
                 self.data_exists = False
         else:
-            self.frame = pd.read_csv(self.fetch_file("raw"), parse_dates=["time"])
+            self.frame = pd.read_parquet(self.fetch_file("raw"))
             self.data_exists = True
         return
 
     def _save(self, df, p):
         """
-        Print data into csv file for later processing.
+        Print data into parquet/gzip file for later processing.
         """
-        df.to_csv(self.fetch_file(p), index=False, header=True, float_format="%g")
+        df.to_parquet(
+            self.fetch_file(p),
+            index=False,
+            compression="gzip",
+        )
         return
 
 
@@ -214,7 +217,7 @@ class Filter(StagingUnit):
                 self.filt_frame = self.filt_frame[self.filt_frame.srange > 500.0]
             self._save(self.filt_frame, "filt")
         else:
-            self.filt_frame = pd.read_csv(self.fetch_file("filt"), parse_dates=["time"])
+            self.filt_frame = pd.read_parquet(self.fetch_file("filt"))
         logger.info(f" Filtered data {len(self.filt_frame)}")
         return
 
@@ -229,9 +232,7 @@ class Filter(StagingUnit):
             )
             self._save(self.dtnd_frame, "dtrnd")
         else:
-            self.dtnd_frame = pd.read_csv(
-                self.fetch_file("dtrnd"), parse_dates=["time"]
-            )
+            self.dtnd_frame = pd.read_parquet(self.fetch_file("dtrnd"))
         logger.info(f" Done Dtrnd {len(self.dtnd_frame)}")
         return
 
@@ -271,7 +272,7 @@ class Filter(StagingUnit):
         self.pg = Periodograms(self.rad, self.dates, self.conf, self.dtnd_frame, file)
         return
 
-    def _compile_sample_output(self, beam=13, fq=[(13, 32)], wv=[(13, 50)]):
+    def _compile_sample_output(self, beam=13, fq=[(13, 38)], wv=[(13, 50)]):
         """
         Create figures:
         1. RTI plots.
@@ -300,6 +301,8 @@ class Filter(StagingUnit):
         )
         ip.save(series_file)
         ip.close()
+        file = self.base + "histograms.png"
+        histogram_plots(self.pg.frequencies, self.pg.wavelengths, file)
         return
 
 
@@ -333,7 +336,7 @@ class StagingHopper(object):
         Load parameters from params.json
         """
         with open("config/params.json") as f:
-            self.conf = json.load(f, object_hook=lambda x: SimpleNamespace(**x))
+            self.conf = json.load(f, object_hook=lambda x: utils.RecursiveNamespace(**x))
         return
 
     def _proc(self, o):
@@ -376,4 +379,4 @@ if __name__ == "__main__":
     start = time.time()
     StagingHopper(run_first=None)
     end = time.time()
-    logger.info(f" Interval time {np.round(end - start, 2)} sec.")
+    logger.info(f" Interval time {'%.2f'%(end - start)} sec.")

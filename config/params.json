@@ -20,13 +20,15 @@
     "pname": "p_l",
     "freq": {
       "min_window_hour": 2,
-      "min_no_echoes": 60,
+      "min_no_echoes": 70,
       "ls": {
         "fit_mean": true,
         "center_data": true,
         "nterms": 1,
         "normalization": "standard"
-      }
+      },
+      "fmin": 1e-4,
+      "fmax": 1e-3
     },
     "wv": {
       "dtau_mins": 2,
@@ -36,12 +38,14 @@
         "center_data": true,
         "nterms": 1,
         "normalization": "standard"
-      }
+      },
+      "wmin": 1e-6,
+      "wmax": 1e-5
     }
   },
   "files": {
     "base": "tmp/sd.run.{run_id}/{date}/",
-    "csv": "{rad}_{stime}_{etime}_{kind}.csv",
+    "csv": "{rad}_{stime}_{etime}_{kind}.parquet.gzip",
     "pkl": "{rad}_{stime}_{etime}.pickle",
     "png": "{rad}_{stime}_{etime}_{kind}.png"
   }
