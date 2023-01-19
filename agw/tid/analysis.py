@@ -16,12 +16,26 @@ __status__ = "Research"
 import datetime as dt
 import os
 import pickle
+import pandas as pd
 
 import numpy as np
 from astropy.timeseries import LombScargle
 from loguru import logger
 from scipy.signal import find_peaks
 from tqdm import tqdm
+
+def smooth(x,window_len=21,window="hanning"):
+    if x.ndim != 1: raise ValueError("smooth only accepts 1 dimension arrays.")
+    if x.size < window_len: raise ValueError("Input vector needs to be bigger than window size.")
+    if window_len<3: return x
+    if not window in ["flat", "hanning", "hamming", "bartlett", "blackman"]: raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+    s = np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
+    if window == "flat": w = numpy.ones(window_len,"d")
+    else: w = eval("np."+window+"(window_len)")
+    y = np.convolve(w/w.sum(),s,mode="valid")
+    d = window_len - 1
+    y = y[int(d/2):-int(d/2)]
+    return y
 
 
 class Periodograms(object):
@@ -76,7 +90,7 @@ class Periodograms(object):
                     ts = u["time"].tolist()[0]
                     t, y = np.array(
                         [(x - ts).total_seconds() for x in u["time"]]
-                    ), np.array(u[self.pname])
+                    ), smooth(np.array(u[self.pname]))
                     LS = LombScargle(
                         t,
                         y,
@@ -139,7 +153,8 @@ class Periodograms(object):
             min_no_echoes = conf.min_no_echoes
             min_window_hour = conf.min_window_hour
             if len(u) >= min_no_echoes:
-                dtau = (
+                e = True
+                dtau = np.rint(
                     np.abs((u.time.tolist()[-1] - u.time.tolist()[0]).total_seconds())
                     / 3600
                 )
@@ -167,7 +182,7 @@ class Periodograms(object):
             self.results = pickle.load(h)
         return
 
-    def _run_identification_(self):
+    def _run_identification_(self, run_wv=False):
         """
         Run identification using peak_detectors
         """
@@ -182,14 +197,15 @@ class Periodograms(object):
                     fx = f[ind_p]
                     if fx >= fmin and fx <= fmax:
                         self.frequencies.append(fx)
-        wmin, wmax = self.conf.periodograms.wv.wmin, self.conf.periodograms.wv.wmax
-        for bm in self.results["wv"].keys():
-            for tm in self.results["wv"][bm].keys():
-                o = self.results["wv"][bm][tm]
-                w, power = o["wvn"], o["pow"]
-                peaks, _ = find_peaks(power)
-                for ind_p in peaks:
-                    wx = w[ind_p]
-                    if wx >= wmin and wx <= wmax:
-                        self.wavelengths.append(wx)
+        if run_wv:
+            wmin, wmax = self.conf.periodograms.wv.wmin, self.conf.periodograms.wv.wmax
+            for bm in self.results["wv"].keys():
+                for tm in self.results["wv"][bm].keys():
+                    o = self.results["wv"][bm][tm]
+                    w, power = o["wvn"], o["pow"]
+                    peaks, _ = find_peaks(power)
+                    for ind_p in peaks:
+                        wx = w[ind_p]
+                        if wx >= wmin and wx <= wmax:
+                            self.wavelengths.append(wx)
         return

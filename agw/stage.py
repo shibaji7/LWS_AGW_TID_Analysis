@@ -19,21 +19,30 @@ sys.path.extend(["agw/", "agw/tid/"])
 
 import datetime as dt
 import json
-import multiprocessing as mp
 import os
 import time
 import traceback
+from functools import partial
+from types import SimpleNamespace
+import multiprocessing as mp
 from functools import partial
 
 import numpy as np
 import pandas as pd
 import pydarn
+
 import utils
 from analysis import Periodograms
 from fetch_fit_data import FetchData
 from loguru import logger
 from plots import RTI, IntervalPlots, histogram_plots
+from scipy.fft import rfft, rfftfreq
+from scipy.interpolate import interp1d
+from scipy.signal import get_window
+from scipy.stats import t as T
 from tqdm import tqdm
+
+from boxcar import BxFilter
 
 
 class StagingUnit(object):
@@ -49,6 +58,7 @@ class StagingUnit(object):
         rad - 3 char radar code
         dates - [sdate, edate]
         """
+        tqdm.pandas()
         self.proc_start_time = time.time()
         self.rad = rad
         self.dates = dates
@@ -82,7 +92,7 @@ class StagingUnit(object):
         )
         return file
 
-    def __get_magnetic_loc__(self, row):
+    def __get_location__(self, row):
         """
         Get AACGMV2 magnetic location
         """
@@ -93,27 +103,45 @@ class StagingUnit(object):
         )
         row["glat"], row["glon"] = lat, lon
         return row
+    
+    def _create_sequence_(self, scans):
+        self.fscans = []
+        fscans = [
+            scans[i:i+3] 
+            for i in range(len(scans)-3)
+        ]
+        p0 = mp.Pool(self.conf.cores)
+        self.filter, j = BxFilter(thresh=self.conf.filter.thresh), 0
+        partial_filter = partial(self.filter.doFilter)
+        for s in p0.map(partial_filter, fscans):
+            if np.mod(j,10)==0: logger.info(f"Running median filter for scan at - {j}")
+            self.fscans.append(s)
+            j += 1
+        return
 
     def _fetch(self):
         """
         Fetch radar data from repository
         """
         logger.info(" Fetching data...")
+        dates = (
+            [
+                self.dates[0] - dt.timedelta(minutes=self.conf.filter.w_mins / 2),
+                self.dates[1] + dt.timedelta(minutes=self.conf.filter.w_mins / 2),
+            ]
+            if self.conf.filter.w_mins is not None
+            else self.dates
+        )
+        logger.info(
+            f" Read radar file {self.rad} for {[d.strftime('%Y.%m.%dT%H.%M') for d in self.dates]}"
+        )
+        self.fd = FetchData(self.rad, dates, ftype=self.conf.ftype)
         if not os.path.exists(self.fetch_file("raw")):
-            dates = (
-                [
-                    self.dates[0] - dt.timedelta(minutes=self.conf.filter.w_mins / 2),
-                    self.dates[1] + dt.timedelta(minutes=self.conf.filter.w_mins / 2),
-                ]
-                if self.conf.filter.w_mins is not None
-                else self.dates
-            )
-            logger.info(
-                f" Read radar file {self.rad} for {[d.strftime('%Y.%m.%dT%H.%M') for d in self.dates]}"
-            )
-            self.fd = FetchData(self.rad, dates, ftype=self.conf.ftype)
+            
             _, scans, self.data_exists = self.fd.fetch_data(by="scan")
             if self.data_exists:
+                #self._create_sequence_(scans)
+                scan_time = (scans[0].etime-scans[0].stime).total_seconds()
                 self.frame = self.fd.scans_to_pandas(scans)
                 if len(self.frame) > 0:
                     self.frame["srange"] = self.frame.frang + (
@@ -123,15 +151,16 @@ class StagingUnit(object):
                         self.frame["intt.sc"] + 1.0e-6 * self.frame["intt.us"]
                     )
                     self.frame = self.frame.progress_apply(
-                        self.__get_magnetic_loc__, axis=1
+                        self.__get_location__, axis=1
                     )
+                    self.frame["scan_time"] = scan_time
                     self._save(self.frame, "raw")
                 else:
                     logger.info(f" Radar file does not exist!")
             else:
                 self.data_exists = False
         else:
-            self.frame = pd.read_parquet(self.fetch_file("raw"))
+            self.frame = pd.read_csv(self.fetch_file("raw"), parse_dates=["time"])
             self.data_exists = True
         return
 
@@ -139,12 +168,18 @@ class StagingUnit(object):
         """
         Print data into parquet/gzip file for later processing.
         """
-        df.to_parquet(
-            self.fetch_file(p),
-            index=False,
-            compression="gzip",
-        )
+        df.to_csv(self.fetch_file(p), index=False, header=True)
         return
+
+    def fetch_file(self, p):
+        """
+        Return filename
+        """
+        stime, etime = self.dates[0].strftime("%H%M"), self.dates[-1].strftime("%H%M")
+        file = self.base + self.conf.files.csv.format(
+            rad=self.rad, stime=stime, etime=etime, kind=p
+        )
+        return file
 
 
 class Filter(StagingUnit):
@@ -170,55 +205,10 @@ class Filter(StagingUnit):
         self.proc_start_time = time.time()
         super().__init__(rad, dates, conf)
         self.filters = filters
-        if self.data_exists:
-            self._filter()
+        if self.data_exists: 
             self._detrnd()
-            self._analysis()
-            self._compile_sample_output()
-        return
-
-    def fetch_file(self, p):
-        """
-        Return filename
-        """
-        stime, etime = self.dates[0].strftime("%H%M"), self.dates[-1].strftime("%H%M")
-        file = self.base + self.conf.files.csv.format(
-            rad=self.rad, stime=stime, etime=etime, kind=p
-        )
-        return file
-
-    def _filter(self):
-        """
-        Filter data based on the beams
-        and given filter criteria
-        """
-        if not os.path.exists(self.fetch_file("filt")):
-            self.filt_frame = self.frame.copy()
-            logger.info(f" Total data {len(self.filt_frame)}")
-            if "a" in self.filters:
-                flg, flg_val = self.conf.filter.gflg_key, self.conf.filter.gflg_type
-                self.filt_frame = self.filt_frame[self.filt_frame[flg] == flg_val]
-                for p in self.conf.filter.params:
-                    if hasattr(p, "vmax"):
-                        self.filt_frame = self.filt_frame[
-                            self.filt_frame[p.name] <= p.vmax
-                        ]
-                    if hasattr(p, "vmin"):
-                        self.filt_frame = self.filt_frame[
-                            self.filt_frame[p.name] >= p.vmin
-                        ]
-            if "b" in self.filters:
-                self.filt_frame = self.filt_frame[
-                    (self.filt_frame.p_l > 3.0)
-                    & (self.filt_frame.v_e <= 100.0)
-                    & (self.filt_frame.w_l_e <= 100.0)
-                ]
-            if "c" in self.filters:
-                self.filt_frame = self.filt_frame[self.filt_frame.srange > 500.0]
-            self._save(self.filt_frame, "filt")
-        else:
-            self.filt_frame = pd.read_parquet(self.fetch_file("filt"))
-        logger.info(f" Filtered data {len(self.filt_frame)}")
+            #self._analysis()
+        self._compile_sample_output()
         return
 
     def _detrnd(self):
@@ -226,13 +216,13 @@ class Filter(StagingUnit):
         Detreand the dataset with w_min window
         """
         if not os.path.exists(self.fetch_file("dtrnd")):
-            logger.info(f" Start detranding data {len(self.filt_frame)}")
-            self.dtnd_frame = self.filt_frame.progress_apply(
+            logger.info(f" Start detranding data {len(self.frame)}")
+            self.dtnd_frame = self.frame.progress_apply(
                 self.__trnd_support__, axis=1
             )
             self._save(self.dtnd_frame, "dtrnd")
         else:
-            self.dtnd_frame = pd.read_parquet(self.fetch_file("dtrnd"))
+            self.dtnd_frame = pd.read_csv(self.fetch_file("dtrnd"), parse_dates=["time"])
         logger.info(f" Done Dtrnd {len(self.dtnd_frame)}")
         return
 
@@ -241,27 +231,26 @@ class Filter(StagingUnit):
         Detrend the velocity data - Support Function.
         """
         w_mins = self.conf.filter.w_mins
-        for p in self.conf.filter.params:
-            pval = np.nan
-            b, g, t, p_raw = row["bmnum"], row["slist"], row["time"], row[p.name]
-            if (t >= self.dates[0]) & (t <= self.dates[-1]):
-                t_start, t_end = t - dt.timedelta(minutes=w_mins / 2), t + dt.timedelta(
-                    minutes=w_mins / 2
-                )
-                x = self.filt_frame[
-                    (self.filt_frame.bmnum == b)
-                    & (self.filt_frame.slist == g)
-                    & (self.filt_frame.time >= t_start)
-                    & (self.filt_frame.time >= t_end)
-                ]
-                pval = p_raw - np.nanmedian(x[p.name])
-            row[p.name] = pval
+        pval = np.nan
+        b, g, t, p_raw = row["bmnum"], row["slist"], row["time"], row["p_l"]
+        if (t >= self.dates[0]) & (t <= self.dates[-1]):
+            t_start, t_end = t - dt.timedelta(minutes=w_mins / 2), t + dt.timedelta(
+                minutes=w_mins / 2
+            )
+            x = self.frame[
+                (self.frame.bmnum == b)
+                & (self.frame.slist == g)
+                & (self.frame.time >= t_start)
+                & (self.frame.time >= t_end)
+            ]
+            pval = p_raw - np.nanmedian(x["p_l"])
+        row["p_l"] = pval
         return row
 
     def _analysis(self):
         """
         Analyze the data
-        1. Run periodograms
+        1. Run resample and FFT algo
         2. Run MUSIC
         """
         self.dtnd_frame.dropna(inplace=True)
@@ -272,13 +261,13 @@ class Filter(StagingUnit):
         self.pg = Periodograms(self.rad, self.dates, self.conf, self.dtnd_frame, file)
         return
 
-    def _compile_sample_output(self, beam=13, fq=[(13, 38)], wv=[(13, 50)]):
+    def _compile_sample_output(self, beam=13, fq=[(10, 35)]):
         """
         Create figures:
         1. RTI plots.
         2. Series plot.
         """
-        rti = RTI(100, self.dates, fig_title="", num_subplots=2)
+        rti = RTI(100, self.dates, fig_title="", num_subplots=3)
         stime, etime = self.dates[0].strftime("%H%M"), self.dates[-1].strftime("%H%M")
         rti_file = self.base + self.conf.files.png.format(
             rad=self.rad, stime=stime, etime=etime, kind="rti"
@@ -290,19 +279,29 @@ class Filter(StagingUnit):
             + ":"
             + str(beam)
             + ", "
-            + self.dates[0].strftime("%Y-%m-%d"),
+            + self.dates[0].strftime("%Y-%m-%d")
         )
-        rti.addParamPlot(self.filt_frame, beam, "filter")
+#         rti.addParamPlot(
+#             self.dtnd_frame,
+#             beam,
+#             self.rad.upper()
+#             + ":"
+#             + str(beam)
+#             + ", "
+#             + self.dates[0].strftime("%Y-%m-%d"),
+#             p_max=21, p_min=-20
+#         )
+        #rti.add_series(self.dtnd_frame, fq[0][0], fq[0][1])
         rti.save(rti_file)
         rti.close()
-        ip = IntervalPlots(self.pg.results, fq, wv)
-        series_file = self.base + self.conf.files.png.format(
-            rad=self.rad, stime=stime, etime=etime, kind="series"
-        )
-        ip.save(series_file)
-        ip.close()
-        file = self.base + "histograms.png"
-        histogram_plots(self.pg.frequencies, self.pg.wavelengths, file)
+#         ip = IntervalPlots(self.pg.results, fq)
+#         series_file = self.base + self.conf.files.png.format(
+#             rad=self.rad, stime=stime, etime=etime, kind="series"
+#         )
+#         ip.save(series_file)
+#         ip.close()
+#         file = self.base + "histograms.png"
+#         histogram_plots(self.pg.frequencies, file)
         return
 
 
@@ -314,7 +313,7 @@ class StagingHopper(object):
     local or ARC.
     """
 
-    def __init__(self, _filestr="config/record.logs/*.log", cores=8, run_first=None):
+    def __init__(self, _filestr="config/record.logs/*.log", cores=4, run_first=None):
         """
         Params
         ------
@@ -336,7 +335,7 @@ class StagingHopper(object):
         Load parameters from params.json
         """
         with open("config/params.json") as f:
-            self.conf = json.load(f, object_hook=lambda x: utils.RecursiveNamespace(**x))
+            self.conf = json.load(f, object_hook=lambda x: SimpleNamespace(**x))
         return
 
     def _proc(self, o):
@@ -364,12 +363,9 @@ class StagingHopper(object):
             logger.info(f"Start parallel procs for first {self.run_first} entries")
         else:
             logger.info(f"Start parallel procs for first {len(self._logs)} entries")
-        self.flist = []
         rlist = self._logs if self.run_first is None else self._logs[: self.run_first]
-        p0 = mp.Pool(self.cores)
-        partial_filter = partial(self._proc)
-        for f in p0.map(partial_filter, rlist.to_dict(orient="records")):
-            self.flist.append(f)
+        for f in rlist.to_dict(orient="records"):
+            self._proc(f)
         logger.info(f"Job complete!")
         return
 

@@ -199,6 +199,14 @@ class FetchData(object):
         self.ftype = ftype
         if (rad is not None) and (date_range is not None) and (len(date_range) == 2):
             self._create_files()
+        self.s_params=[
+            "bmnum", "noise.sky", "tfreq", "scan", "nrang",
+            "intt.sc", "intt.us", "mppul", "rsep", "cp", 
+            "frang", "smsep", "lagfr", "channel", "mplgs",
+            "nave", "noisesearch", "mplgexs", "xcf", "noisesky",
+            "noisemean", "ifmode",
+        ]
+        self.v_params=["v", "w_l", "gflg", "p_l", "slist"]
         return
 
     def _create_files(self):
@@ -286,33 +294,20 @@ class FetchData(object):
     def convert_to_pandas(
         self,
         beams,
-        s_params=[
-            "bmnum",
-            "noise.sky",
-            "tfreq",
-            "scan",
-            "nrang",
-            "time",
-            "rsep",
-            "frang",
-            "intt.sc",
-            "intt.us",
-            "cp",
-        ],
-        v_params=["v", "w_l", "gflg", "p_l", "slist", "v_e", "w_l_e"],
     ):
         """
         Convert the beam data into dataframe
         """
-        _o = dict(zip(s_params + v_params, ([] for _ in s_params + v_params)))
+        if "time" not in self.s_params: self.s_params.append("time")
+        _o = dict(zip(self.s_params + self.v_params, ([] for _ in self.s_params + self.v_params)))
         for b in beams:
             l = len(getattr(b, "slist"))
-            for p in v_params:
+            for p in self.v_params:
                 _o[p].extend(getattr(b, p))
             for p in s_params:
                 _o[p].extend([getattr(b, p)] * l)
         L = len(_o["slist"])
-        for p in s_params + v_params:
+        for p in self.s_params + self.v_params:
             if len(_o[p]) < L:
                 l = len(_o[p])
                 _o[p].extend([np.nan] * (L - l))
@@ -321,41 +316,28 @@ class FetchData(object):
     def scans_to_pandas(
         self,
         scans,
-        s_params=[
-            "bmnum",
-            "noise.sky",
-            "tfreq",
-            "scan",
-            "nrang",
-            "time",
-            "rsep",
-            "frang",
-            "intt.sc",
-            "intt.us",
-            "cp",
-        ],
-        v_params=["v", "w_l", "gflg", "p_l", "slist", "v_e", "w_l_e"],
         start_scnum=0,
     ):
         """
         Convert the scan data into dataframe
         """
+        if "time" not in self.s_params: self.s_params.append("time")
         _o = dict(
             zip(
-                s_params + v_params + ["scnum"],
-                ([] for _ in s_params + v_params + ["scnum"]),
+                self.s_params + self.v_params + ["scnum"],
+                ([] for _ in self.s_params + self.v_params + ["scnum"]),
             )
         )
         for idn, s in enumerate(scans):
             for b in s.beams:
                 l = len(getattr(b, "slist"))
-                for p in v_params:
+                for p in self.v_params:
                     _o[p].extend(getattr(b, p))
-                for p in s_params:
+                for p in self.s_params:
                     _o[p].extend([getattr(b, p)] * l)
                 _o["scnum"].extend([idn + start_scnum] * l)
             L = len(_o["slist"])
-            for p in s_params + v_params:
+            for p in self.s_params + self.v_params:
                 if len(_o[p]) < L:
                     l = len(_o[p])
                     _o[p].extend([np.nan] * (L - l))
@@ -364,19 +346,8 @@ class FetchData(object):
     def pandas_to_beams(
         self,
         df,
-        s_params=[
-            "bmnum",
-            "noise.sky",
-            "tfreq",
-            "scan",
-            "nrang",
-            "time",
-            "intt.sc",
-            "intt.us",
-            "cp",
-        ],
-        v_params=["v", "w_l", "gflg", "p_l", "slist"],
     ):
+        if "time" not in self.s_params: self.s_params.append("time")
         """
         Convert the dataframe to beam
         """
@@ -384,37 +355,26 @@ class FetchData(object):
         for bm in np.unique(df.bmnum):
             o = df[df.bmnum == bm]
             d = o.to_dict(orient="list")
-            for p in s_params:
+            for p in self.s_params:
                 d[p] = d[p][0]
             b = Beam()
-            b.set(o.time.tolist()[0], d, s_params, v_params)
+            b.set(o.time.tolist()[0], d, self.s_params, self.v_params)
             beams.append(b)
         return beams
 
     def pandas_to_scans(
         self,
         df,
-        smode,
-        s_params=[
-            "bmnum",
-            "noise.sky",
-            "tfreq",
-            "scan",
-            "nrang",
-            "time",
-            "intt.sc",
-            "intt.us",
-            "cp",
-        ],
-        v_params=["v", "w_l", "gflg", "p_l", "slist"],
+        smode="normal",
     ):
         """
         Convert the dataframe to scans
         """
+        if "time" not in self.s_params: self.s_params.append("time")
         scans = []
         for sn in np.unique(df.scnum):
             o = df[df.scnum == sn]
-            beams = self.pandas_to_beams(o, s_params, v_params)
+            beams = self.pandas_to_beams(o)
             sc = Scan(None, None, smode)
             sc.beams.extend(beams)
             sc.update_time()
@@ -423,24 +383,6 @@ class FetchData(object):
 
     def fetch_data(
         self,
-        s_params=[
-            "bmnum",
-            "noise.sky",
-            "tfreq",
-            "scan",
-            "nrang",
-            "intt.sc",
-            "intt.us",
-            "mppul",
-            "nrang",
-            "rsep",
-            "cp",
-            "frang",
-            "smsep",
-            "lagfr",
-            "channel",
-        ],
-        v_params=["v", "w_l", "gflg", "p_l", "slist", "v_e", "w_l_e"],
         by="beam",
         scan_prop={"s_time": 1, "s_mode": "normal"},
     ):
@@ -461,10 +403,19 @@ class FetchData(object):
             records = reader.read_fitacf()
             data += records
         if (by is not None) and (len(data) > 0):
-            data = self._parse_data(data, s_params, v_params, by, scan_prop)
+            data = self._parse_data(data, self.s_params, self.v_params, by, scan_prop)
             return data
         else:
             return (None, None, False)
+        
+    def scanGenerator(self, df=None, scans=None):
+        """
+        Generate yield generators for scans
+        """
+        if df is not None:
+            scans = self.pandas_to_scans(df)
+        for sc in scans:
+            yield sc
 
 
 if __name__ == "__main__":

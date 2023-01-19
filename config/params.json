@@ -1,51 +1,47 @@
 {
   "run_id": 1,
   "ftype": "fitacf",
+  "cores": 6,
   "filter": {
-    "gflg_key": "gflg",
-    "gflg_type": 1,
-    "w_mins": 10,
-    "params": [
-      {
-        "name": "v",
-        "vmax": 30
-      },
-      {
-        "name": "p_l",
-        "vmin": 3
-      }
-    ]
+    "thresh": 0.4,
+    "w_mins": 60,
+    "scan_time_sec": 60,
+    "min_pct_echoes": 0.5,
+    "param": "p_l",
+    "fit": {
+      "kind": "linear"
+    }
   },
   "periodograms": {
     "pname": "p_l",
     "freq": {
+      "fmin": 1e-4,
+      "fmax": 1e-3,
       "min_window_hour": 2,
-      "min_no_echoes": 70,
+      "min_no_echoes": 30,
       "ls": {
         "fit_mean": true,
         "center_data": true,
         "nterms": 1,
         "normalization": "standard"
-      },
-      "fmin": 1e-4,
-      "fmax": 1e-3
+      }
     },
     "wv": {
       "dtau_mins": 2,
       "min_no_echoes": 10,
+      "wmin": 1e-4,
+      "wmax": 1e-3,
       "ls": {
         "fit_mean": true,
         "center_data": true,
         "nterms": 1,
         "normalization": "standard"
-      },
-      "wmin": 1e-6,
-      "wmax": 1e-5
+      }
     }
   },
   "files": {
     "base": "tmp/sd.run.{run_id}/{date}/",
-    "csv": "{rad}_{stime}_{etime}_{kind}.parquet.gzip",
+    "csv": "{rad}_{stime}_{etime}_{kind}.csv",
     "pkl": "{rad}_{stime}_{etime}.pickle",
     "png": "{rad}_{stime}_{etime}_{kind}.png"
   }
