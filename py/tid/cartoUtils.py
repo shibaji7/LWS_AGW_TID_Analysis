@@ -24,6 +24,7 @@ import pydarn
 import tidUtils
 from cartopy.mpl.geoaxes import GeoAxes
 from matplotlib.projections import register_projection
+from rad_fov import CalcFov
 from shapely.geometry import LineString, MultiLineString, Polygon, mapping
 
 
@@ -371,14 +372,13 @@ class SDCarto(GeoAxes):
         lineColor="k",
         lineWidth=0.5,
         ls="-",
-        fovObj=None,
         model="IS",
         fov_dir="front",
     ):
         """Overlay radar FoV"""
         hdw = pydarn.read_hdw_file(rad)
-        latFull, lonFull = pydarn.Coords.GEOGRAPHIC(hdw.stid)
-        latFull, lonFull = latFull.T, lonFull.T
+        fov = CalcFov(hdw=hdw, model=model, fov_dir=fov_dir)
+        latFull, lonFull = fov.latFull, fov.lonFull
         self.maxGate = maxGate
         lcolor = lineColor
         from numpy import concatenate, ones, shape, transpose, vstack
@@ -446,6 +446,8 @@ class SDCarto(GeoAxes):
         cbar=True,
         maxGate=None,
         scan_time=None,
+        model="IS",
+        fov_dir="front",
         **kwargs
     ):
         """Overlay radar Data"""
@@ -460,8 +462,10 @@ class SDCarto(GeoAxes):
         if len(df) > 0:
             # TODO
             hdw = pydarn.read_hdw_file(rad)
-            lats, lons = pydarn.Coords.GEOGRAPHIC(hdw.stid)
-            lats, lons = lats.T, lons.T
+            fov = CalcFov(hdw=hdw, model=model, fov_dir=fov_dir)
+            # lats, lons = pydarn.Coords.GEOGRAPHIC(hdw.stid)
+            # lats, lons = lats.T, lons.T
+            lats, lons = fov.latCenter, fov.lonCenter
             Xb, Yg, Px = tidUtils.get_gridded_parameters(
                 df, xparam="bmnum", yparam="slist", zparam=p_name
             )
@@ -481,6 +485,7 @@ class SDCarto(GeoAxes):
                 vmin=p_min,
                 s=2,
                 marker="D",
+                alpha=0.6,
                 **kwargs
             )
             if cbar:
