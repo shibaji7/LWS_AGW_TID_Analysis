@@ -16,7 +16,6 @@ __status__ = "Research"
 import matplotlib
 import matplotlib.pyplot as plt
 
-plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import matplotlib.dates as mdates
@@ -29,7 +28,10 @@ class RTI(object):
     Create plots for velocity, width, power, elevation angle, etc.
     """
 
-    def __init__(self, nGates, drange, fig_title=None, num_subplots=1):
+    def __init__(self, nGates, drange, fig_title=None, num_subplots=1, cs=True):
+        if cs:
+            plt.style.use(["science", "ieee"])
+        self.cs = cs
         self.nGates = nGates
         self.drange = drange
         self.num_subplots = num_subplots
@@ -67,7 +69,10 @@ class RTI(object):
         X, Y, Z = tidUtils.get_gridded_parameters(
             df, xparam="time", yparam=yscale, zparam=zparam, rounding=False
         )
-        ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+        if self.cs:
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+        else:
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
         hours = mdates.HourLocator(byhour=range(0, 24, 1))
         ax.xaxis.set_major_locator(hours)
         ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
@@ -111,7 +116,7 @@ class RTI(object):
         return
 
     def save(self, filepath):
-        self.fig.savefig(filepath, bbox_inches="tight")
+        self.fig.savefig(filepath, bbox_inches="tight", facecolor=(1,1,1,1))
         return
 
     def close(self):

@@ -17,7 +17,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import cartopy
@@ -31,7 +30,10 @@ class Fan(object):
     This class holds plots for all radars FoVs
     """
 
-    def __init__(self, rads, date, fig_title=None, nrows=1, ncols=1, coord="geo"):
+    def __init__(self, rads, date, fig_title=None, nrows=1, ncols=1, coord="geo", cs=True):
+        if cs:
+            plt.style.use(["science", "ieee"])
+        self.cs = cs
         self.rads = rads
         self.date = date
         self.nrows, self.ncols = nrows, ncols
@@ -112,7 +114,7 @@ class Fan(object):
         return
 
     def save(self, filepath):
-        self.fig.savefig(filepath, bbox_inches="tight")
+        self.fig.savefig(filepath, bbox_inches="tight", facecolor=(1,1,1,1))
         return
 
     def close(self):
