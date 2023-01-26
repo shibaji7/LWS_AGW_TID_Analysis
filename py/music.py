@@ -975,10 +975,10 @@ def defineLimits(
                 gateLimits = [np.min(inx[1][:]), np.max(inx[1][:])]
 
             if gateLimits != None:
-                rangeMin = np.int(
+                rangeMin = int(
                     np.min(currentData.fov.slantRCenter[:, gateLimits[0]])
                 )
-                rangeMax = np.int(
+                rangeMax = int(
                     np.max(currentData.fov.slantRCenter[:, gateLimits[1]])
                 )
                 rangeLimits = [rangeMin, rangeMax]
@@ -993,6 +993,8 @@ def defineLimits(
             currentData.metadata["timeLimits"] = timeLimits
 
     except:
+        import traceback
+        traceback.print_exc()
         logging.warning(
             "An error occured while defining limits.  No limits set.  Check your input values."
         )
@@ -1252,8 +1254,8 @@ def determineRelativePosition(dataObj, dataSet="active", altitude=250.0):
     currentData = getDataSet(dataObj, dataSet)
 
     # Determine center beam.
-    ctrBeamInx = len(currentData.fov.beams) / 2
-    ctrGateInx = len(currentData.fov.gates) / 2
+    ctrBeamInx = int(len(currentData.fov.beams) / 2)
+    ctrGateInx = int(len(currentData.fov.gates) / 2)
 
     currentData.fov.relative_centerInx = [ctrBeamInx, ctrGateInx]
 
@@ -2028,8 +2030,8 @@ def calculateDlm(dataObj, dataSet="active", comment=None):
     # Explicitly write out gate/range indices...
 
     llList = []
-    for gg in xrange(nrGates):
-        for bb in xrange(nrBeams):
+    for gg in range(nrGates):
+        for bb in range(nrBeams):
             llList.append((bb, gg))
 
     for ll in range(nCells):
@@ -2137,14 +2139,14 @@ def calculateKarr(
     def vCalc(um, v):
         return np.dot(np.conj(um), v) * np.dot(np.conj(v), um)
 
-    vList = [eVecs[:, minEvalsInx[ee]] for ee in xrange(cnt)]
+    vList = [eVecs[:, minEvalsInx[ee]] for ee in range(cnt)]
     kArr = np.zeros((nkx, nky), dtype=np.complex64)
-    for kk_kx in xrange(nkx):
+    for kk_kx in range(nkx):
         kx = kxVec[kk_kx]
-        for kk_ky in xrange(nky):
+        for kk_ky in range(nky):
             ky = kyVec[kk_ky]
             um = np.exp(1j * (kx * xm + ky * ym))
-            kArr[kk_kx, kk_ky] = 1.0 / np.sum(map(lambda v: vCalc(um, v), vList))
+            kArr[kk_kx, kk_ky] = 1.0 / np.sum(list(map(lambda v: vCalc(um, v), vList)))
     t1 = datetime.datetime.now()
     logging.info("Finished kArr Calculation.  Total time: " + str(t1 - t0))
 
@@ -2232,9 +2234,9 @@ def simulator(
         xgrid = np.zeros((nx, ny))
         ygrid = np.zeros((nx, ny))
 
-        for kk in xrange(nx):
+        for kk in range(nx):
             ygrid[kk, :] = yvec[:]
-        for kk in xrange(ny):
+        for kk in range(ny):
             xgrid[kk, :] = yvec[:]
 
     if sigs == None:
@@ -2252,9 +2254,9 @@ def simulator(
 
     dataArr = np.zeros((nSteps, nx, ny))
 
-    for step in xrange(nSteps):
+    for step in range(nSteps):
         t = secVec[step]
-        for kk in xrange(len(sigs)):
+        for kk in range(len(sigs)):
             amp = sigs[kk][0]
             kx = sigs[kk][1]
             ky = sigs[kk][2]
@@ -2281,16 +2283,16 @@ def simulator(
 
     # Signal RMS
     sig_rms = np.zeros((nx, ny))
-    for xx in xrange(nx):
-        for yy in xrange(ny):
+    for xx in range(nx):
+        for yy in range(ny):
             sig_rms[xx, yy] = np.sqrt(np.mean((dataArr[:, xx, yy]) ** 2.0))
 
     noise_rms = np.zeros((nx, ny))
     if noiseFactor > 0:
         nf = noiseFactor
         # Temporal White Noise
-        for xx in xrange(nx):
-            for yy in xrange(ny):
+        for xx in range(nx):
+            for yy in range(ny):
                 noise = nf * np.random.standard_normal(nSteps)
                 noise_rms[xx, yy] = np.sqrt(np.mean(noise**2))
                 dataArr[:, xx, yy] = dataArr[:, xx, yy] + noise
@@ -2305,11 +2307,11 @@ def simulator(
     rgDist = rgDist / np.max(rgDist)
 
     mask = np.zeros((nx, ny))
-    for nn in xrange(nx):
+    for nn in range(nx):
         mask[nn, :] = rgDist[:]
 
     mask3d = np.zeros((nSteps, nx, ny))
-    for nn in xrange(nSteps):
+    for nn in range(nSteps):
         mask3d[nn, :, :] = mask[:]
 
     # Apply Range Gate Dependence
@@ -2373,8 +2375,8 @@ def scale_karr(kArr):
 
     # Determine scale for colorbar.
     scale = [0.0, 1.0]
-    sd = stats.nanstd(data, axis=None)
-    mean = stats.nanmean(data, axis=None)
+    sd = np.nanstd(data, axis=None)
+    mean = np.nanmean(data, axis=None)
     scMax = mean + 6.5 * sd
     data = data / scMax
     return data
@@ -2411,8 +2413,9 @@ def detectSignals(dataObj, dataSet="active", threshold=0.35, neighborhood=(10, 1
     # Feature detection...
     # Now lets do a little image processing...
     from scipy import ndimage
+    global peak_local_max, watershed
     from skimage.feature import peak_local_max
-    from skimage.morphology import watershed
+    from skimage.segmentation import watershed
 
     # sudo pip install cython
     # sudo pip install scikit-image
@@ -2429,17 +2432,17 @@ def detectSignals(dataObj, dataSet="active", threshold=0.35, neighborhood=(10, 1
     markers, nb = ndimage.label(local_maxi)
     labels = watershed(-distance, markers, mask=mask)
 
-    areas = ndimage.sum(mask, labels, xrange(1, labels.max() + 1))
-    maxima = ndimage.maximum(data, labels, xrange(1, labels.max() + 1))
+    areas = ndimage.sum(mask, labels, range(1, labels.max() + 1))
+    maxima = ndimage.maximum(data, labels, range(1, labels.max() + 1))
     order = np.argsort(maxima)[::-1] + 1
-    maxpos = ndimage.maximum_position(data, labels, xrange(1, labels.max() + 1))
+    maxpos = ndimage.maximum_position(data, labels, range(1, labels.max() + 1))
 
     sigDetect = SigDetect()
     sigDetect.mask = mask
     sigDetect.labels = labels
     sigDetect.nrSigs = nb
     sigDetect.info = []
-    for x in xrange(labels.max()):
+    for x in range(labels.max()):
         info = {}
         info["labelInx"] = x + 1
         info["order"] = order[x]

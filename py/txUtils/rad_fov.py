@@ -30,6 +30,7 @@ class CalcFov(object):
         date_time=None,
         coord_alt=0.0,
         fov_dir="front",
+        coords="geo",
     ):
         # Define class constants
         rn = "fov"
@@ -397,7 +398,7 @@ class CalcFov(object):
         self.slantRFull = slant_range_full
         self.beams = beams[:-1]
         self.gates = gates[:-1]
-        self.coords = "geo"
+        self.coords = coords
         self.fov_dir = fov_dir
         self.model = model
 

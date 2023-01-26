@@ -244,8 +244,8 @@ class musicFan(object):
         # Set colorbar scale if not explicitly defined.
         if scale is None:
             if autoScale:
-                sd = stats.nanstd(np.abs(currentData.data), axis=None)
-                mean = stats.nanmean(np.abs(currentData.data), axis=None)
+                sd = np.nanstd(np.abs(currentData.data), axis=None)
+                mean = np.nanmean(np.abs(currentData.data), axis=None)
                 scMax = np.ceil(mean + 1.0 * sd)
                 if np.min(currentData.data) < 0:
                     scale = scMax * np.array([-1.0, 1.0])
@@ -560,7 +560,7 @@ class musicRTI(object):
 
         # Calculate terminator. ########################################################
         if plotTerminator:
-            daylight = np.ones([nrTimes, nrGates], np.bool)
+            daylight = np.ones([nrTimes, nrGates], bool)
             for tm_inx in range(nrTimes):
                 tm = time[tm_inx]
                 term_lons = lonCenter[beamInx, :]
@@ -586,8 +586,8 @@ class musicRTI(object):
         # Set colorbar scale if not explicitly defined.
         if scale is None:
             if autoScale:
-                sd = stats.nanstd(np.abs(currentData.data), axis=None)
-                mean = stats.nanmean(np.abs(currentData.data), axis=None)
+                sd = np.nanstd(np.abs(currentData.data), axis=None)
+                mean = np.nanmean(np.abs(currentData.data), axis=None)
                 scMax = np.ceil(mean + 1.0 * sd)
                 if np.min(currentData.data) < 0:
                     scale = scMax * np.array([-1.0, 1.0])
@@ -1810,8 +1810,8 @@ def plotFullSpectrum(
         data = data / data.max()
 
     # Determine scale for colorbar.
-    sd = stats.nanstd(data, axis=None)
-    mean = stats.nanmean(data, axis=None)
+    sd = np.nanstd(data, axis=None)
+    mean = np.nanmean(data, axis=None)
     scMax = mean + 2.0 * sd
     if scale is None:
         scale = scMax * np.array([0, 1.0])
@@ -1945,7 +1945,7 @@ def plotFullSpectrum(
     axis.add_patch(poly)
 
     # X-Labels
-    modX = np.ceil(npf / np.float(maxXTicks))
+    modX = np.ceil(npf / float(maxXTicks))
 
     xlabels = []
     xpos = []
@@ -2061,8 +2061,8 @@ def plotDlm(dataObj, dataSet="active", fig=None):
     data = np.abs(currentData.Dlm)
 
     # Determine scale for colorbar.
-    sd = stats.nanstd(data, axis=None)
-    mean = stats.nanmean(data, axis=None)
+    sd = np.nanstd(data, axis=None)
+    mean = np.nanmean(data, axis=None)
     scMax = mean + 4.0 * sd
     scale = scMax * np.array([0, 1.0])
 
@@ -2125,7 +2125,7 @@ def plotDlm(dataObj, dataSet="active", fig=None):
     ticks = []
     labels = []
     mod = int(np.floor(nrGates / 10))
-    for x in xrange(nrGates):
+    for x in range(nrGates):
         if x % mod != 0:
             continue
         ll = nrBeams * x
@@ -2435,7 +2435,7 @@ def plotKarrDetected(
         # Add wavelength to x/y tick labels ############################################
         ticks = axis.get_xticks()
         newLabels = []
-        for x in xrange(len(ticks)):
+        for x in range(len(ticks)):
             tck = ticks[x]
             if tck != 0:
                 km = 2 * np.pi / tck
@@ -2452,7 +2452,7 @@ def plotKarrDetected(
 
         ticks = axis.get_yticks()
         newLabels = []
-        for y in xrange(len(ticks)):
+        for y in range(len(ticks)):
             tck = ticks[y]
             if tck != 0:
                 km = 2 * np.pi / tck
@@ -2562,8 +2562,8 @@ def plotKarrAxis(
 
     data = np.abs(currentData.karr) - np.min(np.abs(currentData.karr))
     # Determine scale for colorbar.
-    sd = stats.nanstd(data, axis=None)
-    mean = stats.nanmean(data, axis=None)
+    sd = np.nanstd(data, axis=None)
+    mean = np.nanmean(data, axis=None)
     scMax = mean + 6.5 * sd
 
     data = data / scMax
@@ -2648,7 +2648,7 @@ def plotKarrAxis(
     # Add wavelength to x/y tick labels ############################################
     ticks = axis.get_xticks()
     newLabels = []
-    for x in xrange(len(ticks)):
+    for x in range(len(ticks)):
         tck = ticks[x]
         if tck != 0:
             km = 2 * np.pi / tck
@@ -2666,7 +2666,7 @@ def plotKarrAxis(
 
     ticks = axis.get_yticks()
     newLabels = []
-    for y in xrange(len(ticks)):
+    for y in range(len(ticks)):
         tck = ticks[y]
         if tck != 0:
             km = 2 * np.pi / tck

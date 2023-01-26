@@ -674,13 +674,9 @@ class musicArray(object):
         prm.mpinc = []
         prm.nrang = []
 
-        scanReader = unit.fd.scanGenerator(df=unit.frame)
+        scanReader = unit.scanGenerator(df=unit.frame)
 
-        while beamTime < eTime:
-            # Load one scan into memory.
-            #            myScan = pydarn.sdio.radDataRead.radDataReadScan(myPtr)
-            myScan = next(scanReader)
-
+        for myScan in scanReader:
             if myScan == None:
                 break
 
@@ -704,24 +700,24 @@ class musicArray(object):
                 prm.time.append(beamTime)
                 prm.mplgs.append(myBeam.mplgs)
                 prm.nave.append(myBeam.nave)
-                prm.noisesearch.append(myBeam.noisesearch)
+                prm.noisesearch.append(getattr(myBeam, "noise.search"))
                 prm.scan.append(myBeam.scan)
                 prm.smsep.append(myBeam.smsep)
                 prm.mplgexs.append(myBeam.mplgexs)
                 prm.xcf.append(myBeam.xcf)
-                prm.noisesky.append(myBeam.noisesky)
+                prm.noisesky.append(getattr(myBeam, "noise.sky"))
                 prm.rsep.append(myBeam.rsep)
                 prm.mppul.append(myBeam.mppul)
                 prm.inttsc.append(getattr(myBeam, "intt.sc"))
                 prm.frang.append(myBeam.frang)
-                # prm.bmazm.append(myBeam.bmazm)
+                prm.bmazm.append(myBeam.bmazm)
                 prm.lagfr.append(myBeam.lagfr)
                 prm.ifmode.append(myBeam.ifmode)
-                prm.noisemean.append(myBeam.noisemean)
+                prm.noisemean.append(getattr(myBeam, "noise.mean"))
                 prm.tfreq.append(myBeam.tfreq)
                 prm.inttus.append(getattr(myBeam, "intt.us"))
-                # prm.rxrise.append(myBeam.rxrise)
-                # prm.mpinc.append(myBeam.mpinc)
+                prm.rxrise.append(myBeam.rxrise)
+                prm.mpinc.append(myBeam.mpinc)
                 prm.nrang.append(myBeam.nrang)
 
                 # Get the fitData.
@@ -751,11 +747,10 @@ class musicArray(object):
                     goodScan = True
                 else:
                     continue
-
+            
             if goodScan:
                 # Determine the start time for each scan and save to list.
                 scanTimeList.append(min([x.time for x in myScan.beams]))
-
                 # Advance to the next scan number.
                 scanNr = scanNr + 1
 
@@ -1248,7 +1243,7 @@ def determineRelativePosition(dataObj, dataSet="active", altitude=250.0):
     Written by Nathaniel A. Frissell, Fall 2013
 
     """
-    import utils
+    import davitUtils as utils
 
     # Get the chosen dataset.
     currentData = getDataSet(dataObj, dataSet)
@@ -1313,7 +1308,7 @@ def timeInterpolation(
     Written by Nathaniel A. Frissell, Fall 2013
 
     """
-    import utils
+    import davitUtils as utils
     from scipy.interpolate import interp1d
 
     currentData = getDataSet(dataObj, dataSet)
@@ -1503,7 +1498,7 @@ class filter(object):
         scale=True,
         newDataSetName="filtered",
     ):
-        import scipy as sp
+        from scipy import signal
 
         sigObj = getattr(dataObj, dataSet)
         nyq = sigObj.nyquistFrequency()
@@ -1526,7 +1521,7 @@ class filter(object):
                 return
 
         if cutoff_high != None:  # Low pass
-            lp = sp.signal.firwin(
+            lp = signal.firwin(
                 numtaps=numtaps,
                 cutoff=cutoff_high,
                 width=width,
@@ -1538,7 +1533,7 @@ class filter(object):
             d = lp
 
         if cutoff_low != None:  # High pass
-            hp = -sp.signal.firwin(
+            hp = -signal.firwin(
                 numtaps=numtaps,
                 cutoff=cutoff_low,
                 width=width,
@@ -1628,7 +1623,7 @@ class filter(object):
 
         Written by Nathaniel A. Frissell, Fall 2013
         """
-
+        from scipy import signal
         if fig == None:
             from matplotlib import pyplot as plt
 
@@ -1642,7 +1637,7 @@ class filter(object):
         else:
             pass
 
-        w, h = sp.signal.freqz(self.ir, 1, worN=worN)
+        w, h = signal.freqz(self.ir, 1, worN=worN)
         h_dB = 20 * np.log10(abs(h))
         axis = fig.add_subplot(211)
 
@@ -1724,6 +1719,7 @@ class filter(object):
 
         Written by Nathaniel A. Frissell, Fall 2013
         """
+        from scipy import signal
 
         if fig == None:
             from matplotlib import pyplot as plt
@@ -1734,7 +1730,7 @@ class filter(object):
         impulse = np.repeat(0.0, l)
         impulse[0] = 1.0
         x = np.arange(0, l)
-        response = sp.signal.lfilter(self.ir, 1, impulse)
+        response = signal.lfilter(self.ir, 1, impulse)
         axis = fig.add_subplot(211)
         axis.stem(x, response)
         axis.set_ylabel("Amplitude")
@@ -1790,9 +1786,10 @@ class filter(object):
         filteredData = np.zeros_like(sigobj.data)
 
         # Apply filter
+        from scipy import signal
         for bm in range(nrBeams):
             for rg in range(nrGates):
-                tmp = sp.signal.lfilter(self.ir, [1.0], sigobj.data[:, bm, rg])
+                tmp = signal.lfilter(self.ir, [1.0], sigobj.data[:, bm, rg])
                 tmp = np.roll(tmp, shift)
                 filteredData[:, bm, rg] = tmp[:]
 
@@ -1847,7 +1844,7 @@ def detrend(
     Written by Nathaniel A. Frissell, Fall 2013
 
     """
-    import scipy as sp
+    from scipy import signal
 
     currentData = getDataSet(dataObj, dataSet)
     currentData = currentData.applyLimits()
@@ -1858,7 +1855,7 @@ def detrend(
     for bm in range(nrBeams):
         for rg in range(nrGates):
             try:
-                newDataArr[:, bm, rg] = sp.signal.detrend(
+                newDataArr[:, bm, rg] = signal.detrend(
                     currentData.data[:, bm, rg], type=type
                 )
             except:
@@ -1923,14 +1920,14 @@ def windowData(
     Written by Nathaniel A. Frissell, Fall 2013
 
     """
-    import scipy as sp
+    from scipy import signal
 
     currentData = getDataSet(dataObj, dataSet)
     currentData = currentData.applyLimits()
 
     nrTimes, nrBeams, nrGates = np.shape(currentData.data)
 
-    win = sp.signal.get_window(window, nrTimes, fftbins=False)
+    win = signal.get_window(window, nrTimes, fftbins=False)
     newDataArr = np.zeros_like(currentData.data)
     for bm in range(nrBeams):
         for rg in range(nrGates):

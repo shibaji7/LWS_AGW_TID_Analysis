@@ -1,4 +1,11 @@
 import logging
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.style.use(["science", "ieee"])
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 
 
 def plot_freq(ax, times, freq, xlim=None, xticks=None):
@@ -8,14 +15,14 @@ def plot_freq(ax, times, freq, xlim=None, xticks=None):
 
     # Format the yaxis.
     ax.yaxis.tick_left()
-    ax.yaxis.set_tick_params(direction="out")
     ax.set_ylim(bottom=8, top=20)
+    ax.yaxis.set_tick_params(direction="out")
     ax.yaxis.set_minor_locator(MultipleLocator())
     ax.yaxis.set_tick_params(direction="out", which="minor")
 
     # Plot the TX frequency.
     ax.plot_date(
-        date2num(times), freq, fmt="k-", tz=None, xdate=True, ydate=False, markersize=2
+        date2num(times), np.array(freq)/1e3, fmt="k-", tz=None, xdate=True, ydate=False, lw=0.8
     )
 
     # Format the xaxis.
@@ -32,15 +39,15 @@ def plot_freq(ax, times, freq, xlim=None, xticks=None):
     height = bb.height
     width = bb.width
     pos = [x0, y0, width, height]
-    fig.text(pos[0] - 0.01, pos[1] + 0.005, "10", ha="right", va="bottom", size=8)
-    fig.text(pos[0] - 0.01, pos[1] + pos[3] - 0.015, "16", ha="right", va="top", size=8)
+    fig.text(pos[0] - 0.01, pos[1] + 0.005, "10", ha="right", va="bottom", size="xx-small")
+    fig.text(pos[0] - 0.01, pos[1] + pos[3] - 0.015, "16", ha="right", va="top", size="xx-small")
     fig.text(
         pos[0] - 0.07,
         pos[1] + pos[3] / 2.0,
         "Freq",
         ha="center",
         va="center",
-        size=9,
+        size="x-small",
         rotation="vertical",
     )
     fig.text(
@@ -49,7 +56,7 @@ def plot_freq(ax, times, freq, xlim=None, xticks=None):
         "[MHz]",
         ha="center",
         va="center",
-        size=7,
+        size="x-small",
         rotation="vertical",
     )
     l = Line2D(
@@ -65,7 +72,7 @@ def plot_freq(ax, times, freq, xlim=None, xticks=None):
     ax.set_xticklabels([])
     # use only 2 major yticks
     ax.set_yticks([10, 16])
-    ax.set_yticklabels([" ", " "])
+    ax.set_yticklabels([" ", " "])    
     return
 
 
@@ -84,7 +91,7 @@ def plot_nave(ax, times, nave, xlim=None, xticks=None, ytickside="right"):
 
     # Plot the number of averages.
     ax.plot_date(
-        date2num(times), nave, fmt="k:", tz=None, xdate=True, ydate=False, markersize=2
+        date2num(times), nave, fmt="k:", tz=None, xdate=True, ydate=False, markersize=0.8
     )
 
     # Format the xaxis.
@@ -102,16 +109,16 @@ def plot_nave(ax, times, nave, xlim=None, xticks=None, ytickside="right"):
     width = bb.width
     pos = [x0, y0, width, height]
     fig.text(
-        pos[0] + pos[2] + 0.01, pos[1] - 0.004, "0", ha="left", va="bottom", size=8
+        pos[0] + pos[2] + 0.01, pos[1] - 0.004, "0", ha="left", va="bottom", size="xx-small"
     )
-    fig.text(pos[0] + pos[2] + 0.01, pos[1] + pos[3], "80", ha="left", va="top", size=8)
+    fig.text(pos[0] + pos[2] + 0.01, pos[1] + pos[3], "80", ha="left", va="top", size="xx-small")
     fig.text(
         pos[0] + pos[2] + 0.06,
         pos[1] + pos[3] / 2.0,
         "Nave",
         ha="center",
         va="center",
-        size=8.5,
+        size="x-small",
         rotation="vertical",
     )
 
@@ -150,7 +157,7 @@ def plot_skynoise(ax, times, sky, xlim=None, xticks=None):
 
     # Plot the sky noise data.
     ax.plot_date(
-        date2num(times), np.log10(sky), fmt="k-", tz=None, xdate=True, ydate=False
+        date2num(times), np.log10(sky), fmt="k-", tz=None, xdate=True, ydate=False, lw=0.8
     )
 
     # Format the xaxis.
@@ -167,15 +174,15 @@ def plot_skynoise(ax, times, sky, xlim=None, xticks=None):
     height = bb.height
     width = bb.width
     pos = [x0, y0, width, height]
-    fig.text(pos[0] - 0.01, pos[1] + 0.004, r"$10^0$", ha="right", va="bottom", size=8)
-    fig.text(pos[0] - 0.01, pos[1] + pos[3], r"$10^6$", ha="right", va="top", size=8)
+    fig.text(pos[0] - 0.01, pos[1] + 0.004, r"$10^0$", ha="right", va="bottom", size="xx-small")
+    fig.text(pos[0] - 0.01, pos[1] + pos[3], r"$10^6$", ha="right", va="top", size="xx-small")
     fig.text(
         pos[0] - 0.07,
         pos[1] + pos[3] / 2.0,
         "N.Sky",
         ha="center",
         va="center",
-        size=8.5,
+        size="x-small",
         rotation="vertical",
     )
     l = Line2D(
@@ -217,7 +224,7 @@ def plot_searchnoise(ax, times, search, xlim=None, xticks=None, ytickside="right
         tz=None,
         xdate=True,
         ydate=False,
-        lw=1.5,
+        markersize=0.8
     )
 
     # Format the xaxis.
@@ -241,10 +248,10 @@ def plot_searchnoise(ax, times, search, xlim=None, xticks=None, ytickside="right
         r"$10^0$",
         ha="left",
         va="bottom",
-        size=8,
+        size="xx-small",
     )
     fig.text(
-        pos[0] + pos[2] + 0.01, pos[1] + pos[3], r"$10^6$", ha="left", va="top", size=8
+        pos[0] + pos[2] + 0.01, pos[1] + pos[3], r"$10^6$", ha="left", va="top", size="xx-small"
     )
     fig.text(
         pos[0] + pos[2] + 0.06,
@@ -252,7 +259,7 @@ def plot_searchnoise(ax, times, search, xlim=None, xticks=None, ytickside="right
         "N.Sch",
         ha="center",
         va="center",
-        size=8.5,
+        size="xx-small",
         rotation="vertical",
     )
 

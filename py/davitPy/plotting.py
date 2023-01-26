@@ -59,7 +59,7 @@ from matplotlib import dates as md
 from matplotlib.collections import PolyCollection
 from matplotlib.patches import Polygon
 from music import getDataSet
-from utils import getParamDict
+from davitUtils import getParamDict
 
 # Global Figure Size
 figsize = (20, 10)
@@ -92,7 +92,7 @@ def daynight_terminator(date, lons):
     Adapted from mpl_toolkits.basemap.solar by Nathaniel A. Frissell, Fall 2013
 
     """
-    import utils
+    import davitUtils as utils
 
     dg2rad = np.pi / 180.0
     # compute greenwich hour angle and solar declination
@@ -537,14 +537,14 @@ class musicRTI(object):
         **kwArgs
     ):
 
-        import utils
+        import davitUtils as utils
         from rti import plot_freq, plot_nave, plot_searchnoise, plot_skynoise
         from scipy import stats
 
         if axis is None:
             from matplotlib import pyplot as plt
 
-            fig = plt.figure(figsize=figsize)
+            fig = plt.figure(figsize=(8,4), dpi=180)
 
         # Make some variables easier to get to...
         currentData = getDataSet(dataObject, dataSet)
@@ -898,10 +898,10 @@ class musicRTI(object):
                 if currentData.metadata["gscat"] == 1:
                     cbar.ax.text(
                         0.5,
-                        cbar_gstext_offset,
+                        -0.01,
                         "Ground\nscat\nonly",
-                        ha="center",
-                        fontsize=cbar_gstext_fontsize,
+                        ha="center", va="top",
+                        fontsize="xx-small"
                     )
 
         txt = "Model: " + metadata["model"]
@@ -994,7 +994,8 @@ class musicRTI(object):
             txt.append(
                 currentData.history[max(currentData.history.keys())]
             )  # Label the plot with the current level of data processing.
-            txt = "\n".join(txt)
+            txt = "\n".join(txt).replace("_", ".")
+            
             fig.text(
                 (xmin + xmax) / 2.0, title_y, txt, weight=550, size="large", ha="center"
             )
@@ -1010,6 +1011,10 @@ class musicRTI(object):
         cbar_info["ticks"] = cbar_ticks
         cbar_info["mappable"] = pcoll
         self.cbar_info = cbar_info
+        axis.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+        hours = matplotlib.dates.HourLocator(byhour=range(0, 24, 1))
+        axis.xaxis.set_major_locator(hours)
+        return
 
 
 def plotRelativeRanges(dataObj, dataSet="active", time=None, fig=None):
@@ -1494,7 +1499,7 @@ def spectrumMultiPlot(
             + timeLim[0].strftime("%Y %b %d %H:%M - ")
             + timeLim[1].strftime("%Y %b %d %H:%M")
         )
-        title = "\n".join(title)
+        title = "\n".join(title).replace("_", ".")
 
     multiPlot(
         xData1,
@@ -1895,7 +1900,7 @@ def plotFullSpectrum(
                     cbar_gstext_offset,
                     "Ground\nscat\nonly",
                     ha="center",
-                    fontsize=cbar_gstext_fontsize,
+                    fontsize="xx-small",
                 )
 
     # Plot average values.

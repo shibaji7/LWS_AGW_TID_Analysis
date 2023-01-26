@@ -15,8 +15,6 @@ __status__ = "Research"
 
 import sys
 
-sys.path.extend(["agw/", "agw/tid/"])
-
 import datetime as dt
 import json
 import multiprocessing as mp
@@ -30,7 +28,6 @@ import numpy as np
 import pandas as pd
 import pydarn
 import utils
-from analysis import Periodograms
 from boxcar import BxFilter
 from fetch_fit_data import FetchData
 from loguru import logger

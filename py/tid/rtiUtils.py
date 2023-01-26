@@ -16,6 +16,7 @@ __status__ = "Research"
 import matplotlib
 import matplotlib.pyplot as plt
 
+plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import matplotlib.dates as mdates

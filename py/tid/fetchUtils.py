@@ -214,12 +214,14 @@ class FetchData(object):
             "channel",
             "mplgs",
             "nave",
-            "noisesearch",
+            "noise.search",
             "mplgexs",
             "xcf",
-            "noisesky",
-            "noisemean",
+            "noise.mean",
             "ifmode",
+            "bmazm",
+            "rxrise",
+            "mpinc",
         ]
         self.v_params = ["v", "w_l", "gflg", "p_l", "slist"]
         self.hdw_data = pydarn.read_hdw_file(self.rad)
@@ -327,7 +329,7 @@ class FetchData(object):
             l = len(getattr(b, "slist"))
             for p in self.v_params:
                 _o[p].extend(getattr(b, p))
-            for p in s_params:
+            for p in self.s_params:
                 _o[p].extend([getattr(b, p)] * l)
         L = len(_o["slist"])
         for p in self.s_params + self.v_params:
@@ -446,6 +448,15 @@ class FetchData(object):
         else:
             return (None, None, False)
 
+    def scanGenerator(self, df=None, scans=None):
+        """
+        Generate yield generators for scans
+        """
+        if df is not None:
+            scans = self.pandas_to_scans(df)
+        for sc in scans:
+            yield sc
+    
     @staticmethod
     def fetch(rads, date_range, ftype="fitacf", files=None, verbose=True):
         """
