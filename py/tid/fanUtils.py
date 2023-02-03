@@ -31,7 +31,9 @@ class Fan(object):
     This class holds plots for all radars FoVs
     """
 
-    def __init__(self, rads, date, fig_title=None, nrows=1, ncols=1, coord="geo", cs=True):
+    def __init__(
+        self, rads, date, fig_title=None, nrows=1, ncols=1, coord="geo", cs=True
+    ):
         if cs:
             plt.style.use(["science", "ieee"])
         self.cs = cs
@@ -115,7 +117,7 @@ class Fan(object):
         return
 
     def save(self, filepath):
-        self.fig.savefig(filepath, bbox_inches="tight", facecolor=(1,1,1,1))
+        self.fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
         return
 
     def close(self):

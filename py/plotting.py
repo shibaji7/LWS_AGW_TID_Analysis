@@ -216,7 +216,6 @@ class musicFan(object):
         title=None,
         **kwArgs
     ):
-
         if axis is None:
             from matplotlib import pyplot as plt
 
@@ -536,7 +535,6 @@ class musicRTI(object):
         y_labelpad=None,
         **kwArgs
     ):
-
         import utils
         from rti import plot_freq, plot_nave, plot_searchnoise, plot_skynoise
         from scipy import stats

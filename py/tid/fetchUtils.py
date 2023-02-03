@@ -21,6 +21,7 @@ import pandas as pd
 import pydarn
 import tidUtils
 from loguru import logger
+from rtiUtils import RTI
 from tqdm import tqdm
 
 
@@ -448,6 +449,29 @@ class FetchData(object):
         else:
             return (None, None, False)
 
+    def plot_RTI(self, beams=[], nGates=100, date_range=None, angle_th=100.0, vhm=None):
+        """
+        Plot RTI plots by beams
+        """
+        date_range = date_range if date_range else self.date_range
+        beams = beams if beams and len(beams) > 0 else self.frame.bmnum.unique()
+        for b in beams:
+            file = (
+                tidUtils.get_folder(self.date_range[0]) + f"/{self.rad}-{'%02d'%b}.png"
+            )
+            rt = RTI(
+                100,
+                date_range,
+                f"{self.date_range[0].strftime('%Y-%m-%d')}/{self.rad}/{b}",
+                num_subplots=1,
+                angle_th=angle_th,
+                vhm=vhm,
+            )
+            rt.addParamPlot(self.frame, b, "", cbar=True, fov=(self.lats, self.lons))
+            rt.save(file)
+            rt.close()
+        return
+
     def scanGenerator(self, df=None, scans=None):
         """
         Generate yield generators for scans
@@ -456,7 +480,7 @@ class FetchData(object):
             scans = self.pandas_to_scans(df)
         for sc in scans:
             yield sc
-    
+
     @staticmethod
     def fetch(rads, date_range, ftype="fitacf", files=None, verbose=True):
         """

@@ -55,11 +55,11 @@ import logging
 import matplotlib
 import numpy as np
 import scipy as sp
+from davitUtils import getParamDict
 from matplotlib import dates as md
 from matplotlib.collections import PolyCollection
 from matplotlib.patches import Polygon
 from music import getDataSet
-from davitUtils import getParamDict
 
 # Global Figure Size
 figsize = (20, 10)
@@ -216,7 +216,6 @@ class musicFan(object):
         title=None,
         **kwArgs
     ):
-
         if axis is None:
             from matplotlib import pyplot as plt
 
@@ -536,7 +535,6 @@ class musicRTI(object):
         y_labelpad=None,
         **kwArgs
     ):
-
         import davitUtils as utils
         from rti import plot_freq, plot_nave, plot_searchnoise, plot_skynoise
         from scipy import stats
@@ -544,7 +542,7 @@ class musicRTI(object):
         if axis is None:
             from matplotlib import pyplot as plt
 
-            fig = plt.figure(figsize=(8,4), dpi=180)
+            fig = plt.figure(figsize=(8, 4), dpi=180)
 
         # Make some variables easier to get to...
         currentData = getDataSet(dataObject, dataSet)
@@ -900,8 +898,9 @@ class musicRTI(object):
                         0.5,
                         -0.01,
                         "Ground\nscat\nonly",
-                        ha="center", va="top",
-                        fontsize="xx-small"
+                        ha="center",
+                        va="top",
+                        fontsize="xx-small",
                     )
 
         txt = "Model: " + metadata["model"]
@@ -995,7 +994,7 @@ class musicRTI(object):
                 currentData.history[max(currentData.history.keys())]
             )  # Label the plot with the current level of data processing.
             txt = "\n".join(txt).replace("_", ".")
-            
+
             fig.text(
                 (xmin + xmax) / 2.0, title_y, txt, weight=550, size="large", ha="center"
             )

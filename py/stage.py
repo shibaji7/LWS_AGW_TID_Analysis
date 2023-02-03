@@ -13,12 +13,11 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-import sys
-
 import datetime as dt
 import json
 import multiprocessing as mp
 import os
+import sys
 import time
 import traceback
 from functools import partial
@@ -129,7 +128,6 @@ class StagingUnit(object):
         )
         self.fd = FetchData(self.rad, dates, ftype=self.conf.ftype)
         if not os.path.exists(self.fetch_file("raw")):
-
             _, scans, self.data_exists = self.fd.fetch_data(by="scan")
             if self.data_exists:
                 # self._create_sequence_(scans)

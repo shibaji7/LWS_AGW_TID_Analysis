@@ -730,7 +730,7 @@ class musicArray(object):
                 gflag = getattr(myBeam, "gflg")
 
                 if len(slist) > 1:
-                    for (gate, data, flag) in zip(slist, fitDataList, gflag):
+                    for gate, data, flag in zip(slist, fitDataList, gflag):
                         # Get information from each gate in scan.  Skip record if the chosen ground scatter option is not met.
                         if (gscat == 1) and (flag == 0):
                             continue
@@ -975,12 +975,8 @@ def defineLimits(
                 gateLimits = [np.min(inx[1][:]), np.max(inx[1][:])]
 
             if gateLimits != None:
-                rangeMin = int(
-                    np.min(currentData.fov.slantRCenter[:, gateLimits[0]])
-                )
-                rangeMax = int(
-                    np.max(currentData.fov.slantRCenter[:, gateLimits[1]])
-                )
+                rangeMin = int(np.min(currentData.fov.slantRCenter[:, gateLimits[0]]))
+                rangeMax = int(np.max(currentData.fov.slantRCenter[:, gateLimits[1]]))
                 rangeLimits = [rangeMin, rangeMax]
 
             currentData.metadata["gateLimits"] = gateLimits
@@ -994,6 +990,7 @@ def defineLimits(
 
     except:
         import traceback
+
         traceback.print_exc()
         logging.warning(
             "An error occured while defining limits.  No limits set.  Check your input values."
@@ -2413,6 +2410,7 @@ def detectSignals(dataObj, dataSet="active", threshold=0.35, neighborhood=(10, 1
     # Feature detection...
     # Now lets do a little image processing...
     from scipy import ndimage
+
     global peak_local_max, watershed
     from skimage.feature import peak_local_max
     from skimage.segmentation import watershed

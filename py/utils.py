@@ -223,7 +223,6 @@ def epem(date):
 
 
 def JulianDayFromDate(date, calendar="standard"):
-
     """
     creates a Julian Day from a 'datetime-like' object.  Returns the fractional
     Julian Day (resolution 1 second).

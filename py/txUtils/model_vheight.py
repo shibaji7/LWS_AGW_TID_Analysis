@@ -14,7 +14,7 @@ import numpy
 
 
 def standard_vhm(
-    slant_range, adjusted_sr=True, max_vh=400.0, hop=0.5, alt=None, elv=None
+    slant_range, adjusted_sr=False, max_vh=400.0, hop=0.5, alt=None, elv=None
 ):
     """Standard virtual height model
     Parameters
