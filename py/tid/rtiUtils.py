@@ -113,6 +113,7 @@ class RTI(object):
             snap=True,
             vmax=p_max,
             vmin=p_min,
+            shading="auto",
         )
         if cbar:
             self._add_colorbar(self.fig, ax, im, label=label)

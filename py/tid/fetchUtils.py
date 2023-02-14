@@ -480,9 +480,56 @@ class FetchData(object):
             scans = self.pandas_to_scans(df)
         for sc in scans:
             yield sc
+            
+    def to_netcdf(self, fname, params=["p_l"]):
+        """
+        Convert to NetCDF files
+        """
+        def extract_3D_data(px="p_l"):
+            dat = np.zeros(
+                (len(self.scans), self.lats.shape[1], self.lats.shape[0])
+            )*np.nan
+            for i, s in enumerate(self.scans):
+                for j, b in enumerate(s.beams):
+                    dat[i, j, getattr(b, "slist")] = getattr(b, px)
+            dat = np.ma.masked_invalid(dat)
+            return dat
+        
+        from netCDF4 import Dataset
+        ds = Dataset(fname, "w")
+        # Create all dataset dinemtions
+        beams = ds.createDimension("beams", self.lats.shape[1])
+        gates = ds.createDimension("gates", self.lats.shape[0])
+        scans = ds.createDimension("scans", len(self.scans))
+        # Create all dataset
+        beams = ds.createVariable("beams", "i2", ("beams",))
+        gates = ds.createVariable("gates", "i2", ("gates",))
+        scans = ds.createVariable("scans", "i2", ("scans",))
+        beams[:] = np.arange(self.lats.shape[1])
+        gates[:] = np.arange(self.lats.shape[0])
+        scans[:] = np.arange(len(self.scans))
+        lat_grid = ds.createVariable("gdlat", "f4", ("beams", "gates"))
+        lon_grid = ds.createVariable("glong", "f4", ("beams", "gates"))
+        lat_grid[:], lon_grid[:] = self.lats.T, self.lons.T
+        lat_grid.units, lon_grid.units = "deg", "deg"
+        stimes = ds.createVariable("start_time","i4",("scans",))
+        etimes = ds.createVariable("end_time","i4",("scans",))
+        stimes[:], etimes[:] = (
+            [(s.stime-self.date_range[0]).total_seconds() for s in self.scans], 
+            [(s.etime-self.date_range[0]).total_seconds() for s in self.scans]
+        )
+        stimes.units, etimes.units = (
+            f"Sec since {self.date_range[0].strftime('%Y-%m-%dT%H:%M:%S')}",
+            f"Sec since {self.date_range[0].strftime('%Y-%m-%dT%H:%M:%S')}"
+        )
+        for param in params:
+            p = ds.createVariable(param, "f4", ("scans", "beams", "gates"))
+            p[:] = extract_3D_data(param)
+        ds.close()
+        return
 
     @staticmethod
-    def fetch(rads, date_range, ftype="fitacf", files=None, verbose=True):
+    def fetch(rads, date_range, ftype="fitacf", files=None, verbose=True, to_netcdf=False):
         """
         Static method to fetch datasets
         """
@@ -493,11 +540,18 @@ class FetchData(object):
             fd = FetchData(rad, date_range, ftype, files, verbose)
             if os.path.exists(file):
                 fd.frame = pd.read_csv(file, parse_dates=["time"])
+                logger.info(f"Data length {rad}: {len(fd.frame)}")
+                fd.scans = fd.pandas_to_scans(fd.frame)
+                logger.info(f"# Scans {rad}: {len(fd.scans)}")
+                if to_netcdf:
+                    fd.to_netcdf(file.replace(".csv", ".nc"))
             else:
                 _, scans, data_exists = fd.fetch_data(by="scan")
                 if data_exists:
                     scan_time = (scans[0].etime - scans[0].stime).total_seconds()
                     fd.frame = fd.scans_to_pandas(scans)
+                    fd.scans = scans
+                    logger.info(f"Data length {rad}: {len(fd.frame)}")
                     if len(fd.frame) > 0:
                         fd.frame["srange"] = fd.frame.frang + (
                             fd.frame.slist * fd.frame.rsep
@@ -508,5 +562,9 @@ class FetchData(object):
                         fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
                         fd.frame["scan_time"] = scan_time
                         fd.frame.to_csv(file, index=False, header=True)
+                        if to_netcdf:
+                            fd.to_netcdf(file.replace(".csv", ".nc"))
+                else:
+                    logger.info(f"Data does not exists: {rad}!")
             fds[rad] = fd
         return fds
