@@ -339,12 +339,18 @@ class SDCarto(GeoAxes):
         if annotate:
             rad = hdw.abbrev
             if rad in nearby_rad[0]:
-                xOff, ha = 1.5 if not xOffset else xOffset, 0
+                xOff, yOff = (
+                    1.5 if not xOffset else xOffset, 
+                    0 if not yOffset else yOffset
+                )
             elif rad in nearby_rad[1]:
-                xOff, ha = -1.5 if not xOffset else xOffset, 1
+                xOff, yOff = (
+                    -1.5 if not xOffset else -xOffset, 
+                    1 if not yOffset else yOffset
+                )
             else:
-                xOff, ha = 0.0, 0.5
-            lat, lon = hdw.geographic.lat + yOffset, hdw.geographic.lon + xOffset
+                xOff, yOff = xOffset, yOffset
+            lat, lon = hdw.geographic.lat + yOff, hdw.geographic.lon + xOff
             if "aacgm" in self.coords:
                 lat, lon = self.to_aagcm(lat, lon)
             x, y = self.projection.transform_point(lon, lat, src_crs=tx)
@@ -438,7 +444,7 @@ class SDCarto(GeoAxes):
         df,
         tx,
         fm=cartopy.crs.Geodetic(),
-        p_max=36,
+        p_max=39,
         p_min=0,
         p_name="p_l",
         label="Power [dB]",
@@ -483,9 +489,9 @@ class SDCarto(GeoAxes):
                 cmap=cmap,
                 vmax=p_max,
                 vmin=p_min,
-                s=2,
-                marker="D",
-                alpha=0.6,
+                s=0.3,
+                marker="o",
+                alpha=0.4,
                 **kwargs
             )
             if cbar:
@@ -500,6 +506,60 @@ class SDCarto(GeoAxes):
         cpos = [1.04, 0.1, 0.025, 0.8]
         cax = self.inset_axes(cpos, transform=self.transAxes)
         cb = fig.colorbar(im, ax=self, cax=cax)
+        cb.set_label(label)
+        return
+    
+    def overlay_tec(
+        self,
+        lats,
+        lons,
+        tec,
+        tx,
+        fm=cartopy.crs.Geodetic(),
+        p_max=0.15,
+        p_min=-0.15,
+        label="dTEC [TECu]",
+        cmap=plt.cm.Greys,
+        hcbar=True,
+        **kwargs,
+    ):
+        """Overlay TEC Data"""
+        XYZ = tx.transform_points(fm, lons, lats)
+        im = self.scatter(
+            XYZ[:, 0],
+            XYZ[:, 1],
+            c=tec,
+            transform=tx,
+            cmap=cmap,
+            vmax=p_max,
+            vmin=p_min,
+            s=0.1,
+            marker="o",
+            alpha=1.0,
+            **kwargs
+        )
+        if hcbar:
+            self._add_hcolorbar(im, label)
+        return
+    
+    def _add_hcolorbar(self, im, label=""):
+        """Add a colorbar to the right of an axis."""
+        fig = self.get_figure()
+        pos = self.get_position()
+        cpos = [
+            pos.x0 + 0.3 * pos.width,
+            pos.y0 - 0.6 * pos.height,
+            pos.width * 0.5,
+            0.02,
+        ]  # this list defines (left, bottom, width, height)
+        cax = self.inset_axes(cpos, transform=self.transAxes)
+        cb = fig.colorbar(
+            im, 
+            ax=self, 
+            cax=cax,
+            spacing="uniform",
+            orientation="horizontal",
+        )
         cb.set_label(label)
         return
 

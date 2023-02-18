@@ -13,7 +13,7 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-import matplotlib
+import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -24,6 +24,9 @@ import cartopy
 import matplotlib.ticker as mticker
 from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
 from cartoUtils import SDCarto
+import tidUtils
+import glob
+import cv2
 
 
 class Fan(object):
@@ -32,7 +35,8 @@ class Fan(object):
     """
 
     def __init__(
-        self, rads, date, fig_title=None, nrows=1, ncols=1, coord="geo", cs=True
+        self, rads, date, fig_title=None, nrows=1, ncols=1, coord="geo", cs=True,
+        tec=None, tec_times=None
     ):
         if cs:
             plt.style.use(["science", "ieee"])
@@ -53,6 +57,7 @@ class Fan(object):
             fontweight="bold",
             fontsize=8,
         )
+        self.tec, self.tec_times = tec, tec_times
         return
 
     def add_axes(self):
@@ -102,18 +107,29 @@ class Fan(object):
         stime = self.date
         date_str = "{:{dd} {tt}} UT".format(stime, dd=dfmt, tt=tfmt)
         return date_str
+    
+    def generate_fov(self, rad, frame, beams=[], ax=None, laytec=False):
+        """
+        Generate plot with dataset overlaid
+        """
+        ax = ax if ax else self.add_axes()
+        if laytec:
+            ipplat, ipplon, dtec = tidUtils.fetch_tec_by_datetime(self.date, self.tec, self.tec_times)
+            ax.overlay_tec(ipplat, ipplon, dtec, self.proj)
+        ax.overlay_radar(rad)
+        ax.overlay_fov(rad)
+        ax.overlay_data(rad, frame, self.proj)
+        if beams and len(beams) > 0:
+            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="--") for b in beams]
+        return        
 
-    def generate_fov(self, fds, beams=[]):
+    def generate_fovs(self, fds, beams=[], laytec=False):
         """
         Generate plot with dataset overlaid
         """
         ax = self.add_axes()
         for rad in self.rads:
-            ax.overlay_radar(rad)
-            ax.overlay_fov(rad)
-            ax.overlay_data(rad, fds[rad].frame, self.proj)
-            if beams and len(beams) > 0:
-                [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="--") for b in beams]
+            self.generate_fov(rad, fds[rad].frame, beams, ax, laytec)
         return
 
     def save(self, filepath):
@@ -124,3 +140,51 @@ class Fan(object):
         self.fig.clf()
         plt.close()
         return
+
+def create_movie(folder, fps=60):
+    """
+    Create movies from pngs
+    """
+    files = glob.glob(f"{folder}/Fan,*.png")
+    files.sort()
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    img = cv2.imread(files[0])
+    height, width, layers = img.shape
+    size = (width,height)
+    out = cv2.VideoWriter(f"{folder}/tec-overlay.mp4", fourcc, fps, size)
+    for idx in range(len(files)):
+        img = cv2.imread(files[idx])
+        out.write(img)
+    out.release()
+    return
+    
+def create_ovearlay_movies(fds, date, rads, ovearlay_tec="data/2022-12-21/WS355.mat", fps=30):
+    """
+    Create Fov-Fan plots and ovearlay movies
+    """
+    folder = tidUtils.get_folder(date)
+    if ovearlay_tec:
+        tec, tec_times = tidUtils.read_tec_mat_files(ovearlay_tec)
+    time_range = [
+        min([fds[rad].scans[0].stime for rad in rads]),
+        max([fds[rad].scans[-1].etime for rad in rads])
+    ]
+    times = [
+        time_range[0] + dt.timedelta(seconds=i*60) 
+        for i in range(int((time_range[1]-time_range[0]).total_seconds()/60))
+    ]
+    for d in times:
+        ipplat, ipplon, dtec = tidUtils.fetch_tec_by_datetime(
+            d,
+            tec,
+            tec_times,
+        )
+        file = (
+            tidUtils.get_folder(d) + f"/Fan,{d.strftime('%H-%M')}.png"
+        )
+        fov = Fan(rads, d, tec=tec, tec_times=tec_times)
+        fov.generate_fovs(fds, laytec=ovearlay_tec is not None)
+        fov.save(file)
+        fov.close()
+    create_movie(tidUtils.get_folder(date), fps)
+    return

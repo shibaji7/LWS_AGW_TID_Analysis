@@ -18,8 +18,29 @@ sys.path.extend(["py/txUtils/", "py/tid/", "py/davitPy/"])
 from fetchUtils import FetchData
 import tidUtils
 
-rads = ["fhe", "fhw", "bks"]
+rads = [
+    "bks",
+    "fhe",
+    "fhw",
+]
 fdMap = {}
-dates = [dt.datetime(2022, 12, 19), dt.datetime(2022, 12, 20), dt.datetime(2022, 12, 21), dt.datetime(2022, 12, 22), dt.datetime(2022, 12, 23), dt.datetime(2022, 12, 24)]
+dates = [
+#     dt.datetime(2022, 12, 18), 
+#     dt.datetime(2022, 12, 19),
+#     dt.datetime(2022, 12, 20),
+    dt.datetime(2022, 12, 21), 
+#     dt.datetime(2022, 12, 22),
+#     dt.datetime(2022, 12, 23),
+#     dt.datetime(2022, 12, 24)
+]
 for d in dates:
-    fdMap[d] = FetchData.fetch(rads, [d, d + dt.timedelta(1)], to_netcdf=True)
+    fdMap[d] = {}
+    for rad in rads:
+        fd = FetchData.fetch(
+            rad,
+            [d, d + dt.timedelta(1)],
+            med_filter={"cpu": 4, "thresh":.7}
+        )
+        fd.plot_RTI(angle_th=110.)
+        fdMap[d][r] = fd
+            

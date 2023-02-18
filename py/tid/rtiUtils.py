@@ -92,7 +92,6 @@ class RTI(object):
                 ),
                 "Virtual Height [km]",
             )
-
         X, Y, Z = tidUtils.get_gridded_parameters(
             df, xparam="time", yparam=yscale, zparam=zparam, rounding=False
         )
@@ -130,7 +129,7 @@ class RTI(object):
                 df.frang.iloc[0],
                 yscale,
             )
-        return
+        return ax
 
     def overlay_sza(self, fov, ax, times, beam, gate_range, rsep, frang, yscale):
         """
@@ -170,6 +169,12 @@ class RTI(object):
             shading="nearest",
             alpha=0.3,
         )
+        return
+    
+    def ovearlay_TEC(self, ax, tec_fname):
+        """
+        Add TEC in the observations panel
+        """
         return
 
     def _add_axis(self):

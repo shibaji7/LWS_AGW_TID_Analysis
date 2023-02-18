@@ -21,164 +21,16 @@ import pandas as pd
 import pydarn
 import tidUtils
 from loguru import logger
+from dataUtils import Beam, Scan, Gate
 from rtiUtils import RTI
+from fanUtils import Fan
+from filterUtils import Boxcar
 from tqdm import tqdm
-
-
-class Gate(object):
-    """Class object to hold each range cell value"""
-
-    def __init__(self, bm, i, params=["v", "w_l", "gflg", "p_l", "v_e"], gflg_type=-1):
-        """
-        initialize the parameters which will be stored
-        bm: beam object
-        i: index to store
-        params: parameters to store
-        """
-        for p in params:
-            if len(getattr(bm, p)) > i:
-                setattr(self, p, getattr(bm, p)[i])
-            else:
-                setattr(self, p, np.nan)
-        if gflg_type >= 0 and len(getattr(bm, "gsflg")[gflg_type]) > 0:
-            setattr(self, "gflg", getattr(bm, "gsflg")[gflg_type][i])
-        return
-
-
-class Beam(object):
-    """Class to hold one beam object"""
-
-    def __init__(self):
-        """initialize the instance"""
-        return
-
-    def set(
-        self,
-        time,
-        d,
-        s_params=["bmnum", "noise.sky", "tfreq", "scan", "nrang"],
-        v_params=["v", "w_l", "gflg", "p_l", "slist", "v_e"],
-        k=None,
-    ):
-        """
-        Set all parameters
-        time: datetime of beam
-        d: data dict for other parameters
-        s_param: other scalar params
-        v_params: other list params
-        """
-        for p in s_params:
-            if p in d.keys():
-                if p == "scan" and d[p] != 0:
-                    setattr(self, p, 1)
-                else:
-                    setattr(self, p, d[p]) if k is None else setattr(self, p, d[p][k])
-            else:
-                setattr(self, p, None)
-        for p in v_params:
-            if p in d.keys():
-                setattr(self, p, d[p])
-            else:
-                setattr(self, p, [])
-        self.time = time
-        return
-
-    def set_nc(self, time, d, i, s_params, v_params):
-        """
-        Set all parameters
-        time: datetime of beam
-        d: data dict for other parameters
-        s_param: other scalar params
-        v_params: other list params
-        """
-        for p in s_params:
-            if p in d.keys():
-                setattr(self, p, d[p][i])
-            else:
-                setattr(self, p, None)
-        for p in v_params:
-            if p in d.keys():
-                setattr(self, p, np.array(d[p])[i, :])
-                if "slist" not in v_params and p == "v":
-                    setattr(self, "slist", np.argwhere(~np.isnan(getattr(self, "v"))))
-                setattr(self, p, getattr(self, p)[~np.isnan(getattr(self, p))])
-            else:
-                setattr(self, p, [])
-        self.time = time
-        return
-
-    def copy(self, bm):
-        """Copy all parameters"""
-        for p in bm.__dict__.keys():
-            setattr(self, p, getattr(bm, p))
-        return
-
-    def gs_estimation(self):
-        """
-        Estimate GS flag using different criterion
-        Cases -
-                0. Sundeen et al. |v| + w/3 < 30 m/s
-                1. Blanchard et al. |v| + 0.4w < 60 m/s
-                2. Blanchard et al. [2009] |v| - 0.139w + 0.00113w^2 < 33.1 m/s
-        """
-        self.gsflg = {}
-        if len(self.v) > 0 and len(self.w_l) > 0:
-            self.gsflg[0] = ((np.abs(self.v) + self.w_l / 3.0) < 30.0).astype(int)
-        if len(self.v) > 0 and len(self.w_l) > 0:
-            self.gsflg[1] = ((np.abs(self.v) + self.w_l * 0.4) < 60.0).astype(int)
-        if len(self.v) > 0 and len(self.w_l) > 0:
-            self.gsflg[2] = (
-                (np.abs(self.v) - 0.139 * self.w_l + 0.00113 * self.w_l**2) < 33.1
-            ).astype(int)
-        # Modified defination by S. Chakraborty: {W-[50-(0.7*(V+5)**2)]} < 0
-        self.gsflg[3] = (
-            (np.array(self.w_l) - (50 - (0.7 * (np.array(self.v) + 5) ** 2)) < 0)
-        ).astype(int)
-        return
-
-
-class Scan(object):
-    """Class to hold one scan (multiple beams)"""
-
-    def __init__(self, stime=None, etime=None, s_mode="normal"):
-        """
-        initialize the parameters which will be stored
-        stime: start time of scan
-        etime: end time of scan
-        s_mode: scan type
-        """
-        self.stime = stime
-        self.etime = etime
-        self.s_mode = s_mode
-        self.beams = []
-        return
-
-    def update_time(self):
-        """
-        Update stime and etime of the scan.
-        up: Update average parameters if True
-        """
-        self.stime = min([b.time for b in self.beams])
-        self.etime = max([b.time for b in self.beams])
-        self._populate_avg_params()
-        return
-
-    def _populate_avg_params(self):
-        """
-        Polulate average parameetrs
-        """
-        f, nsky = [], []
-        for b in self.beams:
-            f.append(getattr(b, "tfreq"))
-            nsky.append(getattr(b, "noise.sky"))
-        self.f, self.nsky = np.mean(f), np.mean(nsky)
-        return
-
 
 class FetchData(object):
     """Class to fetch data from fitacf files for one radar for atleast a day"""
 
-    def __init__(self, rad, date_range, ftype="fitacf", files=None, verbose=True):
+    def __init__(self, rad, date_range, ftype="fitacf", files=None, verbose=True, nrange_scatter=None):
         """
         initialize the vars
         rad = radar code
@@ -224,6 +76,7 @@ class FetchData(object):
             "rxrise",
             "mpinc",
         ]
+        self.nrange_scatter = nrange_scatter
         self.v_params = ["v", "w_l", "gflg", "p_l", "slist"]
         self.hdw_data = pydarn.read_hdw_file(self.rad)
         self.lats, self.lons = pydarn.Coords.GEOGRAPHIC(self.hdw_data.stid)
@@ -265,14 +118,12 @@ class FetchData(object):
                     ent = -1
         return
 
-    def _parse_data(self, data, s_params, v_params, by, scan_prop):
+    def _parse_data(self, data, s_params, v_params, by):
         """
         Parse data by data type
         data: list of data dict
         params: parameter list to fetch
         by: sort data by beam or scan
-        scan_prop: provide scan properties if by='scan'
-                        {"s_mode": type of scan, "s_time": duration in min}
         """
         _b, _s = [], []
         if self.verbose:
@@ -288,7 +139,7 @@ class FetchData(object):
                 d["time.us"],
             )
             if time >= self.date_range[0] and time <= self.date_range[1]:
-                bm = Beam()
+                bm = Beam(self.nrange_scatter)
                 bm.set(time, d, s_params, v_params)
                 _b.append(bm)
         if self.verbose:
@@ -296,16 +147,17 @@ class FetchData(object):
         if by == "scan":
             if self.verbose:
                 logger.info("Started converting to scan data.")
-            scan, sc = 0, Scan(None, None, scan_prop["s_mode"])
+            scan, sc = 0, Scan(None, None)
             sc.beams.append(_b[0])
             for _ix, d in enumerate(_b[1:]):
                 if d.scan == 1 and d.time != _b[_ix].time:
                     sc.update_time()
                     _s.append(sc)
-                    sc = Scan(None, None, scan_prop["s_mode"])
+                    sc = Scan(None, None)
                     sc.beams.append(d)
                 else:
                     sc.beams.append(d)
+            sc.update_time()
             _s.append(sc)
             if self.verbose:
                 logger.info("Converted to scan data.")
@@ -343,16 +195,21 @@ class FetchData(object):
         self,
         scans,
         start_scnum=0,
+        flt=False,
     ):
         """
         Convert the scan data into dataframe
         """
         if "time" not in self.s_params:
             self.s_params.append("time")
+        if "srange" not in self.v_params:
+            self.v_params.append("srange")
+        if "intt" not in self.s_params:
+            self.s_params.append("intt")
         _o = dict(
             zip(
-                self.s_params + self.v_params + ["scnum"],
-                ([] for _ in self.s_params + self.v_params + ["scnum"]),
+                self.s_params + self.v_params + ["scnum", "scan_time"],
+                ([] for _ in self.s_params + self.v_params + ["scnum", "scan_time"]),
             )
         )
         for idn, s in enumerate(scans):
@@ -363,6 +220,7 @@ class FetchData(object):
                 for p in self.s_params:
                     _o[p].extend([getattr(b, p)] * l)
                 _o["scnum"].extend([idn + start_scnum] * l)
+                _o["scan_time"].extend([getattr(b, "scan_time")] * l)
             L = len(_o["slist"])
             for p in self.s_params + self.v_params:
                 if len(_o[p]) < L:
@@ -386,18 +244,18 @@ class FetchData(object):
         self,
         df,
     ):
-        if "time" not in self.s_params:
-            self.s_params.append("time")
         """
         Convert the dataframe to beam
         """
+        if "time" not in self.s_params:
+            self.s_params.append("time")
         beams = []
         for bm in np.unique(df.bmnum):
             o = df[df.bmnum == bm]
             d = o.to_dict(orient="list")
             for p in self.s_params:
                 d[p] = d[p][0]
-            b = Beam()
+            b = Beam(self.nrange_scatter)
             b.set(o.time.tolist()[0], d, self.s_params, self.v_params)
             beams.append(b)
         return beams
@@ -405,7 +263,6 @@ class FetchData(object):
     def pandas_to_scans(
         self,
         df,
-        smode="normal",
     ):
         """
         Convert the dataframe to scans
@@ -416,7 +273,7 @@ class FetchData(object):
         for sn in np.unique(df.scnum):
             o = df[df.scnum == sn]
             beams = self.pandas_to_beams(o)
-            sc = Scan(None, None, smode)
+            sc = Scan(None, None)
             sc.beams.extend(beams)
             sc.update_time()
             scans.append(sc)
@@ -425,14 +282,11 @@ class FetchData(object):
     def fetch_data(
         self,
         by="beam",
-        scan_prop={"s_time": 1, "s_mode": "normal"},
     ):
         """
         Fetch data from file list and return the dataset
         params: parameter list to fetch
         by: sort data by beam or scan
-        scan_prop: provide scan properties if by='scan'
-                   {"s_mode": type of scan, "s_time": duration in min}
         """
         data = []
         for f in self.files:
@@ -444,7 +298,7 @@ class FetchData(object):
             records = reader.read_fitacf()
             data += records
         if (by is not None) and (len(data) > 0):
-            data = self._parse_data(data, self.s_params, self.v_params, by, scan_prop)
+            data = self._parse_data(data, self.s_params, self.v_params, by)
             return data
         else:
             return (None, None, False)
@@ -455,6 +309,15 @@ class FetchData(object):
         """
         date_range = date_range if date_range else self.date_range
         beams = beams if beams and len(beams) > 0 else self.frame.bmnum.unique()
+        
+        # Reload dataset
+        del self.frame
+        del self.medframe
+        file = os.path.join(tidUtils.get_folder(self.date_range[0]), f"{self.rad}.csv")
+        mfile = os.path.join(tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv")
+        self.frame = pd.read_csv(file, parse_dates=["time"])
+        self.medframe = pd.read_csv(mfile, parse_dates=["time"])
+        
         for b in beams:
             file = (
                 tidUtils.get_folder(self.date_range[0]) + f"/{self.rad}-{'%02d'%b}.png"
@@ -463,13 +326,47 @@ class FetchData(object):
                 100,
                 date_range,
                 f"{self.date_range[0].strftime('%Y-%m-%d')}/{self.rad}/{b}",
-                num_subplots=1,
+                num_subplots=2,
                 angle_th=angle_th,
                 vhm=vhm,
             )
-            rt.addParamPlot(self.frame, b, "", cbar=True, fov=(self.lats, self.lons))
+            rt.addParamPlot(self.frame, b, "", xlabel="", cbar=False, fov=(self.lats, self.lons))
+            rt.addParamPlot(self.medframe, b, "", cbar=True, fov=(self.lats, self.lons))
             rt.save(file)
             rt.close()
+        return
+    
+    def plot_FoV(self, scan_num=None, date=None, tec_mat_file=None):
+        """
+        Plot FoV plots by scan_num/date
+        """
+        if scan_num:
+            scan = self.scans[scan_num]
+            file = (
+                tidUtils.get_folder(scan.stime) + f"/{self.rad}-Fan-{scan.stime.strftime('%H.%M')}.png"
+            )
+            fov = Fan([self.rad], scan.stime)
+            fov.generate_fov(self.rad, self.frame, tec_mat_file=tec_mat_file)
+            fov.save(file)
+            fov.close()
+        elif date:
+            file = (
+                tidUtils.get_folder(scan.stime) + f"/{self.rad}-Fan-{date.strftime('%H.%M')}.png"
+            )
+            fov = Fan([self.rad], date)
+            fov.generate_fov(self.rad, self.frame, tec_mat_file=tec_mat_file)
+            fov.save(file)
+            fov.close()
+        else:
+            tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)
+            for scan in self.scans:
+                file = (
+                    tidUtils.get_folder(scan.stime) + f"/{self.rad},{scan.stime.strftime('%H-%M')}.png"
+                )
+                fov = Fan([self.rad], scan.stime, tec=tec, tec_times=tec_times)
+                fov.generate_fov(self.rad, self.frame, laytec=True)
+                fov.save(file)
+                fov.close()
         return
 
     def scanGenerator(self, df=None, scans=None):
@@ -481,7 +378,7 @@ class FetchData(object):
         for sc in scans:
             yield sc
             
-    def to_netcdf(self, fname, params=["p_l"]):
+    def to_netcdf(self, fname, params=["p_l", "gflg"], near_range_scatter=7):
         """
         Convert to NetCDF files
         """
@@ -527,44 +424,66 @@ class FetchData(object):
             p[:] = extract_3D_data(param)
         ds.close()
         return
+    
+    def med_filter(self, param, fname):
+        """
+        Run median filtering
+        """
+        bx = Boxcar(
+            thresh=param["thresh"],
+            w=None,
+            nrange_scatter=self.nrange_scatter,
+        )
+        scan_stacks = [self.scans[i - 1 : i + 2] for i in range(1, len(self.scans) - 1)]
+        self.filtered_scans = [
+            bx.do_filter(scan_stack)
+            for scan_stack in scan_stacks
+        ]
+        self.medframe = self.scans_to_pandas(self.filtered_scans)
+        self.medframe = self.medframe.progress_apply(self.__get_location__, axis=1)
+        logger.info(f"m-Data length {self.rad}: {len(self.medframe)}")
+        self.medframe.to_csv(fname, index=False, header=True, float_format="%g")
+        return
 
     @staticmethod
-    def fetch(rads, date_range, ftype="fitacf", files=None, verbose=True, to_netcdf=False):
+    def fetch(
+        rad, 
+        date_range, 
+        ftype="fitacf", 
+        files=None, 
+        verbose=True,
+        med_filter=None,
+        nrange_scatter=7,
+    ):
         """
         Static method to fetch datasets
         """
         tqdm.pandas()
-        fds = {}
-        for rad in rads:
-            file = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}.csv")
-            fd = FetchData(rad, date_range, ftype, files, verbose)
-            if os.path.exists(file):
-                fd.frame = pd.read_csv(file, parse_dates=["time"])
+        file = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}.csv")
+        mfile = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}_med.csv")
+        nfile = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}.nc")
+        fd = FetchData(rad, date_range, ftype, files, verbose, nrange_scatter)
+        if med_filter:
+            _, scans, data_exists = fd.fetch_data(by="scan")
+            if data_exists:
+                fd.frame = fd.scans_to_pandas(scans)
+                fd.scans = scans
                 logger.info(f"Data length {rad}: {len(fd.frame)}")
-                fd.scans = fd.pandas_to_scans(fd.frame)
-                logger.info(f"# Scans {rad}: {len(fd.scans)}")
-                if to_netcdf:
-                    fd.to_netcdf(file.replace(".csv", ".nc"))
-            else:
-                _, scans, data_exists = fd.fetch_data(by="scan")
-                if data_exists:
-                    scan_time = (scans[0].etime - scans[0].stime).total_seconds()
-                    fd.frame = fd.scans_to_pandas(scans)
-                    fd.scans = scans
-                    logger.info(f"Data length {rad}: {len(fd.frame)}")
-                    if len(fd.frame) > 0:
-                        fd.frame["srange"] = fd.frame.frang + (
-                            fd.frame.slist * fd.frame.rsep
-                        )
-                        fd.frame["intt"] = (
-                            fd.frame["intt.sc"] + 1.0e-6 * fd.frame["intt.us"]
-                        )
-                        fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
-                        fd.frame["scan_time"] = scan_time
-                        fd.frame.to_csv(file, index=False, header=True)
-                        if to_netcdf:
-                            fd.to_netcdf(file.replace(".csv", ".nc"))
+                if len(fd.frame) > 0:
+                    fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
+                    fd.frame.to_csv(file, index=False, header=True, float_format="%g")
+                    fd.to_netcdf(nfile)
+                    fd.med_filter(med_filter, mfile)
                 else:
                     logger.info(f"Data does not exists: {rad}!")
-            fds[rad] = fd
-        return fds
+        elif os.path.exists(file):
+            fd.frame = pd.read_csv(file, parse_dates=["time"])
+            logger.info(f"Data length {rad}: {len(fd.frame)}")
+            fd.scans = fd.pandas_to_scans(fd.frame)
+            logger.info(f"# Scans {rad}: {len(fd.scans)}")
+            if os.path.exists(mfile):
+                fd.medframe = pd.read_csv(mfile, parse_dates=["time"])
+                logger.info(f"m-Data length {rad}: {len(fd.medframe)}")
+                fd.filtered_scans = fd.pandas_to_scans(fd.medframe)
+                logger.info(f"# Scans {rad}: {len(fd.filtered_scans)}")
+        return fd
