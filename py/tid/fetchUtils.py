@@ -20,17 +20,26 @@ import numpy as np
 import pandas as pd
 import pydarn
 import tidUtils
-from loguru import logger
-from dataUtils import Beam, Scan, Gate
-from rtiUtils import RTI
+from dataUtils import Beam, Gate, Scan
 from fanUtils import Fan
 from filterUtils import Boxcar
+from loguru import logger
+from rtiUtils import RTI
 from tqdm import tqdm
+
 
 class FetchData(object):
     """Class to fetch data from fitacf files for one radar for atleast a day"""
 
-    def __init__(self, rad, date_range, ftype="fitacf", files=None, verbose=True, nrange_scatter=None):
+    def __init__(
+        self,
+        rad,
+        date_range,
+        ftype="fitacf",
+        files=None,
+        verbose=True,
+        nrange_scatter=None,
+    ):
         """
         initialize the vars
         rad = radar code
@@ -303,22 +312,36 @@ class FetchData(object):
         else:
             return (None, None, False)
 
-    def plot_RTI(self, beams=[], nGates=100, date_range=None, angle_th=100.0, vhm=None):
+    def plot_RTI(
+        self,
+        beams=[],
+        nGates=100,
+        date_range=None,
+        angle_th=100.0,
+        vhm=None,
+        tec_mat_file=None,
+        tec_param="cdvTECgrid2",
+    ):
         """
         Plot RTI plots by beams
         """
+        logger.info("Inside RTI plots")
         date_range = date_range if date_range else self.date_range
         beams = beams if beams and len(beams) > 0 else self.frame.bmnum.unique()
-        
+
         # Reload dataset
-        del self.frame
-        del self.medframe
         file = os.path.join(tidUtils.get_folder(self.date_range[0]), f"{self.rad}.csv")
-        mfile = os.path.join(tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv")
+        mfile = os.path.join(
+            tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv"
+        )
         self.frame = pd.read_csv(file, parse_dates=["time"])
         self.medframe = pd.read_csv(mfile, parse_dates=["time"])
-        
+
+        if tec_mat_file:
+            tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)
+
         for b in beams:
+            logger.info(f" Beam:{b}")
             file = (
                 tidUtils.get_folder(self.date_range[0]) + f"/{self.rad}-{'%02d'%b}.png"
             )
@@ -326,16 +349,38 @@ class FetchData(object):
                 100,
                 date_range,
                 f"{self.date_range[0].strftime('%Y-%m-%d')}/{self.rad}/{b}",
-                num_subplots=2,
+                num_subplots=3,
                 angle_th=angle_th,
                 vhm=vhm,
             )
-            rt.addParamPlot(self.frame, b, "", xlabel="", cbar=False, fov=(self.lats, self.lons))
-            rt.addParamPlot(self.medframe, b, "", cbar=True, fov=(self.lats, self.lons))
+            rt.addParamPlot(
+                self.frame, b, "", xlabel="", cbar=True, fov=(self.lats, self.lons)
+            )
+            if tec_mat_file:
+                rt.ovearlay_TEC(
+                    tec,
+                    tec_times,
+                    b,
+                    fov=(self.lats, self.lons),
+                    xlabel="",
+                    tec_param=tec_param,
+                )
+                axis, _ = rt.addParamPlot(
+                    self.frame, b, "", xlabel="", fov=(self.lats, self.lons)
+                )
+                axis = rt.ovearlay_TEC(
+                    tec,
+                    tec_times,
+                    b,
+                    ax=axis,
+                    cbar_xOff=0.15,
+                    alpha=0.5,
+                    tec_param=tec_param,
+                )
             rt.save(file)
             rt.close()
         return
-    
+
     def plot_FoV(self, scan_num=None, date=None, tec_mat_file=None):
         """
         Plot FoV plots by scan_num/date
@@ -343,7 +388,8 @@ class FetchData(object):
         if scan_num:
             scan = self.scans[scan_num]
             file = (
-                tidUtils.get_folder(scan.stime) + f"/{self.rad}-Fan-{scan.stime.strftime('%H.%M')}.png"
+                tidUtils.get_folder(scan.stime)
+                + f"/{self.rad}-Fan-{scan.stime.strftime('%H.%M')}.png"
             )
             fov = Fan([self.rad], scan.stime)
             fov.generate_fov(self.rad, self.frame, tec_mat_file=tec_mat_file)
@@ -351,7 +397,8 @@ class FetchData(object):
             fov.close()
         elif date:
             file = (
-                tidUtils.get_folder(scan.stime) + f"/{self.rad}-Fan-{date.strftime('%H.%M')}.png"
+                tidUtils.get_folder(scan.stime)
+                + f"/{self.rad}-Fan-{date.strftime('%H.%M')}.png"
             )
             fov = Fan([self.rad], date)
             fov.generate_fov(self.rad, self.frame, tec_mat_file=tec_mat_file)
@@ -361,7 +408,8 @@ class FetchData(object):
             tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)
             for scan in self.scans:
                 file = (
-                    tidUtils.get_folder(scan.stime) + f"/{self.rad},{scan.stime.strftime('%H-%M')}.png"
+                    tidUtils.get_folder(scan.stime)
+                    + f"/{self.rad},{scan.stime.strftime('%H-%M')}.png"
                 )
                 fov = Fan([self.rad], scan.stime, tec=tec, tec_times=tec_times)
                 fov.generate_fov(self.rad, self.frame, laytec=True)
@@ -377,54 +425,57 @@ class FetchData(object):
             scans = self.pandas_to_scans(df)
         for sc in scans:
             yield sc
-            
-    def to_netcdf(self, fname, params=["p_l", "gflg"], near_range_scatter=7):
+
+    def to_netcdf(self, scans, fname, params=["p_l", "gflg"], near_range_scatter=7):
         """
         Convert to NetCDF files
         """
+
         def extract_3D_data(px="p_l"):
-            dat = np.zeros(
-                (len(self.scans), self.lats.shape[1], self.lats.shape[0])
-            )*np.nan
-            for i, s in enumerate(self.scans):
+            dat = (
+                np.zeros((len(scans), self.lats.shape[1], self.lats.shape[0])) * np.nan
+            )
+            for i, s in enumerate(scans):
                 for j, b in enumerate(s.beams):
-                    dat[i, j, getattr(b, "slist")] = getattr(b, px)
+                    if len(getattr(b, "slist")) > 0:
+                        dat[i, j, getattr(b, "slist")] = getattr(b, px)
             dat = np.ma.masked_invalid(dat)
             return dat
-        
+
         from netCDF4 import Dataset
+
         ds = Dataset(fname, "w")
         # Create all dataset dinemtions
         beams = ds.createDimension("beams", self.lats.shape[1])
         gates = ds.createDimension("gates", self.lats.shape[0])
-        scans = ds.createDimension("scans", len(self.scans))
+        lscans = ds.createDimension("scans", len(scans))
         # Create all dataset
         beams = ds.createVariable("beams", "i2", ("beams",))
         gates = ds.createVariable("gates", "i2", ("gates",))
-        scans = ds.createVariable("scans", "i2", ("scans",))
+        lscans = ds.createVariable("scans", "i2", ("scans",))
         beams[:] = np.arange(self.lats.shape[1])
         gates[:] = np.arange(self.lats.shape[0])
-        scans[:] = np.arange(len(self.scans))
+        lscans[:] = np.arange(len(scans))
         lat_grid = ds.createVariable("gdlat", "f4", ("beams", "gates"))
         lon_grid = ds.createVariable("glong", "f4", ("beams", "gates"))
         lat_grid[:], lon_grid[:] = self.lats.T, self.lons.T
         lat_grid.units, lon_grid.units = "deg", "deg"
-        stimes = ds.createVariable("start_time","i4",("scans",))
-        etimes = ds.createVariable("end_time","i4",("scans",))
+        stimes = ds.createVariable("start_time", "i4", ("scans",))
+        etimes = ds.createVariable("end_time", "i4", ("scans",))
         stimes[:], etimes[:] = (
-            [(s.stime-self.date_range[0]).total_seconds() for s in self.scans], 
-            [(s.etime-self.date_range[0]).total_seconds() for s in self.scans]
+            [(s.stime - self.date_range[0]).total_seconds() for s in scans],
+            [(s.etime - self.date_range[0]).total_seconds() for s in scans],
         )
         stimes.units, etimes.units = (
             f"Sec since {self.date_range[0].strftime('%Y-%m-%dT%H:%M:%S')}",
-            f"Sec since {self.date_range[0].strftime('%Y-%m-%dT%H:%M:%S')}"
+            f"Sec since {self.date_range[0].strftime('%Y-%m-%dT%H:%M:%S')}",
         )
         for param in params:
             p = ds.createVariable(param, "f4", ("scans", "beams", "gates"))
             p[:] = extract_3D_data(param)
         ds.close()
         return
-    
+
     def med_filter(self, param, fname):
         """
         Run median filtering
@@ -435,25 +486,38 @@ class FetchData(object):
             nrange_scatter=self.nrange_scatter,
         )
         scan_stacks = [self.scans[i - 1 : i + 2] for i in range(1, len(self.scans) - 1)]
-        self.filtered_scans = [
-            bx.do_filter(scan_stack)
-            for scan_stack in scan_stacks
-        ]
+        self.filtered_scans = [bx.do_filter(scan_stack) for scan_stack in scan_stacks]
         self.medframe = self.scans_to_pandas(self.filtered_scans)
         self.medframe = self.medframe.progress_apply(self.__get_location__, axis=1)
         logger.info(f"m-Data length {self.rad}: {len(self.medframe)}")
         self.medframe.to_csv(fname, index=False, header=True, float_format="%g")
         return
 
+    def to_geom(self):
+        """
+        Save lat/lons. csv
+        """
+        file = os.path.join(
+            tidUtils.get_folder(self.date_range[0]), f"{self.rad}_geom.csv"
+        )
+        o = pd.DataFrame()
+        for b in range(self.lats.shape[1]):
+            o["beam%02d.lat" % (b + 1)] = self.lats[:, b]
+            o["beam%02d.lon" % (b + 1)] = self.lons[:, b]
+        o.to_csv(file, index=False, header=True, float_format="%g")
+        return
+
     @staticmethod
     def fetch(
-        rad, 
-        date_range, 
-        ftype="fitacf", 
-        files=None, 
+        rad,
+        date_range,
+        ftype="fitacf",
+        files=None,
         verbose=True,
         med_filter=None,
         nrange_scatter=7,
+        to_scan=False,
+        to_med_fetch=False,
     ):
         """
         Static method to fetch datasets
@@ -472,16 +536,18 @@ class FetchData(object):
                 if len(fd.frame) > 0:
                     fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
                     fd.frame.to_csv(file, index=False, header=True, float_format="%g")
-                    fd.to_netcdf(nfile)
+                    fd.to_netcdf(fd.scans, nfile)
                     fd.med_filter(med_filter, mfile)
+                    # fd.to_netcdf(fd.filtered_scans, nfile.replace(".nc", "_med.nc"))
                 else:
                     logger.info(f"Data does not exists: {rad}!")
         elif os.path.exists(file):
             fd.frame = pd.read_csv(file, parse_dates=["time"])
             logger.info(f"Data length {rad}: {len(fd.frame)}")
-            fd.scans = fd.pandas_to_scans(fd.frame)
-            logger.info(f"# Scans {rad}: {len(fd.scans)}")
-            if os.path.exists(mfile):
+            if to_scan:
+                fd.scans = fd.pandas_to_scans(fd.frame)
+                logger.info(f"# Scans {rad}: {len(fd.scans)}")
+            if to_med_fetch and os.path.exists(mfile):
                 fd.medframe = pd.read_csv(mfile, parse_dates=["time"])
                 logger.info(f"m-Data length {rad}: {len(fd.medframe)}")
                 fd.filtered_scans = fd.pandas_to_scans(fd.medframe)

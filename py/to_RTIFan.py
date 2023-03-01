@@ -30,6 +30,10 @@ dates = [
 for d in dates:
     for rad in rads:
         fd = FetchData.fetch(
-            rad, [d, d + dt.timedelta(1)], med_filter={"cpu": 4, "thresh": 0.7}
+            rad,
+            [d, d + dt.timedelta(1)],
         )
-        fd.to_geom()
+        fd.plot_RTI(
+            tec_mat_file=f"data/{d.strftime('%Y-%m-%d')}/{rad}geom.mat",
+            tec_param="cdvTECgrid2",
+        )

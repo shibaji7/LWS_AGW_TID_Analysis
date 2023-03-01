@@ -197,7 +197,7 @@ class SDCarto(GeoAxes):
                     _pro[1],
                     r"$%s^{\circ}$" % str(lat_arr[_np]),
                     **kwargs,
-                    alpha=0.5
+                    alpha=0.5,
                 )
             else:
                 out_extent_lats = True
@@ -278,7 +278,7 @@ class SDCarto(GeoAxes):
                 ha=ha,
                 va=va,
                 **kwargs,
-                alpha=0.5
+                alpha=0.5,
             )
         return
 
@@ -340,13 +340,13 @@ class SDCarto(GeoAxes):
             rad = hdw.abbrev
             if rad in nearby_rad[0]:
                 xOff, yOff = (
-                    1.5 if not xOffset else xOffset, 
-                    0 if not yOffset else yOffset
+                    1.5 if not xOffset else xOffset,
+                    0 if not yOffset else yOffset,
                 )
             elif rad in nearby_rad[1]:
                 xOff, yOff = (
-                    -1.5 if not xOffset else -xOffset, 
-                    1 if not yOffset else yOffset
+                    -1.5 if not xOffset else -xOffset,
+                    1 if not yOffset else yOffset,
                 )
             else:
                 xOff, yOff = xOffset, yOffset
@@ -454,7 +454,7 @@ class SDCarto(GeoAxes):
         scan_time=None,
         model="IS",
         fov_dir="front",
-        **kwargs
+        **kwargs,
     ):
         """Overlay radar Data"""
         scan_time = scan_time if scan_time else np.rint(df.scan_time.tolist()[0] / 60.0)
@@ -491,8 +491,8 @@ class SDCarto(GeoAxes):
                 vmin=p_min,
                 s=0.3,
                 marker="o",
-                alpha=0.4,
-                **kwargs
+                alpha=0.9,
+                **kwargs,
             )
             if cbar:
                 self._add_colorbar(im, label=label)
@@ -508,7 +508,7 @@ class SDCarto(GeoAxes):
         cb = fig.colorbar(im, ax=self, cax=cax)
         cb.set_label(label)
         return
-    
+
     def overlay_tec(
         self,
         lats,
@@ -536,12 +536,12 @@ class SDCarto(GeoAxes):
             s=0.1,
             marker="o",
             alpha=1.0,
-            **kwargs
+            **kwargs,
         )
         if hcbar:
             self._add_hcolorbar(im, label)
         return
-    
+
     def _add_hcolorbar(self, im, label=""):
         """Add a colorbar to the right of an axis."""
         fig = self.get_figure()
@@ -554,8 +554,8 @@ class SDCarto(GeoAxes):
         ]  # this list defines (left, bottom, width, height)
         cax = self.inset_axes(cpos, transform=self.transAxes)
         cb = fig.colorbar(
-            im, 
-            ax=self, 
+            im,
+            ax=self,
             cax=cax,
             spacing="uniform",
             orientation="horizontal",

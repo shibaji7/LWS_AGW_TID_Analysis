@@ -11,11 +11,11 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-import datetime as dt
 import configparser
+import datetime as dt
 import os
-import h5py
 
+import h5py
 import numpy as np
 
 
@@ -56,26 +56,42 @@ def get_folder(date):
     os.makedirs(fold, exist_ok=True)
     return fold
 
+
 def to_date(ts):
     """
     Convert to date
     """
-    ts = dt.datetime.fromordinal(int(ts)) + dt.timedelta(days=ts%1)-dt.timedelta(days=366)
-    t = ts.replace(second=0, microsecond=0) + dt.timedelta(seconds=30*np.rint(ts.second/30))
+    ts = (
+        dt.datetime.fromordinal(int(ts))
+        + dt.timedelta(days=ts % 1)
+        - dt.timedelta(days=366)
+    )
+    t = ts.replace(second=0, microsecond=0) + dt.timedelta(
+        seconds=30 * np.rint(ts.second / 30)
+    )
     return t
+
 
 def read_tec_mat_files(fname):
     """
     Read TEC files
     """
     tec = h5py.File(fname)
-    times = np.concatenate(tec["UTT"],axis=0)
+    times = np.concatenate(tec["UTT"], axis=0)
     times = [to_date(ts) for ts in times]
     return tec, times
 
+
 def fetch_tec_by_datetime(ts, mat, times):
-    t = ts.replace(second=0, microsecond=0) + dt.timedelta(seconds=30*np.rint(ts.second/30))
+    t = ts.replace(second=0, microsecond=0) + dt.timedelta(
+        seconds=30 * np.rint(ts.second / 30)
+    )
     idx = times.index(t)
     dset = mat[mat["fulltimedata"][idx][0]]
     ipplat, ipplon, dtec = dset[2], dset[3], dset[5]
     return ipplat, ipplon, dtec
+
+
+def fetch_tec_by_beam(dmat, bm, param="cdvTECgrid1"):
+    dset = np.array(dmat[dmat[param][bm][0]])
+    return dset

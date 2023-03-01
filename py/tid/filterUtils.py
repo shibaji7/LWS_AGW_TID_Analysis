@@ -11,9 +11,10 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-from dataUtils import Beam, Scan, Gate
 import numpy as np
+from dataUtils import Beam, Gate, Scan
 from loguru import logger
+
 
 class Boxcar(object):
     """Class to filter data - Boxcar median filter."""
@@ -68,9 +69,9 @@ class Boxcar(object):
 
     def do_filter(self, scans, params_to_run_filter=["v", "w_l", "p_l", "gflg"]):
         """
-        Median filter based on the weight given by matrix (3X3X3) weight, 
+        Median filter based on the weight given by matrix (3X3X3) weight,
         and threshold based on thresh
-    
+
         params_to_run_filter: List of parameters to run boxcar filter
         """
         scans = [self.__discard_repeting_beams__(s) for s in scans]
@@ -142,7 +143,7 @@ class Boxcar(object):
                         for pm in params_to_run_filter:
                             getattr(beam, pm).append(np.median(params[pm]))
                         beam.slist.append(r)
-                        beam.srange.append(r*beam.rsep + beam.frang)
+                        beam.srange.append(r * beam.rsep + beam.frang)
                 for k in beam.__dict__.keys():
                     if type(getattr(beam, key)) == list:
                         setattr(beam, key, np.asarray(getattr(beam, key)))

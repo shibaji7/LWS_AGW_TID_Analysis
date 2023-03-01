@@ -34,19 +34,27 @@ class RTI(object):
     """
 
     def __init__(
-        self, nGates, drange, fig_title=None, num_subplots=1, angle_th=100.0, vhm=None
+        self,
+        nGates,
+        drange,
+        fig_title=None,
+        num_subplots=1,
+        angle_th=100.0,
+        vhm=None,
+        ylim=[180, 2500],
     ):
         self.nGates = nGates
         self.drange = drange
         self.num_subplots = num_subplots
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(6, 3 * num_subplots), dpi=180)
+        self.fig = plt.figure(figsize=(6, 3 * num_subplots), dpi=240)
         if fig_title:
             plt.suptitle(
                 fig_title, x=0.075, y=0.99, ha="left", fontweight="bold", fontsize=15
             )
         self.angle_th = angle_th
         self.vhm = vhm
+        self.ylim = ylim
         return
 
     def addParamPlot(
@@ -56,21 +64,23 @@ class RTI(object):
         title,
         p_max=36,
         p_min=0,
-        xlabel="Time [UT]",
+        xlabel="Time (UT)",
         zparam="p_l",
-        label="Power [dB]",
+        label="Power (dB)",
         yscale="srange",
-        cmap=plt.cm.jet,
-        cbar=False,
+        cmap=plt.cm.cool,
+        cbar=True,
         fov=None,
+        tec_details=None,
     ):
         if yscale == "srange":
-            yrange, ylab = (
+            yrange, ylab, frang = (
                 self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0],
-                "Slant Range [km]",
+                "Slant Range (km)",
+                df.frang.tolist()[0],
             )
         else:
-            yrange, ylab = (self.nGates, "Range Gates")
+            yrange, ylab, frang = (self.nGates, "Range Gates", 0)
         ax = self._add_axis()
         df = df[df.bmnum == beam]
         if self.vhm:
@@ -90,7 +100,7 @@ class RTI(object):
                         self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0]
                     )
                 ),
-                "Virtual Height [km]",
+                "Virtual Height (km)",
             )
         X, Y, Z = tidUtils.get_gridded_parameters(
             df, xparam="time", yparam=yscale, zparam=zparam, rounding=False
@@ -100,7 +110,7 @@ class RTI(object):
         ax.xaxis.set_major_locator(hours)
         ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
         ax.set_xlim([mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])])
-        ax.set_ylim(0, yrange)
+        ax.set_ylim(frang, yrange)
         ax.set_ylabel(ylab, fontdict={"size": 12, "fontweight": "bold"})
         im = ax.pcolormesh(
             X,
@@ -122,26 +132,28 @@ class RTI(object):
             self.overlay_sza(
                 fov,
                 ax,
-                df.time.unique(),
                 beam,
                 [0, self.nGates],
                 df.rsep.iloc[0],
                 df.frang.iloc[0],
                 yscale,
             )
-        return ax
+        ax.set_ylim(self.ylim)
+        return ax, Y[:, 0]
 
-    def overlay_sza(self, fov, ax, times, beam, gate_range, rsep, frang, yscale):
+    def overlay_sza(self, fov, ax, beam, gate_range, rsep, frang, yscale):
         """
         Add terminator to the radar
         """
+        times = [
+            self.drange[0] + dt.timedelta(minutes=i)
+            for i in range(int((self.drange[1] - self.drange[0]).total_seconds() / 60))
+        ]
         R = 6378.1
         gates = np.arange(gate_range[0], gate_range[1])
         dn_grid = np.zeros((len(times), len(gates)))
         for i, d in enumerate(times):
-            d = dt.datetime.utcfromtimestamp(d.astype(dt.datetime) * 1e-9).replace(
-                tzinfo=dt.timezone.utc
-            )
+            d = d.replace(tzinfo=dt.timezone.utc)
             for j, g in enumerate(gates):
                 gdlat, glong = fov[0][g, beam], fov[1][g, beam]
                 angle = 90.0 - get_altitude_fast(gdlat, glong, d)
@@ -170,23 +182,105 @@ class RTI(object):
             alpha=0.3,
         )
         return
-    
-    def ovearlay_TEC(self, ax, tec_fname):
+
+    def ovearlay_TEC(
+        self,
+        tec,
+        tec_times,
+        beam,
+        cbar=True,
+        fov=None,
+        gate_range=None,
+        rsep=None,
+        frang=None,
+        yscale="srange",
+        label="TEC (TECu)",
+        cmap="hot",
+        p_max=0.2,
+        p_min=-0.2,
+        ax=None,
+        xlabel="Time (UT)",
+        cbar_xOff=0.0,
+        alpha=1.0,
+        tec_param="cdvTECgrid2",
+    ):
         """
         Add TEC in the observations panel
         """
-        return
+        frang = frang if frang else 180
+        rsep = rsep if rsep else 45
+        gate_range = gate_range if gate_range else [0, self.nGates]
+        Yaxis = (
+            [frang + i * rsep for i in range(self.nGates + 1)]
+            if yscale == "srange"
+            else np.arange(self.nGates + 1)
+        )
+        if ax is None:
+            ax = self._add_axis()
+            if yscale == "srange":
+                yrange, ylab = (
+                    self.nGates * rsep + frang,
+                    "Slant Range (km)",
+                )
+            else:
+                yrange, ylab = (self.nGates, "Range Gates")
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+            hours = mdates.HourLocator(byhour=range(0, 24, 4))
+            ax.xaxis.set_major_locator(hours)
+            ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
+            ax.set_xlim(
+                [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
+            )
+            ax.set_ylim(frang, yrange)
+            ax.set_ylabel(ylab, fontdict={"size": 12, "fontweight": "bold"})
+
+        dset = tidUtils.fetch_tec_by_beam(tec, beam, tec_param)
+        im = ax.pcolormesh(
+            tec_times[: dset.shape[0]],
+            Yaxis,
+            dset.T,
+            lw=0.01,
+            edgecolors="None",
+            cmap=cmap,
+            snap=True,
+            vmax=p_max,
+            vmin=p_min,
+            shading="auto",
+            alpha=alpha,
+        )
+        if cbar:
+            self._add_colorbar(self.fig, ax, im, label=label, xOff=cbar_xOff)
+        if fov:
+            self.overlay_sza(
+                fov,
+                ax,
+                beam,
+                [0, self.nGates],
+                rsep,
+                frang,
+                yscale,
+            )
+        ax.set_ylim(self.ylim)
+        return ax
 
     def _add_axis(self):
         self._num_subplots_created += 1
         ax = self.fig.add_subplot(self.num_subplots, 1, self._num_subplots_created)
         return ax
 
-    def _add_colorbar(self, fig, ax, im, label=""):
+    def _add_colorbar(
+        self,
+        fig,
+        ax,
+        im,
+        label="",
+        xOff=0,
+        yOff=0,
+    ):
         """
         Add a colorbar to the right of an axis.
         """
-        cpos = [1.04, 0.1, 0.025, 0.8]
+        cpos = [1.04 + xOff, 0.1 + yOff, 0.025, 0.8]
         cax = ax.inset_axes(cpos, transform=ax.transAxes)
         cb = fig.colorbar(im, ax=ax, cax=cax)
         cb.set_label(label)

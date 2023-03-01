@@ -72,16 +72,12 @@ class Beam(object):
             else:
                 setattr(self, p, np.asarray([]))
         if hasattr(self, "frang") and hasattr(self, "slist") and hasattr(self, "rsep"):
-            setattr(
-                self, 
-                "srange", 
-                np.asarray(self.frang + self.slist*self.rsep)
-            )
+            setattr(self, "srange", np.asarray(self.frang + self.slist * self.rsep))
         if hasattr(self, "intt.sc") and hasattr(self, "intt.us"):
             setattr(
                 self,
                 "intt",
-                getattr(self, "intt.sc") + 1.0e-6 * getattr(self, "intt.us")
+                getattr(self, "intt.sc") + 1.0e-6 * getattr(self, "intt.us"),
             )
         if self.nrange_scatter is not None:
             sl, gf = np.asarray(self.slist), np.asarray(self.gflg)
@@ -118,7 +114,7 @@ class Scan(object):
         """
         self.stime = min([b.time for b in self.beams])
         self.etime = max([b.time for b in self.beams])
-        self.scan_time = 60*np.rint((self.etime-self.stime).total_seconds()/60.)
+        self.scan_time = 60 * np.rint((self.etime - self.stime).total_seconds() / 60.0)
         for b in self.beams:
             setattr(b, "scan_time", self.scan_time)
         return
