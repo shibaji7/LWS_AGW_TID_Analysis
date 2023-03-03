@@ -37,6 +37,8 @@ class RTI(object):
         self,
         nGates,
         drange,
+        fov,
+        xlim,
         fig_title=None,
         num_subplots=1,
         angle_th=100.0,
@@ -45,6 +47,7 @@ class RTI(object):
     ):
         self.nGates = nGates
         self.drange = drange
+        self.fov = fov
         self.num_subplots = num_subplots
         self._num_subplots_created = 0
         self.fig = plt.figure(figsize=(6, 3 * num_subplots), dpi=240)
@@ -55,6 +58,7 @@ class RTI(object):
         self.angle_th = angle_th
         self.vhm = vhm
         self.ylim = ylim
+        self.xlim = xlim
         return
 
     def addParamPlot(
@@ -62,17 +66,19 @@ class RTI(object):
         df,
         beam,
         title,
-        p_max=36,
-        p_min=0,
+        vlim=[20, 50],
         xlabel="Time (UT)",
         zparam="p_l",
         label="Power (dB)",
         yscale="srange",
-        cmap=plt.cm.cool,
+        cmap="jet",
         cbar=True,
-        fov=None,
+        plot_fov=False,
         tec_details=None,
+        ax=None,
+        alpha=1,
     ):
+        df = df[df.bmnum == beam]
         if yscale == "srange":
             yrange, ylab, frang = (
                 self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0],
@@ -81,8 +87,6 @@ class RTI(object):
             )
         else:
             yrange, ylab, frang = (self.nGates, "Range Gates", 0)
-        ax = self._add_axis()
-        df = df[df.bmnum == beam]
         if self.vhm:
             yscale = "virtual_height"
             df["virtual_height"] = (
@@ -102,16 +106,20 @@ class RTI(object):
                 ),
                 "Virtual Height (km)",
             )
+        if ax is None:
+            ax = self._add_axis()
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+            hours = mdates.HourLocator(byhour=range(0, 24, 4))
+            ax.xaxis.set_major_locator(hours)
+            ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
+            ax.set_xlim(
+                [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
+            )
+        ax.set_ylim(frang, yrange)
+        ax.set_ylabel(ylab, fontdict={"size": 12, "fontweight": "bold"})
         X, Y, Z = tidUtils.get_gridded_parameters(
             df, xparam="time", yparam=yscale, zparam=zparam, rounding=False
         )
-        ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
-        hours = mdates.HourLocator(byhour=range(0, 24, 4))
-        ax.xaxis.set_major_locator(hours)
-        ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
-        ax.set_xlim([mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])])
-        ax.set_ylim(frang, yrange)
-        ax.set_ylabel(ylab, fontdict={"size": 12, "fontweight": "bold"})
         im = ax.pcolormesh(
             X,
             Y,
@@ -120,17 +128,18 @@ class RTI(object):
             edgecolors="None",
             cmap=cmap,
             snap=True,
-            vmax=p_max,
-            vmin=p_min,
+            vmax=vlim[1],
+            vmin=vlim[0],
             shading="auto",
+            alpha=alpha,
         )
         if cbar:
             self._add_colorbar(self.fig, ax, im, label=label)
         if title:
             ax.set_title(title, loc="left", fontdict={"fontweight": "bold"})
-        if fov:
+        if plot_fov:
             self.overlay_sza(
-                fov,
+                self.fov,
                 ax,
                 beam,
                 [0, self.nGates],
@@ -139,6 +148,7 @@ class RTI(object):
                 yscale,
             )
         ax.set_ylim(self.ylim)
+        ax.set_xlim(self.xlim)
         return ax, Y[:, 0]
 
     def overlay_sza(self, fov, ax, beam, gate_range, rsep, frang, yscale):
@@ -189,15 +199,14 @@ class RTI(object):
         tec_times,
         beam,
         cbar=True,
-        fov=None,
+        plot_fov=False,
         gate_range=None,
         rsep=None,
         frang=None,
         yscale="srange",
         label="TEC (TECu)",
-        cmap="hot",
-        p_max=0.2,
-        p_min=-0.2,
+        cmap=tidUtils.parula,
+        vlim=[-0.2, 0.2],
         ax=None,
         xlabel="Time (UT)",
         cbar_xOff=0.0,
@@ -243,16 +252,16 @@ class RTI(object):
             edgecolors="None",
             cmap=cmap,
             snap=True,
-            vmax=p_max,
-            vmin=p_min,
+            vmax=vlim[1],
+            vmin=vlim[0],
             shading="auto",
             alpha=alpha,
         )
         if cbar:
             self._add_colorbar(self.fig, ax, im, label=label, xOff=cbar_xOff)
-        if fov:
+        if plot_fov:
             self.overlay_sza(
-                fov,
+                self.fov,
                 ax,
                 beam,
                 [0, self.nGates],
@@ -261,6 +270,7 @@ class RTI(object):
                 yscale,
             )
         ax.set_ylim(self.ylim)
+        ax.set_xlim(self.xlim)
         return ax
 
     def _add_axis(self):

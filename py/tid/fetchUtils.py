@@ -321,6 +321,8 @@ class FetchData(object):
         vhm=None,
         tec_mat_file=None,
         tec_param="cdvTECgrid2",
+        power_vlim=[20, 50],
+        tec_vlim=[-0.05, 0.05],
     ):
         """
         Plot RTI plots by beams
@@ -348,34 +350,50 @@ class FetchData(object):
             rt = RTI(
                 100,
                 date_range,
+                (self.lats, self.lons),
+                [date_range[0] + dt.timedelta(hours=14), date_range[1]],
                 f"{self.date_range[0].strftime('%Y-%m-%d')}/{self.rad}/{b}",
                 num_subplots=3,
                 angle_th=angle_th,
                 vhm=vhm,
             )
             rt.addParamPlot(
-                self.frame, b, "", xlabel="", cbar=True, fov=(self.lats, self.lons)
+                self.frame,
+                b,
+                "",
+                xlabel="",
+                cbar=True,
+                plot_fov=False,
+                vlim=power_vlim,
             )
             if tec_mat_file:
                 rt.ovearlay_TEC(
                     tec,
                     tec_times,
                     b,
-                    fov=(self.lats, self.lons),
+                    plot_fov=False,
                     xlabel="",
                     tec_param=tec_param,
+                    vlim=tec_vlim,
                 )
-                axis, _ = rt.addParamPlot(
-                    self.frame, b, "", xlabel="", fov=(self.lats, self.lons)
-                )
+
                 axis = rt.ovearlay_TEC(
                     tec,
                     tec_times,
                     b,
-                    ax=axis,
                     cbar_xOff=0.15,
-                    alpha=0.5,
                     tec_param=tec_param,
+                    plot_fov=False,
+                    vlim=tec_vlim,
+                )
+                rt.addParamPlot(
+                    self.frame,
+                    b,
+                    "",
+                    xlabel="",
+                    plot_fov=False,
+                    ax=axis,
+                    vlim=power_vlim,
                 )
             rt.save(file)
             rt.close()

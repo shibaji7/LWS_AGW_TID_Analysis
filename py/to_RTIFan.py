@@ -19,8 +19,6 @@ import tidUtils
 from fetchUtils import FetchData
 
 rads = [
-    "bks",
-    "fhe",
     "fhw",
 ]
 fdMap = {}
@@ -35,5 +33,7 @@ for d in dates:
         )
         fd.plot_RTI(
             tec_mat_file=f"data/{d.strftime('%Y-%m-%d')}/{rad}geom.mat",
-            tec_param="cdvTECgrid2",
+            tec_param="cdvTECgrid4",
+            power_vlim=[20, 50],
+            tec_vlim=[-0.1, 0.1],
         )
