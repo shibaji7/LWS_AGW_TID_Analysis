@@ -26,6 +26,7 @@ import model_vheight as mvh
 import numpy as np
 import tidUtils
 from pysolar.solar import get_altitude_fast
+from scipy.stats import pearsonr
 
 
 class RTI(object):
@@ -304,3 +305,79 @@ class RTI(object):
         self.fig.clf()
         plt.close()
         return
+
+
+def plot_SDTEC_TS(
+    sdx,
+    sdy,
+    tecx,
+    tecy,
+    fname,
+    xlim,
+    sd_ylim=[20, 50],
+    tec_ylim=[-0.3, 0.3],
+    txt="",
+):
+    """
+    plot SD versus TEC
+    """
+    fig = plt.figure(figsize=(12, 3), dpi=240)
+    spec = fig.add_gridspec(2, 5)
+    ax = fig.add_subplot(spec[:, :3])
+    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+    hours = mdates.HourLocator(byhour=range(0, 24, 4))
+    ax.xaxis.set_major_locator(hours)
+    ax.set_xlabel("Time (UT)", fontdict={"size": 12, "fontweight": "bold"})
+    ax.plot(sdx, sdy, "ko", ls="None", ms=0.8)
+    ax.set_ylim(sd_ylim)
+    ax.set_xlim(xlim)
+    ax.set_ylabel("Power (dB)", fontdict={"size": 12, "fontweight": "bold"})
+    ax.text(
+        0.05,
+        1.05,
+        txt,
+        ha="left",
+        va="center",
+        fontdict={"size": 10},
+        transform=ax.transAxes,
+    )
+
+    ax = ax.twinx()
+    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+    hours = mdates.HourLocator(byhour=range(0, 24, 4))
+    ax.xaxis.set_major_locator(hours)
+    ax.plot(tecx, tecy, "ro", ls="None", ms=0.8)
+    ax.set_ylim(tec_ylim)
+    ax.set_xlim(xlim)
+    ax.set_ylabel(
+        "TEC (TECu)", fontdict={"size": 12, "fontweight": "bold", "color": "r"}
+    )
+
+    ax = fig.add_subplot(spec[:, 3:])
+    from scipy import signal
+
+    N = int(len(tecy) / len(sdy)) + 1
+    tec = tidUtils.interpolate_nans(tecy[::N])
+    sd = tidUtils.interpolate_nans(sdy[: len(tec)])
+    corr, _ = pearsonr(sd, tec)
+    ax.set_ylim(tec_ylim)
+    ax.set_xlim(sd_ylim)
+    ax.plot(sd, tec, "ko", ls="None", ms=0.8)
+    ax.set_ylabel("TEC (TECu)", fontdict={"size": 12, "fontweight": "bold"})
+    ax.set_xlabel("Power (dB)", fontdict={"size": 12, "fontweight": "bold"})
+    ax.plot([0, 1], [0, 1], transform=ax.transAxes, ls="--", color="gray", lw=0.8)
+    ax.text(
+        0.95,
+        1.05,
+        r"$\rho=%.2f$" % corr,
+        ha="right",
+        va="center",
+        fontdict={"size": 10},
+        transform=ax.transAxes,
+    )
+
+    fig.subplots_adjust(wspace=1)
+    fig.savefig(fname, bbox_inches="tight", facecolor=(1, 1, 1, 1))
+    fig.clf()
+    plt.close()
+    return

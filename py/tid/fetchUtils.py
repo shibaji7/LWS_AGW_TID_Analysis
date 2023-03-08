@@ -24,7 +24,7 @@ from dataUtils import Beam, Gate, Scan
 from fanUtils import Fan
 from filterUtils import Boxcar
 from loguru import logger
-from rtiUtils import RTI
+from rtiUtils import RTI, plot_SDTEC_TS
 from tqdm import tqdm
 
 
@@ -375,6 +375,7 @@ class FetchData(object):
                     xlabel="",
                     tec_param=tec_param,
                     vlim=tec_vlim,
+                    cmap="magma",
                 )
 
                 axis = rt.ovearlay_TEC(
@@ -385,6 +386,7 @@ class FetchData(object):
                     tec_param=tec_param,
                     plot_fov=False,
                     vlim=tec_vlim,
+                    cmap="magma",
                 )
                 rt.addParamPlot(
                     self.frame,
@@ -397,6 +399,55 @@ class FetchData(object):
                 )
             rt.save(file)
             rt.close()
+        return
+
+    def TS1D(
+        self,
+        bm,
+        rg,
+        date_range=None,
+        tec_mat_file=None,
+        tec_param="cdvTECgrid2",
+        power_vlim=[20, 50],
+        tec_vlim=[-0.05, 0.05],
+    ):
+        """
+        Conduct 1D TS analysis
+        """
+        logger.info("Inside TS1D plots")
+        date_range = date_range if date_range else self.date_range
+
+        # Reload dataset
+        file = os.path.join(tidUtils.get_folder(self.date_range[0]), f"{self.rad}.csv")
+        mfile = os.path.join(
+            tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv"
+        )
+        self.frame = pd.read_csv(file, parse_dates=["time"])
+        self.medframe = pd.read_csv(mfile, parse_dates=["time"])
+
+        if tec_mat_file:
+            tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)
+
+        logger.info(f" Beam:{bm}, Gate:{rg}")
+        srange = rg * self.frame.rsep.tolist()[0] + self.frame.frang.tolist()[0]
+        sd_frame = self.frame[(self.frame.bmnum == bm) & (self.frame.srange == srange)]
+        tec_frame = tidUtils.fetch_tec_by_beam(tec, bm, param=tec_param)[:, rg]
+        fname = os.path.join(
+            tidUtils.get_folder(self.date_range[0]), f"{self.rad}-{bm}-{rg}.png"
+        )
+        plot_SDTEC_TS(
+            sd_frame.time,
+            # tidUtils.smooth(sd_frame["p_l"], replace_nans=True, byvalue=None),
+            sd_frame["p_l"],
+            tec_times[: len(tec_frame)],
+            # tidUtils.smooth(tec_frame),
+            tec_frame,
+            fname,
+            [date_range[0] + dt.timedelta(hours=14), date_range[1]],
+            txt=f"{date_range[0].strftime('%Y-%m-%d')} / {self.rad} / Beam:{bm} / Range:{srange}",
+            sd_ylim=power_vlim,
+            tec_ylim=tec_vlim,
+        )
         return
 
     def plot_FoV(self, scan_num=None, date=None, tec_mat_file=None):

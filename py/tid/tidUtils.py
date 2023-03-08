@@ -357,3 +357,46 @@ parula_cm = [
     [0.9769, 0.9839, 0.0805],
 ]
 parula = LinearSegmentedColormap.from_list("parula", parula_cm)
+
+
+def interpolate_nans(arr, byvalue=None):
+    """
+    Interpolate numpy array nans
+    """
+    if byvalue is not None:
+        arr[np.isnan(arr)] = byvalue
+    else:
+        ok = ~np.isnan(arr)
+        xp = ok.ravel().nonzero()[0]
+        fp = arr[~np.isnan(arr)]
+        x = np.isnan(arr).ravel().nonzero()[0]
+        arr[np.isnan(arr)] = np.interp(x, xp, fp)
+    return arr
+
+
+def smooth(x, window_len=51, window="hanning", replace_nans=False, byvalue=None):
+    """
+    Smoothing using window
+    """
+    x = np.asarray(x)
+    if replace_nans:
+        interpolate_nans(x, byvalue)
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+    if x.size < window_len:
+        raise ValueError("Input vector needs to be bigger than window size.")
+    if window_len < 3:
+        return x
+    if not window in ["flat", "hanning", "hamming", "bartlett", "blackman"]:
+        raise ValueError(
+            "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+        )
+    s = np.r_[x[window_len - 1 : 0 : -1], x, x[-2 : -window_len - 1 : -1]]
+    if window == "flat":
+        w = numpy.ones(window_len, "d")
+    else:
+        w = eval("np." + window + "(window_len)")
+    y = np.convolve(w / w.sum(), s, mode="valid")
+    d = window_len - 1
+    y = y[int(d / 2) : -int(d / 2)]
+    return y
