@@ -17,14 +17,17 @@ import sys
 sys.path.extend(["py/txUtils/", "py/tid/", "py/davitPy/"])
 import tidUtils
 from fetchUtils import FetchData
+from rtiUtils import RTI
+from model_vheight import chisham_vhm, standard_vhm
 
 # Initializations
 CASES = [
     "RTI",
     "1DTS",
     "Fan",
+    "vhm",
 ]
-case = "1DTS"
+case = "vhm"
 rads = ["fhw"]
 dates = [
     dt.datetime(2022, 12, 20),
@@ -65,3 +68,36 @@ if case == "1DTS":
                     power_vlim=[0, 40],
                     tec_vlim=[-0.3, 0.3],
                 )
+
+if case == "vhm":
+    for d in dates:
+        for rad in rads:
+            fd = FetchData.fetch(
+                rad,
+                [d, d + dt.timedelta(1)],
+            )
+            fd.frame["vheight"] = [standard_vhm(s, hop=1.0) for s in fd.frame.srange]
+            for b in fd.frame.bmnum.unique():
+                rt = RTI(
+                    100,
+                    [d, d + dt.timedelta(1)],
+                    None,
+                    [d + dt.timedelta(hours=14), d + dt.timedelta(1)],
+                    f"{d.strftime('%Y-%m-%d')}/{rad}/{b}",
+                    num_subplots=1
+                )
+                rt.addParamPlot(
+                    fd.frame,
+                    b,
+                    "",
+                    vlim=[0, 600],
+                        cbar=True,
+                    plot_fov=False,
+                    zparam="vheight",
+                    label=r"$H_{virtual}$ (km)"
+                )
+                file = (
+                    tidUtils.get_folder(d) + f"/{rad}-{'%02d'%b}.png"
+                )
+                rt.save(file)
+                rt.close()

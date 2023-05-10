@@ -381,3 +381,21 @@ def plot_SDTEC_TS(
     fig.clf()
     plt.close()
     return
+
+
+def plot_FFT(o, beam, srange, fname):
+    """
+    Plot FFT dataset
+    """
+    fig = plt.figure(figsize=(6, 3), dpi=240)
+    ax = fig.add_subplot(111)
+    ax.loglog(o.freq, o.power, "b-", lw=0.8)
+    ax.set_xlim(1e-6, 1e-2)
+    ax.set_ylim(1e-3, 1)
+    ax.set_xlabel("Frequency, Hz")
+    ax.set_ylabel("Power, Hz")
+    ax.text(0.1, 1.05, "Range Cell: [%d,%d]"%(beam, srange), va="center", ha="left", transform=ax.transAxes)
+    fig.savefig(fname, bbox_inches="tight", facecolor=(1, 1, 1, 1))
+    fig.clf()
+    plt.close()
+    return

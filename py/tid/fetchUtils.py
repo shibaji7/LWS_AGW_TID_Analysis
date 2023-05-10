@@ -499,7 +499,7 @@ class FetchData(object):
         """
         Convert to NetCDF files
         """
-
+        print(self.lats.shape)
         def extract_3D_data(px="p_l"):
             dat = (
                 np.zeros((len(scans), self.lats.shape[1], self.lats.shape[0])) * np.nan
@@ -570,9 +570,12 @@ class FetchData(object):
             tidUtils.get_folder(self.date_range[0]), f"{self.rad}_geom.csv"
         )
         o = pd.DataFrame()
+        rsep, frang = self.frame.rsep.iloc[0], self.frame.frang.iloc[0]
         for b in range(self.lats.shape[1]):
             o["beam%02d.lat" % (b + 1)] = self.lats[:, b]
             o["beam%02d.lon" % (b + 1)] = self.lons[:, b]
+            o["beam%02d.slist" % (b + 1)] = range(len(self.lats[:, b]))
+            o["beam%02d.srange" % (b + 1)] = np.arange(len(self.lats[:, b]))*rsep + frang
         o.to_csv(file, index=False, header=True, float_format="%g")
         return
 
@@ -596,21 +599,8 @@ class FetchData(object):
         mfile = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}_med.csv")
         nfile = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}.nc")
         fd = FetchData(rad, date_range, ftype, files, verbose, nrange_scatter)
-        if med_filter:
-            _, scans, data_exists = fd.fetch_data(by="scan")
-            if data_exists:
-                fd.frame = fd.scans_to_pandas(scans)
-                fd.scans = scans
-                logger.info(f"Data length {rad}: {len(fd.frame)}")
-                if len(fd.frame) > 0:
-                    fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
-                    fd.frame.to_csv(file, index=False, header=True, float_format="%g")
-                    fd.to_netcdf(fd.scans, nfile)
-                    fd.med_filter(med_filter, mfile)
-                    # fd.to_netcdf(fd.filtered_scans, nfile.replace(".nc", "_med.nc"))
-                else:
-                    logger.info(f"Data does not exists: {rad}!")
-        elif os.path.exists(file):
+        
+        if os.path.exists(file):
             fd.frame = pd.read_csv(file, parse_dates=["time"])
             logger.info(f"Data length {rad}: {len(fd.frame)}")
             if to_scan:
@@ -621,4 +611,23 @@ class FetchData(object):
                 logger.info(f"m-Data length {rad}: {len(fd.medframe)}")
                 fd.filtered_scans = fd.pandas_to_scans(fd.medframe)
                 logger.info(f"# Scans {rad}: {len(fd.filtered_scans)}")
+        else:
+            #if med_filter:
+            _, scans, data_exists = fd.fetch_data(by="scan")
+            if data_exists:
+                fd.frame = fd.scans_to_pandas(scans)
+                fd.scans = scans
+                logger.info(f"Data length {rad}: {len(fd.frame)}")
+                if len(fd.frame) > 0:
+                    fd.frame = fd.frame[
+                        (fd.frame.slist<101)
+                        & (fd.frame.bmnum<np.max(fd.frame.bmnum))
+                    ]
+                    fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
+                    fd.frame.to_csv(file, index=False, header=True, float_format="%g")
+                    # fd.to_netcdf(fd.scans, nfile)
+                    # fd.med_filter(med_filter, mfile)
+                    # fd.to_netcdf(fd.filtered_scans, nfile.replace(".nc", "_med.nc"))
+                else:
+                    logger.info(f"Data does not exists: {rad}!")
         return fd
