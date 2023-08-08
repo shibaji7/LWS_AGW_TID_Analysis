@@ -13,8 +13,9 @@ __status__ = "Research"
 
 import argparse
 import datetime as dt
+from loguru import logger
 from dateutil import parser as dparser
-from rt2D import *
+from rt2D import execute_gemini2D_simulation, execute_gemini2D_simulations
 
 
 if __name__ == "__main__":
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-ev",
         "--event",
-        default=dt.datetime(2016, 7, 8, 0, 13, 12),
+        default=dt.datetime(2016, 7, 8, 3, 31, 12),
         help="Event date for simulation [YYYY-mm-ddTHH:MM]",
         type=dparser.isoparse,
     )
@@ -38,6 +39,4 @@ if __name__ == "__main__":
     for k in vars(args).keys():
         print("     ", k, "->", str(vars(args)[k]))
     if args.model == "gemini2D":
-        cfg = read_params_2D()
-        rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
-        execute_gemini2D_simulations(rtobj, cfg, args)
+        execute_gemini2D_simulations(args)

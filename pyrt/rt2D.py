@@ -25,6 +25,7 @@ from geopy.distance import great_circle as GC
 from loguru import logger
 from scipy.io import savemat
 from gemini3d import GEMINI2D
+import plots
 
 
 def read_params_2D(fname="cfg/rt2D.json"):
@@ -185,14 +186,14 @@ class RayTrace2D(object):
             self.pharlap_simulation["rays"].append(pd.read_csv(f))
         return
     
-def execute_gemini2D_simulations(
-    rtobj,
-    cfg,
+def execute_gemini2D_simulation(
     args,
 ):
     """
     Execute GEMINI2D simulation for ray tracing
     """
+    cfg = read_params_2D()
+    rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
     fname = rtobj.folder + "{dn}_{bm}.mat".format(
         dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
     )
@@ -207,14 +208,53 @@ def execute_gemini2D_simulations(
         rtobj.bearing_object["lat"],
         rtobj.bearing_object["lon"],
         rtobj.bearing_object["ht"],
+        dlat=0.2, 
+        dlon=0.2,
         to_file=fname,
     )
     rtobj.compile(gem.param_val)
-    import plots
-
     plots.plot_rays(
         rtobj.folder,
         rtobj.pharlap_simulation,
-        "GEMINI2D + FHE/03/14",
+        f"GEMINI2D + {args.rad.upper()}/{str(args.beam)}/{str(cfg.frequency)}",
     )
+    return
+
+def execute_gemini2D_simulations(
+    args,
+):
+    """
+    Execute GEMINI2D simulation for ray tracing
+    """
+    cfg = read_params_2D()
+    days = GEMINI2D.get_time_keys(args.event.strftime("%Y%m%d"), f"dataset/GEMINI3D/")
+    gem = GEMINI2D(
+        args.event.strftime("%Y%m%d"),
+        cfg,
+        f"dataset/GEMINI3D/",
+        "nsall",
+        "grid.mat",
+    )
+    for d in days:
+        args.event = d
+        rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
+        fname = rtobj.folder + "{dn}_{bm}.mat".format(
+            dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
+        )
+        logger.info(f"Create matlab file: {fname}")
+        gem.fetch_dataset_by_locations(
+            d, 
+            rtobj.bearing_object["lat"],
+            rtobj.bearing_object["lon"],
+            rtobj.bearing_object["ht"], 
+            dlat=0.2, 
+            dlon=0.2,
+            to_file=fname
+        )
+        rtobj.compile(gem.param_val)
+        plots.plot_rays(
+            rtobj.folder,
+            rtobj.pharlap_simulation,
+            f"GEMINI2D + {args.rad.upper()}/{str(args.beam)}/{str(cfg.frequency)}",
+        )
     return

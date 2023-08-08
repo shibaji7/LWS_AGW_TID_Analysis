@@ -31,7 +31,7 @@ class GEMINI2D(object):
         self.param = param
         self.grid_file = grid_file
         self.load_grid()
-        self.load_dataset()
+        self.load_datasets()
         return
     
     def load_grid(self):
@@ -46,28 +46,41 @@ class GEMINI2D(object):
             self.grid["glat"] = fkey.get("glat")[:]
         return
     
-    def load_dataset(self):
+    def load_dataset(self, day, fname=None, reset=True):
         """
-        Load all dataset available
+        Load dataset
         """
-        self.files = glob.glob(self.folder + self.date_str + "*")
-        self.files.sort()
-        self.dataset = dict()
-        for fname in self.files:
+        if reset:
+            self.dataset = dict()
+        if day not in list(self.dataset.keys()):
+            fname = fname if fname else self.files[self.dates.index(day)]
             with h5py.File(fname, "r") as fkey:
-                day = dt.datetime.strptime(fname.split("_")[0].split("/")[-1], "%Y%m%d")
-                seconds = int(fname.split("_")[1].split(".")[0])
-                day = day + dt.timedelta(seconds=seconds)
                 o = self.grid.copy()
                 o[self.param] = fkey.get(self.param)[:]
                 self.dataset[day] = o
                 logger.info(f"Load dataset: {day}")
         return
     
-    def fetch_dataset_by_locations(self, time, lats, lons, alts, dh=500, dlat=0.2, dlon=0.2):
+    def load_datasets(self):
+        """
+        Load all dataset pointers
+        """
+        self.files = glob.glob(self.folder + self.date_str + "*")
+        self.files.sort()
+        self.dates = []
+        self.dataset = dict()
+        for fname in self.files:
+            day = dt.datetime.strptime(fname.split("_")[0].split("/")[-1], "%Y%m%d")
+            seconds = int(fname.split("_")[1].split(".")[0])
+            day = day + dt.timedelta(seconds=seconds)
+            self.dates.append(day)
+        return
+    
+    def fetch_dataset_by_locations(self, time, lats, lons, alts, dlat=0.2, dlon=0.2, to_file=None):
         """
         Fetch data by lat/lon limits
         """
+        self.load_dataset(time)
         logger.info(f"Time: {time}")
         df = self.dataset[time]
         df = df[df.alt>=0]
@@ -83,10 +96,14 @@ class GEMINI2D(object):
             if len(uf) > 0:
                 out[:, ix] = utils.interpolate_by_altitude(
                         np.array(uf.alt)/1e3, alts, utils.smooth(np.array(uf[self.param]), 51),
-                        self.cfg.scale, self.cfg.kind, method="extp"
+                        self.cfg.scale, self.cfg.kind, method="intp"
                     ) * 1e-6
             ix += 1
         self.param_val = out
+        if to_file:
+            mobj = {}
+            mobj["ne"] = out
+            savemat(to_file, mobj)
         return out
     
     @staticmethod
@@ -96,18 +113,32 @@ class GEMINI2D(object):
         folder="dataset/GEMINI3D/",
         param="nsall",
         grid_file="grid.mat",
-        time=dt.datetime(2016,7,8,0, 13,12),
+        time=dt.datetime(2016,7,8,0,13,12),
         lats=[],
         lons=[],
         alts=[],
+        dlat=0.2, 
+        dlon=0.2,
         to_file=None,
     ):
-        mobj = {}
         gem = GEMINI2D(date_str, cfg, folder, param, grid_file)
-        mobj["ne"] = gem.fetch_dataset_by_locations(time, lats, lons, alts)
-        if to_file:
-            savemat(to_file, mobj)
+        gem.fetch_dataset_by_locations(time, lats, lons, alts, dlat, dlon, to_file)
         return gem
+    
+    @staticmethod
+    def get_time_keys(
+        date_str,
+        folder="dataset/GEMINI3D/",
+    ):
+        files = glob.glob(folder + date_str + "*")
+        files.sort()
+        dates = []
+        for fname in files:
+            day = dt.datetime.strptime(fname.split("_")[0].split("/")[-1], "%Y%m%d")
+            seconds = int(fname.split("_")[1].split(".")[0])
+            day = day + dt.timedelta(seconds=seconds)
+            dates.append(day)
+        return dates
 
     
 if __name__ == "__main__":
