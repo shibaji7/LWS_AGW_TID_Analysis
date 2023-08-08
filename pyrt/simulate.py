@@ -24,12 +24,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
     parser.add_argument(
-        "-bm", "--beam", default=11, type=int, help="Radar beam (default 11)"
+        "-bm", "--beam", default=3, type=int, help="Radar beam (default 7)"
     )
     parser.add_argument(
         "-ev",
         "--event",
-        default=dt.datetime(2017, 8, 21, 17, 30),
+        default=dt.datetime(2016, 7, 8, 0, 13, 12),
         help="Event date for simulation [YYYY-mm-ddTHH:MM]",
         type=dparser.isoparse,
     )

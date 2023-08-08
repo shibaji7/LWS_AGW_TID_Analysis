@@ -24,15 +24,24 @@ from dateutil import parser as dparser
 from geopy.distance import great_circle as GC
 from loguru import logger
 from scipy.io import savemat
+from gemini3d import GEMINI2D
 
 
-def read_params_2D(fname="rt2D.json"):
+def read_params_2D(fname="cfg/rt2D.json"):
     import json
     from types import SimpleNamespace
 
     with open(fname, "r") as f:
         param = json.load(f, object_hook=lambda x: SimpleNamespace(**x))
     return param
+
+def read_artificial_radar(fname="cfg/afr.json"):
+    import json
+    from types import SimpleNamespace
+
+    with open(fname, "r") as f:
+        rad = json.load(f, object_hook=lambda x: SimpleNamespace(**x))
+    return rad
 
 class RayTrace2D(object):
     """
@@ -61,7 +70,8 @@ class RayTrace2D(object):
     def _estimate_bearing_(self):
         """Estimate laitude and logitude bearings"""
         fname = self.folder + f"bearing_{'%02d'%self.beam}.mat"
-        bearing = (self.beam - self.hdw.beams) * self.hdw.beam_separation
+        bearing = self.hdw.boresight.physical + (self.beam - self.hdw.beams/2) * self.hdw.beam_separation
+        logger.info(f"Bearing angle of beam {self.beam} is {bearing} deg")
         lat, lon = (self.hdw.geographic.lat, self.hdw.geographic.lon)
         p = (lat, lon)
         gc = GC(p, p)
@@ -186,23 +196,25 @@ def execute_gemini2D_simulations(
     fname = rtobj.folder + "{dn}_{bm}.mat".format(
         dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
     )
-    gitm = GEMINI2D.create_object(
+    logger.info(f"Create matlab file: {fname}")
+    gem = GEMINI2D.create_object(
+        args.event.strftime("%Y%m%d"),
         cfg,
-        args.event.year,
-        f"dataset/GEMINI2D/{args.event.strftime('%Y%m%d')}/",
-        "eden",
+        f"dataset/GEMINI3D/",
+        "nsall",
+        "grid.mat",
         args.event,
         rtobj.bearing_object["lat"],
         rtobj.bearing_object["lon"],
         rtobj.bearing_object["ht"],
         to_file=fname,
     )
-    rtobj.compile(gitm.param)
+    rtobj.compile(gem.param_val)
     import plots
 
     plots.plot_rays(
         rtobj.folder,
         rtobj.pharlap_simulation,
-        "GEMINI2D + ",
+        "GEMINI2D + FHE/03/14",
     )
     return

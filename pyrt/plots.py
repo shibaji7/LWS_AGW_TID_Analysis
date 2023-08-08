@@ -256,7 +256,7 @@ def plot_rays(
     dic,
     pharlap_simulation,
     txt,
-    maxground=3000,
+    maxground=1500,
     maxalt=500,
     step=1,
     showrefract=False,
