@@ -56,7 +56,7 @@ class Fan(object):
         self.date = date
         self.nrows, self.ncols = nrows, ncols
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(3 * ncols, 3 * nrows), dpi=180)
+        self.fig = plt.figure(figsize=(3 * ncols, 3 * nrows), dpi=240)
         self.coord = coord
         plt.suptitle(
             f"{self.date_string()} / {fig_title}"
@@ -131,9 +131,10 @@ class Fan(object):
             ax.overlay_tec(ipplat, ipplon, dtec, self.proj)
         ax.overlay_radar(rad)
         ax.overlay_fov(rad)
-        ax.overlay_data(rad, frame, self.proj)
+        if frame: ax.overlay_data(rad, frame, self.proj)
         if beams and len(beams) > 0:
-            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="--") for b in beams]
+            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor="r",
+        lineWidth=1.2) for b in beams]
         return
 
     def generate_fovs(self, fds, beams=[], laytec=False):

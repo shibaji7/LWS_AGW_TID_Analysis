@@ -26,6 +26,7 @@ from cartopy.mpl.geoaxes import GeoAxes
 from matplotlib.projections import register_projection
 from rad_fov import CalcFov
 from shapely.geometry import LineString, MultiLineString, Polygon, mapping
+from descartes import PolygonPatch
 
 
 class SDCarto(GeoAxes):
@@ -376,7 +377,7 @@ class SDCarto(GeoAxes):
         fovAlpha=0.2,
         zorder=1,
         lineColor="k",
-        lineWidth=0.5,
+        lineWidth=0.4,
         ls="-",
         model="IS",
         fov_dir="front",

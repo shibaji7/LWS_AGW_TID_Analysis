@@ -24,7 +24,7 @@ import datetime as dt
 import matplotlib.dates as mdates
 import model_vheight as mvh
 import numpy as np
-import tidUtils
+import utils
 from pysolar.solar import get_altitude_fast
 from scipy.stats import pearsonr
 

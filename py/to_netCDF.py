@@ -19,15 +19,18 @@ import tidUtils
 from fetchUtils import FetchData
 
 rads = [
-    "fhe",
-    "fhw",
-    "cve",
-    "cvw"
+    "sas",
+    "kap",
+    "pgr",
+    "gbr"
 ]
 fdMap = {}
 dates = [
-    dt.datetime(2017, 9, 7),
-    dt.datetime(2017, 9, 8),
+    dt.datetime(2022, 12, 20),
+    dt.datetime(2022, 12, 21),
+    dt.datetime(2022, 12, 22),
+    dt.datetime(2022, 12, 23),
+    dt.datetime(2022, 12, 24)
 ]
 for d in dates:
     for rad in rads:

@@ -620,7 +620,7 @@ class FetchData(object):
                 logger.info(f"Data length {rad}: {len(fd.frame)}")
                 if len(fd.frame) > 0:
                     fd.frame = fd.frame[
-                        (fd.frame.slist<101)
+                        (fd.frame.slist<76)
                         & (fd.frame.bmnum<np.max(fd.frame.bmnum))
                     ]
                     fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
