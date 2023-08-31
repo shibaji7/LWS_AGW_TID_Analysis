@@ -30,6 +30,14 @@ from matplotlib.transforms import Affine2D
 from mpl_toolkits.axisartist.grid_finder import DictFormatter, FixedLocator
 from pylab import gca
 
+def create_movie(folder, fname, file_ext="png", movie_ext="mp4"):
+    import os
+    if os.path.exists(f"{folder}{fname}.{movie_ext}"):
+        os.remove(f"{folder}{fname}.{movie_ext}")
+    cmd = f"ffmpeg -framerate 30 -pattern_type glob -i '{folder}*.{file_ext}' -c:v libx264 {folder}{fname}.{movie_ext}"
+    os.system(cmd)
+    return
+
 
 def textHighlighted(
     xy,
@@ -242,7 +250,7 @@ def curvedEarthAxes(
 
 def get_polar(d, Re=6371.0):
     """Convert to polar coordinates"""
-    th, r = to_polar(d.grange, d.height, Re)
+    th, r = to_polar(d.ground_range, d.height, Re)
     return th, r
 
 
@@ -254,7 +262,8 @@ def to_polar(grange, height, Re=6371.0):
 
 def plot_rays(
     dic,
-    pharlap_simulation,
+    fig_fname,
+    rto,
     txt,
     maxground=1500,
     maxalt=500,
@@ -305,7 +314,7 @@ def plot_rays(
         ax, aax = curvedEarthAxes(
             fig=fig, rect=rect, maxground=maxground, maxalt=maxalt
         )
-    for ray in pharlap_simulation["rays"]:
+    for ray in list(rto.rays.ray_path_data.values())[::5]:
         th, r = get_polar(ray)
         if not showrefract:
             aax.plot(th, r, c=raycolor, zorder=zorder, alpha=alpha, ls="-", lw=0.5)
@@ -318,7 +327,7 @@ def plot_rays(
             _ = lcol.set_array(v)
             _ = aax.add_collection(lcol)
     if title:
-        stitle = "%s UT" % pharlap_simulation["time"].strftime("%Y-%m-%d %H:%M")
+        stitle = "%s UT" % rto.event.strftime("%Y-%m-%d %H:%M")
         aax.text(0.95, 1.01, stitle, ha="right", va="center", transform=ax.transAxes)
         aax.text(0.05, 1.01, txt, ha="left", va="center", transform=ax.transAxes)
     if showrefract:
@@ -329,10 +338,10 @@ def plot_rays(
 
     # Plot density
     th, r = to_polar(
-        pharlap_simulation["bearing_object"]["dist"],
-        pharlap_simulation["bearing_object"]["heights"],
+        rto.bearing_object["dist"],
+        rto.bearing_object["heights"],
     )
-    pf = np.sqrt(80.6164e-6 * pharlap_simulation["density"])
+    pf = np.sqrt(80.6164e-6 * rto.density)
     im = aax.pcolormesh(
         th,
         r,
@@ -356,14 +365,10 @@ def plot_rays(
     )
     _ = cbax.set_label(r"Plasma Frequency [MHz]")
 
-    ax.beam = pharlap_simulation["beam"]
+    ax.beam = rto.beam
     fig = ax.get_figure()
     fig.savefig(
-        dic
-        + "{time}_{beam}.png".format(
-            time=pharlap_simulation["time"].strftime("%H%M"),
-            beam="%02d" % pharlap_simulation["beam"],
-        ),
+        dic+fig_fname,
         bbox_inches="tight",
     )
     plt.close()

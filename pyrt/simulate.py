@@ -15,22 +15,30 @@ import argparse
 import datetime as dt
 from loguru import logger
 from dateutil import parser as dparser
-from rt2D import execute_gemini2D_simulation, execute_gemini2D_simulations
+from rt2D import (
+    execute_gemini2D_simulation, execute_gemini2D_simulations,
+    execute_iri2D_simulations
+)
+
+from rt3D import execute_iri3D_simulations
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-m", "--model", default="gemini2D", help="Model name [gitm/waccmx]"
+        "-m", "--model", default="iri3D", help="Model name [gitm/waccmx]"
     )
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
     parser.add_argument(
-        "-bm", "--beam", default=3, type=int, help="Radar beam (default 7)"
+        "-bm", "--beam", default=3, type=int, help="Radar beam (default 3)"
+    )
+    parser.add_argument(
+        "-ts", "--time_steps_min", default=300, type=int, help="Time steps for IRI simulation"
     )
     parser.add_argument(
         "-ev",
         "--event",
-        default=dt.datetime(2016, 7, 8, 3, 31, 12),
+        default=dt.datetime(2016, 7, 8, 0, 13, 12),
         help="Event date for simulation [YYYY-mm-ddTHH:MM]",
         type=dparser.isoparse,
     )
@@ -40,3 +48,7 @@ if __name__ == "__main__":
         print("     ", k, "->", str(vars(args)[k]))
     if args.model == "gemini2D":
         execute_gemini2D_simulations(args)
+    if args.model == "iri2D":
+        execute_iri2D_simulations(args)
+    if args.model == "iri3D":
+        execute_iri3D_simulations(args)

@@ -64,3 +64,24 @@ def smooth(x,window_len=11,window="hanning"):
     d = window_len - 1
     y = y[int(d/2):-int(d/2)]
     return y
+
+def get_gridded_parameters(
+    q, xparam="beam", yparam="slist", zparam="v", r=0, rounding=True
+):
+    """
+    Method converts scans to "beam" and "slist" or gate
+    """
+    plotParamDF = q[[xparam, yparam, zparam]]
+    if rounding:
+        plotParamDF.loc[:, xparam] = np.round(plotParamDF[xparam].tolist(), r)
+        plotParamDF.loc[:, yparam] = np.round(plotParamDF[yparam].tolist(), r)
+    plotParamDF = plotParamDF.groupby([xparam, yparam]).mean().reset_index()
+    plotParamDF = plotParamDF[[xparam, yparam, zparam]].pivot(xparam, yparam)
+    x = plotParamDF.index.values
+    y = plotParamDF.columns.levels[1].values
+    X, Y = np.meshgrid(x, y)
+    # Mask the nan values! pcolormesh can't handle them well!
+    Z = np.ma.masked_where(
+        np.isnan(plotParamDF[zparam].values), plotParamDF[zparam].values
+    )
+    return X, Y, Z
