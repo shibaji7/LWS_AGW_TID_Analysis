@@ -9,6 +9,7 @@ __pycache__/
 *data/*
 pyrt/dataset*
 *simulation_results*
+*figures/*
 
 
 # Distribution / packaging

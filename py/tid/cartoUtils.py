@@ -363,7 +363,7 @@ class SDCarto(GeoAxes):
                 va="center",
                 transform=self.projection,
                 fontdict={"color": font_color, "size": fontSize},
-                alpha=0.4,
+                alpha=0.8,
             )
         return
 
@@ -445,17 +445,18 @@ class SDCarto(GeoAxes):
         df,
         tx,
         fm=cartopy.crs.Geodetic(),
-        p_max=39,
+        p_max=33,
         p_min=0,
         p_name="p_l",
         label="Power [dB]",
-        cmap=plt.cm.jet,
+        cmap=plt.cm.plasma,
         cbar=True,
         maxGate=None,
         scan_time=None,
         model="IS",
         fov_dir="front",
         **kwargs,
+
     ):
         """Overlay radar Data"""
         scan_time = scan_time if scan_time else np.rint(df.scan_time.tolist()[0] / 60.0)
@@ -465,7 +466,7 @@ class SDCarto(GeoAxes):
         ]
         if maxGate or hasattr(self, "maxGate"):
             maxGate = maxGate if maxGate else self.maxGate
-            df = df[df.slist <= maxGate]
+            df = df[(df.slist >= 7) & (df.slist <= maxGate)]
         if len(df) > 0:
             # TODO
             hdw = pydarn.read_hdw_file(rad)
@@ -482,18 +483,28 @@ class SDCarto(GeoAxes):
             ].reshape(Xb.shape)
             XYZ = tx.transform_points(fm, lons, lats)
             Px = np.ma.masked_invalid(Px)
-            im = self.scatter(
+            # im = self.scatter(
+            #     XYZ[:, :, 0],
+            #     XYZ[:, :, 1],
+            #     c=Px.T,
+            #     transform=tx,
+            #     cmap=cmap,
+            #     vmax=p_max,
+            #     vmin=p_min,
+            #     s=0.3,
+            #     marker="o",
+            #     alpha=0.9,
+            #     **kwargs,
+            # )
+            im = self.pcolormesh(
                 XYZ[:, :, 0],
                 XYZ[:, :, 1],
-                c=Px.T,
-                transform=tx,
-                cmap=cmap,
+                Px.T,
                 vmax=p_max,
                 vmin=p_min,
-                s=0.3,
-                marker="o",
-                alpha=0.9,
-                **kwargs,
+                transform=tx,
+                cmap=cmap,
+                zorder=2
             )
             if cbar:
                 self._add_colorbar(im, label=label)

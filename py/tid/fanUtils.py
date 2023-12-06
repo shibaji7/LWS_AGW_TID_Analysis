@@ -56,7 +56,7 @@ class Fan(object):
         self.date = date
         self.nrows, self.ncols = nrows, ncols
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(3 * ncols, 3 * nrows), dpi=240)
+        self.fig = plt.figure(figsize=(3 * ncols, 3 * nrows), dpi=300)
         self.coord = coord
         plt.suptitle(
             f"{self.date_string()} / {fig_title}"
@@ -113,13 +113,13 @@ class Fan(object):
 
     def date_string(self, label_style="web"):
         # Set the date and time formats
-        dfmt = "%d/%b/%Y" if label_style == "web" else "%d %b %Y,"
+        dfmt = "%d %b %Y" if label_style == "web" else "%d %b %Y,"
         tfmt = "%H:%M"
         stime = self.date
         date_str = "{:{dd} {tt}} UT".format(stime, dd=dfmt, tt=tfmt)
         return date_str
 
-    def generate_fov(self, rad, frame, beams=[], ax=None, laytec=False):
+    def generate_fov(self, rad, frame, beams=[], ax=None, laytec=False, maxGate=45, col="k"):
         """
         Generate plot with dataset overlaid
         """
@@ -129,9 +129,9 @@ class Fan(object):
                 self.date, self.tec, self.tec_times
             )
             ax.overlay_tec(ipplat, ipplon, dtec, self.proj)
-        ax.overlay_radar(rad)
-        ax.overlay_fov(rad)
-        if frame: ax.overlay_data(rad, frame, self.proj)
+        ax.overlay_radar(rad, font_color=col)
+        ax.overlay_fov(rad, lineColor=col)
+        if len(frame) > 0: ax.overlay_data(rad, frame, self.proj, maxGate=maxGate)
         if beams and len(beams) > 0:
             [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor="r",
         lineWidth=1.2) for b in beams]
@@ -143,8 +143,8 @@ class Fan(object):
         """
         ax = self.add_axes()
         for rad in self.rads:
-            self.generate_fov(rad, fds[rad].frame, beams, ax, laytec)
-        return
+            self.generate_fov(rad, fds[rad].frame, beams, ax, laytec, col=fds[rad].color)
+        return ax
 
     def save(self, filepath):
         self.fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))

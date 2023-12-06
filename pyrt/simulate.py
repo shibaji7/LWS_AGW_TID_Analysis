@@ -33,7 +33,7 @@ if __name__ == "__main__":
         "-bm", "--beam", default=3, type=int, help="Radar beam (default 3)"
     )
     parser.add_argument(
-        "-ts", "--time_steps_min", default=300, type=int, help="Time steps for IRI simulation"
+        "-ts", "--time_steps_min", default=10, type=int, help="Time steps for IRI simulation"
     )
     parser.add_argument(
         "-ev",

@@ -20,9 +20,9 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 
-def get_config(key, section="LWS"):
+def get_config(key, section="LWS", fname="../config/conf.ini"):
     config = configparser.ConfigParser()
-    config.read("config/conf.ini")
+    config.read(fname)
     val = config[section][key]
     return val
 

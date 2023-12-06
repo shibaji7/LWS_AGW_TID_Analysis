@@ -24,7 +24,7 @@ from dataUtils import Beam, Gate, Scan
 from fanUtils import Fan
 from filterUtils import Boxcar
 from loguru import logger
-from rtiUtils import RTI, plot_SDTEC_TS
+#from rtiUtils import RTI, plot_SDTEC_TS
 from tqdm import tqdm
 
 
@@ -115,16 +115,19 @@ class FetchData(object):
             for fname in fnames:
                 tm = fname.split(".")[1]
                 sc = fname.split(".")[2]
-                dus = dt.datetime.strptime(
+                ftime = dt.datetime.strptime(
                     fname.split(".")[0].split("/")[-1] + tm + sc, "%Y%m%d%H%M%S"
                 )
-                due = dus + dt.timedelta(hours=2)
-                if (ent == -1) and (dus <= self.date_range[0] <= due):
-                    ent = 0
-                if ent == 0:
+                if (ftime >= self.date_range[0]) and (ftime <= self.date_range[1]):
                     self.files.append(fname)
-                if (ent == 0) and (dus <= self.date_range[1] <= due):
-                    ent = -1
+                # due = dus + dt.timedelta(hours=2)
+                # print(dus, due, ent)
+                # if (ent == -1) and (dus <= self.date_range[0] <= due):
+                #     ent = 0
+                # if ent == 0:
+                #     self.files.append(fname)
+                # if (ent == 0) and (dus <= self.date_range[1] <= due):
+                #     ent = -1
         return
 
     def _parse_data(self, data, s_params, v_params, by):

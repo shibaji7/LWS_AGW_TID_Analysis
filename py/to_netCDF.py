@@ -15,26 +15,18 @@ import datetime as dt
 import sys
 
 sys.path.extend(["py/txUtils/", "py/tid/", "py/davitPy/"])
-import tidUtils
 from fetchUtils import FetchData
 
 rads = [
-    "sas",
-    "kap",
-    "pgr",
-    "gbr"
+    "fhe","fhw"
 ]
 fdMap = {}
 dates = [
-    dt.datetime(2022, 12, 20),
-    dt.datetime(2022, 12, 21),
-    dt.datetime(2022, 12, 22),
-    dt.datetime(2022, 12, 23),
-    dt.datetime(2022, 12, 24)
+    dt.datetime(2022, 12, 28),
 ]
 for d in dates:
     for rad in rads:
         fd = FetchData.fetch(
             rad, [d, d + dt.timedelta(1)], med_filter={"cpu": 4, "thresh": 0.7}
         )
-        fd.to_geom()
+        #fd.to_geom()
