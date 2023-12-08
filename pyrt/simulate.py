@@ -26,14 +26,14 @@ from rt3D import execute_iri3D_simulations
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-m", "--model", default="iri3D", help="Model name [gitm/waccmx]"
+        "-m", "--model", default="iri2D", help="Model name [gitm/waccmx]"
     )
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
     parser.add_argument(
         "-bm", "--beam", default=3, type=int, help="Radar beam (default 3)"
     )
     parser.add_argument(
-        "-ts", "--time_steps_min", default=10, type=int, help="Time steps for IRI simulation"
+        "-tsmin", "--time_steps_min", default=10, type=int, help="Time steps for IRI simulation"
     )
     parser.add_argument(
         "-ev",

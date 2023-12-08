@@ -148,7 +148,7 @@ class RayTrace2D(object):
         pwd = os.getcwd() + "/pharlap/pharlap_4.1.3/dat"
         cmd = "export DIR_MODELS_REF_DAT={pwd};\
                 cd pharlap;\
-                matlab -nodisplay -nodesktop -nosplash -nojvm -r \"UT=[{ut}];rad='{rad}';dic='{dic}';fname='{fname}';bm={bm};\
+                matlab -softwareopengl -nodisplay -nodesktop -nosplash -nojvm -r \"UT=[{ut}];rad='{rad}';dic='{dic}';fname='{fname}';bm={bm};\
                 rt_2D;exit;\"".format(
             pwd=pwd,
             ut=self.event.strftime("%Y %m %d %H %M"),

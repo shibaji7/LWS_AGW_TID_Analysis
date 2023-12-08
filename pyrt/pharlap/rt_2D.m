@@ -24,7 +24,7 @@
 
 %% Close and clear all panes and variables and command line window and load PharLap
 close all
-startup
+startup_2D
 
 %% initialize
 R12 = 100;
