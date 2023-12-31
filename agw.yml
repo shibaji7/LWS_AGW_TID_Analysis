@@ -81,7 +81,6 @@ dependencies:
   - locket=1.0.0=py310h06a4308_0
   - loguru=0.6.0=py310hff52083_2
   - lz4-c=1.9.3=h295c915_1
-  - matplotlib-base=3.4.3=py310h23f4a51_2
   - matplotlib-inline=0.1.6=pyhd8ed1ab_0
   - mkl=2021.4.0=h06a4308_640
   - mkl-service=2.4.0=py310h7f8727e_0
@@ -150,18 +149,23 @@ dependencies:
     - cython==0.29.33
     - deepdish==0.3.7
     - fonttools==4.38.0
+    - fortranformat==2.0.0
+    - geographiclib==2.0
+    - geopy==2.4.1
     - h5py==3.8.0
+    - iricore==1.6.1
     - matplotlib==3.6.3
     - msgpack==1.0.4
     - mypy-extensions==0.4.3
     - numexpr==2.8.4
-    - numpy==1.22.4
+    - numpy==1.26.2
     - packaging==23.0
     - pathlib2==2.3.7.post1
     - pathspec==0.11.0
     - py-cpuinfo==9.0.0
     - pydarn==3.0
     - pydarnio==1.2.0
+    - pymap3d==3.0.1
     - pysolar==0.10
     - pyyaml==6.0
     - scienceplots==2.0.1

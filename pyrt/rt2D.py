@@ -180,7 +180,7 @@ def execute_gemini2D_simulation(
         cfg,
         f"dataset/GEMINI3D/",
         "nsall",
-        "grid.mat",
+        "coordinates.mat",
         args.event,
         rtobj.bearing_object["lat"],
         rtobj.bearing_object["lon"],
@@ -212,14 +212,14 @@ def execute_gemini2D_simulations(
         cfg,
         f"dataset/GEMINI3D/",
         "nsall",
-        "grid.mat",
+        "coordinates.mat",
     )
     folder = "simulation_results/{dn}/{rad}/".format(
             dn=args.event.strftime("%Y.%m.%d"), rad=args.rad
         )
     movie = False
     beam_soundings_rays = []
-    for d in days:
+    for d in days[:args.time_steps_min]:
         args.event = d
         rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
         if not os.path.exists(rtobj.folder + rtobj.fig_name):

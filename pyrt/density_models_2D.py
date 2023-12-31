@@ -102,7 +102,7 @@ class IRI2D(object):
 
 class GEMINI2D(object):
     
-    def __init__(self, date_str, cfg, folder="dataset/GEMINI3D/", param="nsall", grid_file="grid.mat"):
+    def __init__(self, date_str, cfg, folder="dataset/GEMINI3D/", param="nsall", grid_file="coordinates.mat"):
         self.date_str = date_str
         self.cfg = cfg
         self.folder = folder
@@ -120,7 +120,7 @@ class GEMINI2D(object):
         with h5py.File(self.folder + self.grid_file, "r") as fkey:
             self.grid["glat"] = np.array(fkey.get("glat")[:]).tolist()
             self.grid["glon"] = np.mod( (fkey.get("glon")[:] + 180), 360 ) - 180
-            self.grid["alt"] = fkey.get("alt")[:]
+            self.grid["alt"] = fkey.get("galt")[:]
             self.grid["glat"] = fkey.get("glat")[:]
         return
     
@@ -133,6 +133,7 @@ class GEMINI2D(object):
             self.dataset = dict()
         if day not in list(self.dataset.keys()):
             fname = fname if fname else self.files[self.dates.index(day)]
+            logger.info(f"Loading matlab file: {fname}")
             with h5py.File(fname, "r") as fkey:
                 o = self.grid.copy()
                 o[self.param] = fkey.get(self.param)[:]
@@ -191,7 +192,7 @@ class GEMINI2D(object):
         cfg,
         folder="dataset/GEMINI3D/",
         param="nsall",
-        grid_file="grid.mat",
+        grid_file="coordinates.mat",
         time=dt.datetime(2016,7,8,0,13,12),
         lats=[],
         lons=[],

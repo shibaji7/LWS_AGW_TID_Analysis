@@ -15,6 +15,9 @@ import argparse
 import datetime as dt
 from loguru import logger
 from dateutil import parser as dparser
+from pathlib import Path
+import glob
+import os
 from rt2D import (
     execute_gemini2D_simulation, execute_gemini2D_simulations,
     execute_iri2D_simulations
@@ -22,23 +25,30 @@ from rt2D import (
 
 from rt3D import execute_iri3D_simulations
 
+def clean():
+    files = glob.glob(str(Path.home() / "matlab_crash_dump*"))
+    for f in files:
+        if os.path.exists(f): os.remove(f)
+    return
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-m", "--model", default="iri2D", help="Model name [gitm/waccmx]"
+        "-m", "--model", default="gemini2D", help="Model name [iri(2D/3D) or gemini(2D/3D)]"
     )
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
     parser.add_argument(
         "-bm", "--beam", default=3, type=int, help="Radar beam (default 3)"
     )
     parser.add_argument(
-        "-tsmin", "--time_steps_min", default=10, type=int, help="Time steps for IRI simulation"
+        "-tsmin", "--time_steps_min", default=2, type=int, help="Time steps for IRI simulation"
     )
     parser.add_argument(
         "-ev",
         "--event",
-        default=dt.datetime(2016, 7, 8, 0, 13, 12),
+        default=dt.datetime(2016, 7, 8, 1, 30),
         help="Event date for simulation [YYYY-mm-ddTHH:MM]",
         type=dparser.isoparse,
     )
