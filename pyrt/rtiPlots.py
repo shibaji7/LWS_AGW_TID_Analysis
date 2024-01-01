@@ -16,7 +16,7 @@ __status__ = "Research"
 import matplotlib
 import matplotlib.pyplot as plt
 
-plt.style.use(["science", "ieee"])
+#plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import datetime as dt
@@ -56,7 +56,7 @@ class RTIPlots(object):
         beam_soundings_rays,
         xlabel="Time (UT)",
         cmap="jet",
-        vlim=[-30, 0],
+        vlim=[-10, 0],
         alpha=1,
     ):
         o = pd.DataFrame()

@@ -175,7 +175,7 @@ class GEMINI2D(object):
             uf = uf.groupby("alt").mean().reset_index()
             if len(uf) > 0:
                 out[:, ix] = utils.interpolate_by_altitude(
-                        np.array(uf.alt)/1e3, alts, utils.smooth(np.array(uf[self.param]), 51),
+                        np.array(uf.alt)/1e3, alts, np.array(uf[self.param]),
                         self.cfg.scale, self.cfg.kind, method="intp"
                     ) * 1e-6
             ix += 1

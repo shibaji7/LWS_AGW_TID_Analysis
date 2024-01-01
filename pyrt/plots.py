@@ -21,7 +21,7 @@ from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import Size, SubplotDivider
 from mpl_toolkits.axes_grid1.mpl_axes import Axes
 
-plt.style.use(["science", "ieee"])
+#plt.style.use(["science", "ieee"])
 
 import mpl_toolkits.axisartist.floating_axes as floating_axes
 import numpy as np
@@ -34,7 +34,7 @@ def create_movie(folder, fname, file_ext="png", movie_ext="mp4"):
     import os
     if os.path.exists(f"{folder}{fname}.{movie_ext}"):
         os.remove(f"{folder}{fname}.{movie_ext}")
-    cmd = f"ffmpeg -framerate 30 -pattern_type glob -i '{folder}*.{file_ext}' -c:v libx264 {folder}{fname}.{movie_ext}"
+    cmd = f"ffmpeg -framerate 10 -pattern_type glob -i '{folder}*.{file_ext}' -c:v libx264 {folder}{fname}.{movie_ext}"
     os.system(cmd)
     return
 
