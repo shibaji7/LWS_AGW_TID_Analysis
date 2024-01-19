@@ -363,7 +363,7 @@ def plot_rays(
     cbax = fig.colorbar(
         im, cax, spacing="uniform", orientation="vertical", cmap="plasma"
     )
-    _ = cbax.set_label(r"Plasma Frequency [MHz]")
+    _ = cbax.set_label(r"$f_0$ [MHz]")
 
     ax.beam = rto.beam
     fig = ax.get_figure()

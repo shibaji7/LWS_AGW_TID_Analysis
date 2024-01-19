@@ -118,10 +118,10 @@ class GEMINI2D(object):
         """
         self.grid = pd.DataFrame()
         with h5py.File(self.folder + self.grid_file, "r") as fkey:
-            self.grid["glat"] = np.array(fkey.get("glat")[:]).tolist()
-            self.grid["glon"] = np.mod( (fkey.get("glon")[:] + 180), 360 ) - 180
-            self.grid["alt"] = fkey.get("galt")[:]
-            self.grid["glat"] = fkey.get("glat")[:]
+            self.grid["glat"] = np.array(fkey.get("glat")[0]).tolist()
+            self.grid["glon"] = np.mod( (fkey.get("glon")[0] + 180), 360 ) - 180
+            self.grid["alt"] = fkey.get("galt")[0,:]
+            self.grid["glat"] = fkey.get("glat")[0,:]
         return
     
     def load_dataset(self, day, fname=None, reset=True):
@@ -136,7 +136,7 @@ class GEMINI2D(object):
             logger.info(f"Loading matlab file: {fname}")
             with h5py.File(fname, "r") as fkey:
                 o = self.grid.copy()
-                o[self.param] = fkey.get(self.param)[:]
+                o[self.param] = fkey.get(self.param)[0,:]
                 self.dataset[day] = o
                 logger.info(f"Load dataset: {day}")
         return
