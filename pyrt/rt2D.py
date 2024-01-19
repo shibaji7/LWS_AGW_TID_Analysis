@@ -251,7 +251,8 @@ def execute_gemini2D_simulations(
         beam_soundings_rays.append(
             Rays2D.read_rays(d, args.rad, args.beam, cfg, folder, rt_name)
         )
-        if d>dt.datetime(2016, 7, 8, 3, 13, 12): break
+        #if d > dt.datetime(2016, 7, 8, 3, 13, 12): break
+        os.system("rm -rf ~/matlab_crash_dump*")
     if movie: plots.create_movie(rtobj.folder, "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam))
     rtiPlots.create_RTI(rtobj.folder, beam_soundings_rays)
     return
@@ -307,7 +308,7 @@ def execute_iri2D_simulations(args):
         beam_soundings_rays.append(
             Rays2D.read_rays(d, args.rad, args.beam, cfg, folder, rt_name)
         )
-        
+        os.system("rm -rf ~/matlab_crash_dump*")
     if movie: plots.create_movie(rtobj.folder, "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam))
     rtiPlots.create_RTI(rtobj.folder, beam_soundings_rays)
     return
