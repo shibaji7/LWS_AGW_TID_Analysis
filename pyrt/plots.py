@@ -22,7 +22,7 @@ from mpl_toolkits.axes_grid1 import Size, SubplotDivider
 from mpl_toolkits.axes_grid1.mpl_axes import Axes
 
 #plt.style.use(["science", "ieee"])
-
+import mplstyle
 import mpl_toolkits.axisartist.floating_axes as floating_axes
 import numpy as np
 from matplotlib.projections import polar
