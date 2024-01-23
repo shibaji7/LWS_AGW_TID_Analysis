@@ -73,12 +73,18 @@ class Rays2D(object):
         
         Type: GS - [1]
         """
-        self.ray_power = { "gs": None, "is": None }
+        self.ray_power = { "gs": None, "is": None , "all": None}
         pwer = pd.DataFrame()
-        labels = [1] if type == "gs" else [1,0,-1,-2,-3,-4,-5,-6]
+        if type == "gs":
+            labels = [1] 
+        elif type == "is":
+            labels = [-1] 
+        else: [1,0,-1,-2,-3,-4,-5,-6]
         o = self.ray_data.copy()
         o = o[o.ray_label.isin(labels)]
-        o["weights"] = 1./(o.group_range**3) # By de Larquier, Sebastien [Thesis]
+        # By de Larquier, Sebastien [Thesis]
+        o["weights"] = o.plasma_freq_at_apogee**4/(o.group_range**3) \
+                if type == "is" else 1./(o.group_range**3)
         ranges = 180 + 45*np.arange(76,dtype=int)
         lag_power, bins = np.histogram(
             o.group_range, 

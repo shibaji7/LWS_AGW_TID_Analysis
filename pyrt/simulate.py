@@ -52,6 +52,9 @@ if __name__ == "__main__":
         help="Event date for simulation [YYYY-mm-ddTHH:MM]",
         type=dparser.isoparse,
     )
+    parser.add_argument(
+        "-sct", "--scatter_type", default="gs", help="scatter type - gs/is",
+    )
     args = parser.parse_args()
     logger.info("\n Parameter list for simulation ")
     for k in vars(args).keys():

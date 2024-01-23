@@ -59,10 +59,11 @@ class RTIPlots(object):
         cmap="jet",
         vlim=[-10, 0],
         alpha=1,
+        scatter_type = "gs",
     ):
         o = pd.DataFrame()
         for sound in beam_soundings_rays:
-            o = pd.concat([o, sound.ray_power["gs"]])
+            o = pd.concat([o, sound.ray_power[scatter_type]])
         o.lag_power = 10*np.log10(o.lag_power/o.lag_power.max())
         ax = self._add_axis()
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
@@ -92,6 +93,12 @@ class RTIPlots(object):
         )
         self._add_colorbar(self.fig, ax, im, label=r"$\lambda$ Power (dB)")
         ax.set_ylabel("Slant Range (km)", fontdict={"size": 12, "fontweight": "bold"})
+        ax.text(
+            0.99, 1.05,
+            ha="right", ve="center",
+            f"Scatter: {scatter_type.upper()}",
+            transform=ax.transAxes
+        )
         return ax
 
     def _add_axis(self):
@@ -126,13 +133,13 @@ class RTIPlots(object):
         cb.set_label(label)
         return
     
-def create_RTI(folder, beam_soundings_rays):
+def create_RTI(folder, beam_soundings_rays, scatter_type="gs"):
     rti = RTIPlots(
         80, 
         [beam_soundings_rays[0].date, beam_soundings_rays[-1].date],
         f"GEMINI2D/{beam_soundings_rays[0].rad}/{beam_soundings_rays[0].beam}"
     )
-    rti.addParamPlot(beam_soundings_rays)
+    rti.addParamPlot(beam_soundings_rays, scatter_type=scatter_type)
     rti.save(folder + "RTI.png")
     rti.close()
     return
