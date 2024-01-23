@@ -30,7 +30,7 @@ startup_2D
 R12 = 100;
 speed_of_light = 2.99792458e8;
 doppler_flag = 1;
-irregs_flag = 0;
+irregs_flag = 1;
 kp = 0;
 
 %% load data

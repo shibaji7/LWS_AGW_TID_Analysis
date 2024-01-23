@@ -73,16 +73,23 @@ class Rays2D(object):
         
         Type: GS - [1]
         """
-        self.ray_power = pd.DataFrame()
+        self.ray_power = { "gs": None, "is": None }
+        pwer = pd.DataFrame()
         labels = [1] if type == "gs" else [1,0,-1,-2,-3,-4,-5,-6]
         o = self.ray_data.copy()
         o = o[o.ray_label.isin(labels)]
+        o["weights"] = 1./(o.group_range**3) # By de Larquier, Sebastien [Thesis]
         ranges = 180 + 45*np.arange(76,dtype=int)
-        lag_power, bins = np.histogram(o.group_range, bins=ranges)
-        self.ray_power["lag_power"], self.ray_power["srange"], self.ray_power["gate"] = (
+        lag_power, bins = np.histogram(
+            o.group_range, 
+            bins=ranges,
+            weights=o.weights,
+        )
+        pwer["lag_power"], pwer["srange"], pwer["gate"] = (
             lag_power, ranges[:-1], range(75)
         )
-        self.ray_power["date"] = self.date
+        pwer["date"], pwer["type"] = self.date, type
+        self.ray_power[type] = pwer
         return
     
     @staticmethod

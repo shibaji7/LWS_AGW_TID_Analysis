@@ -9,9 +9,9 @@
     "kind": "linear",
     "frequency": 9,
     "start_elevation": 10,
-    "end_elevation": 45,
+    "end_elevation": 60,
     "elevation_inctiment": 0.1,
-    "nhops": 2,
+    "nhops": 1,
     "rise_time_sec": 60,
     "threshold": 1e-5,
     "radius_earth": 6371

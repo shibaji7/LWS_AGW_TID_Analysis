@@ -274,7 +274,7 @@ def plot_rays(
     raycolor="0.3",
     title=True,
     zorder=2,
-    alpha=1,
+    alpha=0.4,
     fig=None,
     rect=111,
     ax=None,
@@ -314,10 +314,21 @@ def plot_rays(
         ax, aax = curvedEarthAxes(
             fig=fig, rect=rect, maxground=maxground, maxalt=maxalt
         )
-    for ray in list(rto.rays.ray_path_data.values())[::5]:
-        th, r = get_polar(ray)
+    elvs = rto.rays.elvs
+    for i, elv in enumerate(elvs[::2]):
+        ray_path_data, ray_data = (
+            rto.rays.ray_path_data[elv],
+            rto.rays.simulation[elv]["ray_data"]
+        )
+        th, r = get_polar(ray_path_data)
         if not showrefract:
-            aax.plot(th, r, c=raycolor, zorder=zorder, alpha=alpha, ls="-", lw=0.5)
+            ray_label = ray_data["ray_label"]
+            if ray_label == 1: # GS
+                aax.plot(th, r, c=raycolor, zorder=zorder, alpha=alpha, ls="-", lw=0.5)
+            elif ray_label == -1: # IS
+                aax.plot(th, r, c="g", zorder=zorder, alpha=alpha, ls="-", lw=0.5)
+            else:
+                aax.plot(th, r, c="r", zorder=zorder, alpha=alpha, ls="-", lw=0.5)
         else:
             points = np.array([th, r]).T.reshape(-1, 1, 2)
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
