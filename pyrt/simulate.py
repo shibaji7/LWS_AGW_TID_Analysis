@@ -43,7 +43,7 @@ if __name__ == "__main__":
         "-bm", "--beam", default=3, type=int, help="Radar beam (default 3)"
     )
     parser.add_argument(
-        "-tsmin", "--time_steps_min", default=1, type=int, help="Time steps for the RT simulation"
+        "-tsmin", "--time_steps_min", default=-1, type=int, help="Time steps for the RT simulation"
     )
     parser.add_argument(
         "-ev",
