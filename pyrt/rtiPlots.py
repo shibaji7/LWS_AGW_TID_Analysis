@@ -64,6 +64,7 @@ class RTIPlots(object):
         o = pd.DataFrame()
         for sound in beam_soundings_rays:
             o = pd.concat([o, sound.ray_power[scatter_type]])
+        print(o.head())
         o.lag_power = 10*np.log10(o.lag_power/o.lag_power.max())
         ax = self._add_axis()
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
@@ -77,6 +78,7 @@ class RTIPlots(object):
         X, Y, Z = utils.get_gridded_parameters(
             o, xparam="date", yparam="srange", zparam="lag_power", rounding=False
         )
+        vlim = [int(np.nanmin(Z)/5)*5, int(np.nanmax(Z)/5)*5]
         im = ax.pcolormesh(
             X,
             Y,
@@ -95,8 +97,8 @@ class RTIPlots(object):
         ax.set_ylabel("Slant Range (km)", fontdict={"size": 12, "fontweight": "bold"})
         ax.text(
             0.99, 1.05,
-            ha="right", ve="center",
             f"Scatter: {scatter_type.upper()}",
+            ha="right", va="center",
             transform=ax.transAxes
         )
         return ax

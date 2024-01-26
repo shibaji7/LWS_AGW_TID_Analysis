@@ -38,6 +38,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--model", default="gemini2D", help="Model name [iri(2D/3D) or gemini(2D/3D)]"
     )
+    parser.add_argument(
+        "-md", "--method", default="rt", help="Method rt/rti/movie"
+    )
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
     parser.add_argument(
         "-bm", "--beam", default=3, type=int, help="Radar beam (default 3)"

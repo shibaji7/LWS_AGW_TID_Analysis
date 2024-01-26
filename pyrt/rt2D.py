@@ -26,6 +26,7 @@ from loguru import logger
 from scipy.io import savemat
 from density_models_2D import GEMINI2D, IRI2D
 from rays import Rays2D
+from scipy.io import loadmat
 import plots
 import rtiPlots
 
@@ -139,6 +140,16 @@ class RayTrace2D(object):
         self.bearing_object = copy.copy(m)
         return
 
+    def read_density_rays(self, fname):
+        self.density = loadmat(fname)["ne"]
+        self.sim_fname = self.folder + "{date}.{bm}_rt.mat".format(
+            bm="%02d" % self.beam, date=self.event.strftime("%H%M")
+        )
+        logger.info("Data-Model comparison: reading rays....")
+        self.rays = Rays2D.read_rays(self.event, self.rad, self.beam, self.cfg, self.folder, self.sim_fname)
+        return
+        
+
     def compile(self, density):
         """Compute RT using Pharlap"""
         self.density = density
@@ -215,50 +226,59 @@ def execute_gemini2D_simulations(
         "coordinates.mat",
     )
     folder = "simulation_results/{dn}/{rad}/".format(
-            dn=args.event.strftime("%Y.%m.%d"), rad=args.rad
+        dn=args.event.strftime("%Y.%m.%d"), rad=args.rad
+    )
+    if args.method == "movie":
+        plots.create_movie(
+            folder, 
+            "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam),
+            "_{bm}.png".format(bm="%02d" % args.beam)
         )
-    movie = False
-    beam_soundings_rays = []
-    for d in days[:args.time_steps_min]:
-        args.event = d
-        rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
-        if not os.path.exists(rtobj.folder + rtobj.fig_name):
+    else:
+        beam_soundings_rays = []
+        for d in days[:args.time_steps_min]:
+            args.event = d
+            rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
+            #if not os.path.exists(rtobj.folder + rtobj.fig_name):
             fname = rtobj.folder + "{dn}_{bm}.mat".format(
                 dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
             )
-            movie = True
-            logger.info(f"Create matlab file: {fname}")
-            gem.fetch_dataset_by_locations(
-                d, 
-                rtobj.bearing_object["lat"],
-                rtobj.bearing_object["lon"],
-                rtobj.bearing_object["ht"], 
-                dlat=0.2, 
-                dlon=0.2,
-                to_file=fname
+            if (args.method == "rt"):
+                if (not os.path.exists(fname)):
+                    logger.info(f"Create matlab file: {fname}")
+                    gem.fetch_dataset_by_locations(
+                        d, 
+                        rtobj.bearing_object["lat"],
+                        rtobj.bearing_object["lon"],
+                        rtobj.bearing_object["ht"], 
+                        dlat=0.2, 
+                        dlon=0.2,
+                        to_file=fname
+                    )
+                    rtobj.compile(gem.param_val)
+                    os.system("rm -rf ~/matlab_crash_dump*")
+                else:
+                    rtobj.read_density_rays(fname)
+                plots.plot_rays(
+                    folder,
+                    rtobj.fig_name,
+                    rtobj,
+                    fr"GEMINI2D + {args.rad.upper()}/{str(args.beam)}, $f_0$={str(cfg.frequency)} MHz",
+                    maxground = cfg.max_ground_range_km+10,
+                )
+            rt_name = folder + "{date}.{bm}_rt.mat".format(
+                bm="%02d" % args.beam, date=d.strftime("%H%M")
             )
-            rtobj.compile(gem.param_val)
-            plots.plot_rays(
-                rtobj.folder,
-                rtobj.fig_name,
-                rtobj,
-                f"GEMINI2D + {args.rad.upper()}/{str(args.beam)}/{str(cfg.frequency)}",
-                maxground = cfg.max_ground_range_km+10,
+            beam_soundings_rays.append(
+                Rays2D.read_rays(d, args.rad, args.beam, cfg, folder, rt_name)
             )
-        rt_name = folder + "{date}.{bm}_rt.mat".format(
-            bm="%02d" % args.beam, date=d.strftime("%H%M")
-        )
-        beam_soundings_rays.append(
-            Rays2D.read_rays(d, args.rad, args.beam, cfg, folder, rt_name)
-        )
-        #if d > dt.datetime(2016, 7, 8, 11): break
-        os.system("rm -rf ~/matlab_crash_dump*")
-    if movie: plots.create_movie(rtobj.folder, "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam))
-    rtiPlots.create_RTI(
-        rtobj.folder, 
-        beam_soundings_rays,
-        args.scatter_type.lower()
-    )
+            if d > dt.datetime(2016, 7, 8, 11): break
+        if args.method == "rti":
+            rtiPlots.create_RTI(
+                folder, 
+                beam_soundings_rays,
+                args.scatter_type.lower()
+            )
     return
 
 def execute_iri2D_simulations(args):
@@ -277,7 +297,11 @@ def execute_iri2D_simulations(args):
         a_lim = [0.1, 1],
         t = 0,
     )
-    movie = False
+    if args.method == "movie":
+        plots.create_movie(
+            folder, 
+            "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam)
+        )
     for ti, d in enumerate(times):
         args.event = d
         tid_prop["t"] = ti*60
@@ -313,6 +337,6 @@ def execute_iri2D_simulations(args):
             Rays2D.read_rays(d, args.rad, args.beam, cfg, folder, rt_name)
         )
         os.system("rm -rf ~/matlab_crash_dump*")
-    if movie: plots.create_movie(rtobj.folder, "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam))
-    rtiPlots.create_RTI(rtobj.folder, beam_soundings_rays)
+    if args.method == "rti":
+        rtiPlots.create_RTI(rtobj.folder, beam_soundings_rays, scatter_type=args.scatter_type)
     return

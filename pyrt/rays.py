@@ -31,7 +31,8 @@ class Rays2D(object):
         self.folder = folder,
         self.sim_fname = sim_fname
         self.read_file()
-        self.calc_relative_power()
+        self.calc_relative_power(type="gs")
+        self.calc_relative_power(type="is")
         return
     
     def read_file(self):

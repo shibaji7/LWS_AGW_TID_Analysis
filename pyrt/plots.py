@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import Size, SubplotDivider
 from mpl_toolkits.axes_grid1.mpl_axes import Axes
-
+import datetime as dt
 #plt.style.use(["science", "ieee"])
 import mplstyle
 import mpl_toolkits.axisartist.floating_axes as floating_axes
@@ -30,11 +30,11 @@ from matplotlib.transforms import Affine2D
 from mpl_toolkits.axisartist.grid_finder import DictFormatter, FixedLocator
 from pylab import gca
 
-def create_movie(folder, fname, file_ext="png", movie_ext="mp4"):
+def create_movie(folder, fname, file_ext=".png", movie_ext="mp4"):
     import os
     if os.path.exists(f"{folder}{fname}.{movie_ext}"):
         os.remove(f"{folder}{fname}.{movie_ext}")
-    cmd = f"ffmpeg -framerate 10 -pattern_type glob -i '{folder}*.{file_ext}' -c:v libx264 {folder}{fname}.{movie_ext}"
+    cmd = f"ffmpeg -framerate 10 -pattern_type glob -i '{folder}*{file_ext}' -c:v libx264 {folder}{fname}.{movie_ext}"
     os.system(cmd)
     return
 
@@ -314,39 +314,6 @@ def plot_rays(
         ax, aax = curvedEarthAxes(
             fig=fig, rect=rect, maxground=maxground, maxalt=maxalt
         )
-    elvs = rto.rays.elvs
-    for i, elv in enumerate(elvs[::2]):
-        ray_path_data, ray_data = (
-            rto.rays.ray_path_data[elv],
-            rto.rays.simulation[elv]["ray_data"]
-        )
-        th, r = get_polar(ray_path_data)
-        if not showrefract:
-            ray_label = ray_data["ray_label"]
-            if ray_label == 1: # GS
-                aax.plot(th, r, c=raycolor, zorder=zorder, alpha=alpha, ls="-", lw=0.5)
-            elif ray_label == -1: # IS
-                aax.plot(th, r, c="g", zorder=zorder, alpha=alpha, ls="-", lw=0.5)
-            else:
-                aax.plot(th, r, c="r", zorder=zorder, alpha=alpha, ls="-", lw=0.5)
-        else:
-            points = np.array([th, r]).T.reshape(-1, 1, 2)
-            segments = np.concatenate([points[:-1], points[1:]], axis=1)
-            lcol = LineCollection(segments, zorder=zorder, alpha=alpha)
-            _ = lcol.set_cmap(nr_cmap)
-            _ = lcol.set_norm(plt.Normalize(*nr_lim))
-            _ = lcol.set_array(v)
-            _ = aax.add_collection(lcol)
-    if title:
-        stitle = "%s UT" % rto.event.strftime("%Y-%m-%d %H:%M")
-        aax.text(0.95, 1.01, stitle, ha="right", va="center", transform=ax.transAxes)
-        aax.text(0.05, 1.01, txt, ha="left", va="center", transform=ax.transAxes)
-    if showrefract:
-        cbax = addColorbar(lcol, ax)
-        _ = cbax.set_ylabel(r"$\eta$")
-    else:
-        cbax = None
-
     # Plot density
     th, r = to_polar(
         rto.bearing_object["dist"],
@@ -375,6 +342,39 @@ def plot_rays(
         im, cax, spacing="uniform", orientation="vertical", cmap="plasma"
     )
     _ = cbax.set_label(r"$f_0$ [MHz]")
+
+    # Plot rays
+    elvs = rto.rays.elvs
+    for i, elv in enumerate(elvs[::2]):
+        ray_path_data, ray_data = (
+            rto.rays.ray_path_data[elv],
+            rto.rays.simulation[elv]["ray_data"]
+        )
+        th, r = get_polar(ray_path_data)
+        if not showrefract:
+            ray_label = ray_data["ray_label"]
+            aax.plot(th, r, c=raycolor, zorder=zorder, alpha=alpha, ls="-", lw=0.5)
+            col = "r" if ray_label == -1 else "k"
+            if ray_label in [-1, 1]:
+                aax.scatter([th[-1]], [r[-1]], marker="s", s=3, color=col)
+        else:
+            points = np.array([th, r]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            lcol = LineCollection(segments, zorder=zorder, alpha=alpha)
+            _ = lcol.set_cmap(nr_cmap)
+            _ = lcol.set_norm(plt.Normalize(*nr_lim))
+            _ = lcol.set_array(v)
+            _ = aax.add_collection(lcol)
+    if title:
+        event = rto.event - dt.timedelta(minutes=90)
+        stitle = "%s UT" % event.strftime("%Y-%m-%d %H:%M")
+        aax.text(0.95, 1.01, stitle, ha="right", va="center", transform=ax.transAxes)
+        aax.text(0.05, 1.01, txt, ha="left", va="center", transform=ax.transAxes)
+    if showrefract:
+        cbax = addColorbar(lcol, ax)
+        _ = cbax.set_ylabel(r"$\eta$")
+    else:
+        cbax = None
 
     ax.beam = rto.beam
     fig = ax.get_figure()
