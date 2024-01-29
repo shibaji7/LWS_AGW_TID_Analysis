@@ -205,7 +205,7 @@ def execute_gemini2D_simulation(
         rtobj.folder,
         rtobj.fig_name,
         rtobj,
-        f"GEMINI2D + {args.rad.upper()}/{str(args.beam)}/{str(cfg.frequency)}",
+        f"GEMINI3D + {args.rad.upper()}/{str(args.beam)}/{str(cfg.frequency)}",
         maxground = cfg.max_ground_range_km+10,
     )
     return
@@ -263,7 +263,7 @@ def execute_gemini2D_simulations(
                     folder,
                     rtobj.fig_name,
                     rtobj,
-                    fr"GEMINI2D + {args.rad.upper()}/{str(args.beam)}, $f_0$={str(cfg.frequency)} MHz",
+                    fr"GEMINI3D + {args.rad.upper()}/{str(args.beam)}, $f_0$={str(cfg.frequency)} MHz",
                     maxground = cfg.max_ground_range_km+10,
                 )
             rt_name = folder + "{date}.{bm}_rt.mat".format(
@@ -277,7 +277,13 @@ def execute_gemini2D_simulations(
             rtiPlots.create_RTI(
                 folder, 
                 beam_soundings_rays,
-                args.scatter_type.lower()
+                "gs"
+            )
+            rtiPlots.create_RTI(
+                folder, 
+                beam_soundings_rays,
+                "is",
+                vlim=[-15, -25]
             )
     return
 

@@ -31,6 +31,7 @@ class Rays2D(object):
         self.folder = folder,
         self.sim_fname = sim_fname
         self.read_file()
+        self.ray_power = { "gs": None, "is": None , "all": None}
         self.calc_relative_power(type="gs")
         self.calc_relative_power(type="is")
         return
@@ -68,13 +69,12 @@ class Rays2D(object):
         self.ray_data = pd.DataFrame.from_records(self.ray_data)
         return
     
-    def calc_relative_power(self, type="gs"):
+    def calc_relative_power(self, type):
         """
         Calculate relative power,
         
         Type: GS - [1]
         """
-        self.ray_power = { "gs": None, "is": None , "all": None}
         pwer = pd.DataFrame()
         if type == "gs":
             labels = [1] 
@@ -84,8 +84,9 @@ class Rays2D(object):
         o = self.ray_data.copy()
         o = o[o.ray_label.isin(labels)]
         # By de Larquier, Sebastien [Thesis]
-        o["weights"] = o.plasma_freq_at_apogee**4/(o.group_range**3) \
-                if type == "is" else 1./(o.group_range**3)
+        # o["weights"] = o.plasma_freq_at_apogee**4/(o.group_range**3) \
+        #         if type == "is" else 1./(o.group_range**3)
+        o["weights"] = 1./(o.group_range**3)
         ranges = 180 + 45*np.arange(76,dtype=int)
         lag_power, bins = np.histogram(
             o.group_range, 

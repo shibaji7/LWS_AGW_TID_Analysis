@@ -64,7 +64,6 @@ class RTIPlots(object):
         o = pd.DataFrame()
         for sound in beam_soundings_rays:
             o = pd.concat([o, sound.ray_power[scatter_type]])
-        print(o.head())
         o.lag_power = 10*np.log10(o.lag_power/o.lag_power.max())
         ax = self._add_axis()
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
@@ -78,7 +77,6 @@ class RTIPlots(object):
         X, Y, Z = utils.get_gridded_parameters(
             o, xparam="date", yparam="srange", zparam="lag_power", rounding=False
         )
-        vlim = [int(np.nanmin(Z)/5)*5, int(np.nanmax(Z)/5)*5]
         im = ax.pcolormesh(
             X,
             Y,
@@ -135,13 +133,13 @@ class RTIPlots(object):
         cb.set_label(label)
         return
     
-def create_RTI(folder, beam_soundings_rays, scatter_type="gs"):
+def create_RTI(folder, beam_soundings_rays, scatter_type="gs", vlim=[-10, 0]):
     rti = RTIPlots(
         80, 
         [beam_soundings_rays[0].date, beam_soundings_rays[-1].date],
-        f"GEMINI2D/{beam_soundings_rays[0].rad}/{beam_soundings_rays[0].beam}"
+        fr"GEMINI3D/{beam_soundings_rays[0].rad}/{beam_soundings_rays[0].beam}, $f_0$=9 MHz"
     )
-    rti.addParamPlot(beam_soundings_rays, scatter_type=scatter_type)
-    rti.save(folder + "RTI.png")
+    rti.addParamPlot(beam_soundings_rays, scatter_type=scatter_type, vlim=vlim)
+    rti.save(folder + f"RTI_{scatter_type.upper()}.png")
     rti.close()
     return
