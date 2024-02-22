@@ -30,6 +30,15 @@ from matplotlib.transforms import Affine2D
 from mpl_toolkits.axisartist.grid_finder import DictFormatter, FixedLocator
 from pylab import gca
 
+def gerenate_fov_plot(rad, beam, date):
+    import sys
+    sys.path.extend(["../py/", "../py/tid/", "../py/txUtils/"])
+    from fanUtils import Fan
+    fan = Fan([rad], date, fig_title=f"{rad.upper()} / {'%02d'%beam}", cs=False)
+    fan.generate_fov(rad, [], beams=[beam])
+    fan.save(filepath=f"simulation_results/{rad.upper()}_{'%02d'%beam}.png")
+    return
+
 def create_movie(folder, fname, file_ext=".png", movie_ext="mp4"):
     import os
     if os.path.exists(f"{folder}{fname}.{movie_ext}"):

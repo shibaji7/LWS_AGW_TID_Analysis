@@ -63,7 +63,10 @@ class RTIPlots(object):
     ):
         o = pd.DataFrame()
         for sound in beam_soundings_rays:
-            o = pd.concat([o, sound.ray_power[scatter_type]])
+            if scatter_type=="all":
+                o = pd.concat([o, sound.ray_power["gs"], sound.ray_power["is"]])
+            else:
+                o = pd.concat([o, sound.ray_power[scatter_type]])
         o.lag_power = 10*np.log10(o.lag_power/o.lag_power.max())
         ax = self._add_axis()
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))

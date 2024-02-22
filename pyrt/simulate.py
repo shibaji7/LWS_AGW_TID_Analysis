@@ -22,7 +22,7 @@ from rt2D import (
     execute_gemini2D_simulation, execute_gemini2D_simulations,
     execute_iri2D_simulations
 )
-
+from plots import gerenate_fov_plot
 from rt3D import execute_iri3D_simulations
 
 def clean():
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
     parser.add_argument(
-        "-bm", "--beam", default=3, type=int, help="Radar beam (default 3)"
+        "-bm", "--beam", default=11, type=int, help="Radar beam (default 3)"
     )
     parser.add_argument(
         "-tsmin", "--time_steps_min", default=-1, type=int, help="Time steps for the RT simulation"
@@ -62,6 +62,7 @@ if __name__ == "__main__":
     logger.info("\n Parameter list for simulation ")
     for k in vars(args).keys():
         print("     ", k, "->", str(vars(args)[k]))
+    gerenate_fov_plot(args.rad, args.beam, args.event)
     if args.model == "gemini2D":
         execute_gemini2D_simulations(args)
     if args.model == "iri2D":

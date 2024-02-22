@@ -19,7 +19,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-plt.style.use(["science", "ieee"])
+#plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import glob

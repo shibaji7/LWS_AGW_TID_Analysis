@@ -54,8 +54,8 @@ class RayTrace2D(object):
         self.beam = beam
         self.event = event
         self.rad = rad
-        self.folder = "simulation_results/{dn}/{rad}/".format(
-            dn=self.event.strftime("%Y.%m.%d"), rad=self.rad
+        self.folder = "simulation_results/{dn}/{rad}/{bm}/".format(
+            dn=self.event.strftime("%Y.%m.%d"), rad=self.rad, bm=self.beam
         )
         os.makedirs(self.folder, exist_ok=True)
         self.cfg = cfg
@@ -225,8 +225,8 @@ def execute_gemini2D_simulations(
         "nsall",
         "coordinates.mat",
     )
-    folder = "simulation_results/{dn}/{rad}/".format(
-        dn=args.event.strftime("%Y.%m.%d"), rad=args.rad
+    folder = "simulation_results/{dn}/{rad}/{bm}/".format(
+        dn=args.event.strftime("%Y.%m.%d"), rad=args.rad, bm=args.beam
     )
     if args.method == "movie":
         plots.create_movie(
@@ -284,6 +284,11 @@ def execute_gemini2D_simulations(
                 beam_soundings_rays,
                 "is",
                 vlim=[-15, -25]
+            )
+            rtiPlots.create_RTI(
+                folder, 
+                beam_soundings_rays,
+                "all"
             )
     return
 
