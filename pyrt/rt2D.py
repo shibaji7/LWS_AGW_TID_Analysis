@@ -239,33 +239,33 @@ def execute_gemini2D_simulations(
         for d in days[:args.time_steps_min]:
             args.event = d
             rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
-            #if not os.path.exists(rtobj.folder + rtobj.fig_name):
-            fname = rtobj.folder + "{dn}_{bm}.mat".format(
-                dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
-            )
-            if (args.method == "rt"):
-                if (not os.path.exists(fname)):
-                    logger.info(f"Create matlab file: {fname}")
-                    gem.fetch_dataset_by_locations(
-                        d, 
-                        rtobj.bearing_object["lat"],
-                        rtobj.bearing_object["lon"],
-                        rtobj.bearing_object["ht"], 
-                        dlat=0.2, 
-                        dlon=0.2,
-                        to_file=fname
-                    )
-                    rtobj.compile(gem.param_val)
-                    os.system("rm -rf ~/matlab_crash_dump*")
-                else:
-                    rtobj.read_density_rays(fname)
-                plots.plot_rays(
-                    folder,
-                    rtobj.fig_name,
-                    rtobj,
-                    fr"GEMINI3D + {args.rad.upper()}/{str(args.beam)}, $f_0$={str(cfg.frequency)} MHz",
-                    maxground = cfg.max_ground_range_km+10,
+            if not os.path.exists(rtobj.folder + rtobj.fig_name):
+                fname = rtobj.folder + "{dn}_{bm}.mat".format(
+                    dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
                 )
+                if (args.method == "rt"):
+                    if (not os.path.exists(fname)):
+                        logger.info(f"Create matlab file: {fname}")
+                        gem.fetch_dataset_by_locations(
+                            d, 
+                            rtobj.bearing_object["lat"],
+                            rtobj.bearing_object["lon"],
+                            rtobj.bearing_object["ht"], 
+                            dlat=0.2, 
+                            dlon=0.2,
+                            to_file=fname
+                        )
+                        rtobj.compile(gem.param_val)
+                        os.system("rm -rf ~/matlab_crash_dump*")
+                    else:
+                        rtobj.read_density_rays(fname)
+                    plots.plot_rays(
+                        folder,
+                        rtobj.fig_name,
+                        rtobj,
+                        fr"GEMINI3D + {args.rad.upper()}/{str(args.beam)}, $f_0$={str(cfg.frequency)} MHz",
+                        maxground = cfg.max_ground_range_km+10,
+                    )
             rt_name = folder + "{date}.{bm}_rt.mat".format(
                 bm="%02d" % args.beam, date=d.strftime("%H%M")
             )

@@ -45,12 +45,12 @@ class Fan(object):
         nrows=1,
         ncols=1,
         coord="geo",
-        cs=True,
+        cs=False,
         tec=None,
         tec_times=None,
     ):
-        if cs:
-            plt.style.use(["science", "ieee"])
+        # if cs:
+        #     plt.style.use(["science", "ieee"])
         self.cs = cs
         self.rads = rads
         self.date = date
@@ -146,6 +146,18 @@ class Fan(object):
             self.generate_fov(rad, fds[rad].frame, beams, ax, laytec, col=fds[rad].color)
         return ax
 
+    def overlay_fovs(self, rad, beams=[], ax=None, col="k"):
+        """
+        Generate plot with dataset overlaid
+        """
+        ax = ax if ax else self.add_axes()
+        ax.overlay_radar(rad, font_color=col)
+        ax.overlay_fov(rad, lineColor=col)
+        if beams and len(beams) > 0:
+            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor="r",
+                lineWidth=1.2) for b in beams]
+        return ax
+
     def save(self, filepath):
         self.fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
         return
@@ -156,17 +168,18 @@ class Fan(object):
         return
 
 
-def create_movie(folder, fps=60):
+def create_movie(folder, outfile, pat, fps=3):
     """
     Create movies from pngs
     """
-    files = glob.glob(f"{folder}/Fan,*.png")
+    files = glob.glob(f"{folder}/{pat}")
     files.sort()
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    print(files)
+    fourcc = cv2.VideoWriter_fourcc(*"XVID")
     img = cv2.imread(files[0])
     height, width, layers = img.shape
     size = (width, height)
-    out = cv2.VideoWriter(f"{folder}/tec-overlay.mp4", fourcc, fps, size)
+    out = cv2.VideoWriter(f"{folder}/{outfile}", fourcc, fps, size)
     for idx in range(len(files)):
         img = cv2.imread(files[idx])
         out.write(img)

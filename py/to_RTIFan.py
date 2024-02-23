@@ -27,10 +27,10 @@ CASES = [
     "Fan",
     "vhm",
 ]
-case = "vhm"
+case = "Fan"
 rads = ["fhw"]
 dates = [
-    dt.datetime(2022, 12, 20),
+    dt.datetime(2017, 4, 21),
 ]
 bm_gate_cells = [(7, 25)]
 fdMap = {}
