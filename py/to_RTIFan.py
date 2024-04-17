@@ -27,10 +27,10 @@ CASES = [
     "Fan",
     "vhm",
 ]
-case = "Fan"
-rads = ["fhw"]
+case = "RTI"
+rads = ["fhw", "fhe"]
 dates = [
-    dt.datetime(2017, 4, 21),
+    dt.datetime(2017, 5, 27),
 ]
 bm_gate_cells = [(7, 25)]
 fdMap = {}
@@ -45,10 +45,10 @@ if case == "RTI":
                 [d, d + dt.timedelta(1)],
             )
             fd.plot_RTI(
-                tec_mat_file=f"data/{d.strftime('%Y-%m-%d')}/{rad}geom.mat",
-                tec_param="cdvTECgrid2",
-                power_vlim=[20, 50],
-                tec_vlim=[-0.3, 0.3],
+                tec_mat_file=None,
+                tec_param=None,
+                power_vlim=[3, 30],
+                tec_vlim=None,
             )
 
 # Conduct 1D-Timeseries analysis

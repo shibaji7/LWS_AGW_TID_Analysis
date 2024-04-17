@@ -24,7 +24,7 @@ from dataUtils import Beam, Gate, Scan
 from fanUtils import Fan
 from filterUtils import Boxcar
 from loguru import logger
-#from rtiUtils import RTI, plot_SDTEC_TS
+from rtiUtils import RTI, plot_SDTEC_TS
 from tqdm import tqdm
 
 
@@ -340,7 +340,7 @@ class FetchData(object):
             tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv"
         )
         self.frame = pd.read_csv(file, parse_dates=["time"])
-        self.medframe = pd.read_csv(mfile, parse_dates=["time"])
+        #self.medframe = pd.read_csv(mfile, parse_dates=["time"])
 
         if tec_mat_file:
             tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)
@@ -354,7 +354,7 @@ class FetchData(object):
                 100,
                 date_range,
                 (self.lats, self.lons),
-                [date_range[0] + dt.timedelta(hours=14), date_range[1]],
+                [date_range[0], date_range[1]],
                 f"{self.date_range[0].strftime('%Y-%m-%d')}/{self.rad}/{b}",
                 num_subplots=3,
                 angle_th=angle_th,
@@ -368,6 +368,7 @@ class FetchData(object):
                 cbar=True,
                 plot_fov=False,
                 vlim=power_vlim,
+                cmap="Spectral"
             )
             if tec_mat_file:
                 rt.ovearlay_TEC(
@@ -426,7 +427,7 @@ class FetchData(object):
             tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv"
         )
         self.frame = pd.read_csv(file, parse_dates=["time"])
-        self.medframe = pd.read_csv(mfile, parse_dates=["time"])
+        #self.medframe = pd.read_csv(mfile, parse_dates=["time"])
 
         if tec_mat_file:
             tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)

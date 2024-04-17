@@ -27,6 +27,7 @@ import numpy as np
 import utils
 from pysolar.solar import get_altitude_fast
 from scipy.stats import pearsonr
+import tidUtils
 
 
 class RTI(object):
@@ -44,7 +45,7 @@ class RTI(object):
         num_subplots=1,
         angle_th=100.0,
         vhm=None,
-        ylim=[180, 2500],
+        ylim=[180, 3000],
     ):
         self.nGates = nGates
         self.drange = drange
@@ -109,14 +110,14 @@ class RTI(object):
             )
         if ax is None:
             ax = self._add_axis()
-            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
             hours = mdates.HourLocator(byhour=range(0, 24, 4))
             ax.xaxis.set_major_locator(hours)
             ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
             ax.set_xlim(
                 [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
             )
-        ax.set_ylim(frang, yrange)
+        ax.set_ylim(0, 3000)
         ax.set_ylabel(ylab, fontdict={"size": 12, "fontweight": "bold"})
         X, Y, Z = tidUtils.get_gridded_parameters(
             df, xparam="time", yparam=yscale, zparam=zparam, rounding=False
@@ -234,7 +235,7 @@ class RTI(object):
                 )
             else:
                 yrange, ylab = (self.nGates, "Range Gates")
-            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
             hours = mdates.HourLocator(byhour=range(0, 24, 4))
             ax.xaxis.set_major_locator(hours)
             ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
@@ -324,7 +325,7 @@ def plot_SDTEC_TS(
     fig = plt.figure(figsize=(12, 3), dpi=240)
     spec = fig.add_gridspec(2, 5)
     ax = fig.add_subplot(spec[:, :3])
-    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
     hours = mdates.HourLocator(byhour=range(0, 24, 4))
     ax.xaxis.set_major_locator(hours)
     ax.set_xlabel("Time (UT)", fontdict={"size": 12, "fontweight": "bold"})
@@ -343,7 +344,7 @@ def plot_SDTEC_TS(
     )
 
     ax = ax.twinx()
-    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+    ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
     hours = mdates.HourLocator(byhour=range(0, 24, 4))
     ax.xaxis.set_major_locator(hours)
     ax.plot(tecx, tecy, "ro", ls="None", ms=0.8)
