@@ -17,6 +17,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 #plt.style.use(["science", "ieee"])
+import mplstyle
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import datetime as dt
@@ -52,15 +53,17 @@ class RTI(object):
         self.fov = fov
         self.num_subplots = num_subplots
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(6, 3 * num_subplots), dpi=240)
+        self.fig = plt.figure(figsize=(8, 3 * num_subplots), dpi=300)
         if fig_title:
             plt.suptitle(
-                fig_title, x=0.075, y=0.99, ha="left", fontweight="bold", fontsize=15
+                fig_title, x=0.075, y=0.91, ha="left", fontweight="bold", fontsize=15
             )
         self.angle_th = angle_th
         self.vhm = vhm
         self.ylim = ylim
         self.xlim = xlim
+        import matplotlib as mpl
+        mpl.rcParams.update({"xtick.labelsize": 12, "ytick.labelsize":12, "font.size":12})
         return
 
     def addParamPlot(
@@ -110,10 +113,10 @@ class RTI(object):
             )
         if ax is None:
             ax = self._add_axis()
-            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
             hours = mdates.HourLocator(byhour=range(0, 24, 4))
             ax.xaxis.set_major_locator(hours)
-            ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
+            ax.set_xlabel("Time (UT)", fontdict={"size": 12, "fontweight": "bold"})
             ax.set_xlim(
                 [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
             )

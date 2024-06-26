@@ -57,7 +57,6 @@ def get_folder(date):
     os.makedirs(fold, exist_ok=True)
     return fold
 
-
 def to_date(ts):
     """
     Convert to date

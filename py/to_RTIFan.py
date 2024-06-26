@@ -19,7 +19,7 @@ import tidUtils
 from fetchUtils import FetchData
 from rtiUtils import RTI
 from model_vheight import chisham_vhm, standard_vhm
-
+import mplstyle
 # Initializations
 CASES = [
     "RTI",
@@ -28,7 +28,7 @@ CASES = [
     "vhm",
 ]
 case = "RTI"
-rads = ["fhw", "fhe"]
+rads = ["fhe", "fhw", "bks"]
 dates = [
     dt.datetime(2017, 5, 27),
 ]
@@ -47,8 +47,9 @@ if case == "RTI":
             fd.plot_RTI(
                 tec_mat_file=None,
                 tec_param=None,
-                power_vlim=[3, 30],
+                power_vlim=[5, 20],
                 tec_vlim=None,
+                date_range=[d, d + dt.timedelta(1)]
             )
 
 # Conduct 1D-Timeseries analysis

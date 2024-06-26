@@ -315,6 +315,20 @@ class FetchData(object):
         else:
             return (None, None, False)
 
+    def get_unique_freq(self):
+        df = self.frame.copy()
+        df = df[
+            (df.time>=self.date_range[0]) & 
+            (df.time<=self.date_range[-1])
+        ]
+        df.tfreq = df.tfreq/1e3
+        df["unique_tfreq"] = df.tfreq.apply(lambda x: int(x/0.5)*0.5)
+        tf = df.unique_tfreq.unique()
+        tfn = [np.min(tf), np.max(tf)]
+        tf = "[" + "-".join(str(x) for x in tfn) + "]"
+        del df
+        return tf
+
     def plot_RTI(
         self,
         beams=[],
@@ -350,12 +364,18 @@ class FetchData(object):
             file = (
                 tidUtils.get_folder(self.date_range[0]) + f"/{self.rad}-{'%02d'%b}.png"
             )
+            tf = self.get_unique_freq()
+            d0, d1 = self.date_range[0], self.date_range[1]-dt.timedelta(seconds=60)
+            date = self.date_range[0].strftime("%d %b, %Y") if d0.day==d1.day else \
+                self.date_range[0].strftime("%d-") + self.date_range[1].strftime("%d %b, %Y")
+            title = fr"Rad: {self.rad} / Beam: {b} / Date:  {date} / $f_0\sim{tf}$ MHz"
             rt = RTI(
                 100,
                 date_range,
                 (self.lats, self.lons),
                 [date_range[0], date_range[1]],
-                f"{self.date_range[0].strftime('%Y-%m-%d')}/{self.rad}/{b}",
+                
+                title,
                 num_subplots=3,
                 angle_th=angle_th,
                 vhm=vhm,
