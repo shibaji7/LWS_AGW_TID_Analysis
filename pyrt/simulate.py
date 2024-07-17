@@ -39,19 +39,28 @@ if __name__ == "__main__":
         "-m", "--model", default="gemini2D", help="Model name [iri(2D/3D) or gemini(2D/3D)]"
     )
     parser.add_argument(
-        "-md", "--method", default="rt", help="Method rt/rti/movie"
+        "-md", "--method", default="movie", help="Method rt/rti/movie"
     )
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
+    parser.add_argument(
+        "-f", "--fan", default=0, type=int, help="Radar Fan runs (default 0)"
+    )
     parser.add_argument(
         "-bm", "--beam", default=11, type=int, help="Radar beam (default 3)"
     )
     parser.add_argument(
-        "-tsmin", "--time_steps_min", default=-1, type=int, help="Time steps for the RT simulation"
+        "-tsmin", "--time_steps_min", default=1, type=int, help="Time steps for the RT simulation"
+    )
+    parser.add_argument(
+        "-tstart", "--time_steps_start", default=240, type=int, help="Time steps for the RT simulation"
+    )
+    parser.add_argument(
+        "-tend", "--time_steps_end", default=360, type=int, help="Time steps for the RT simulation"
     )
     parser.add_argument(
         "-ev",
         "--event",
-        default=dt.datetime(2016, 7, 8, 1, 30),
+        default=dt.datetime(2017, 5, 27),
         help="Event date for simulation [YYYY-mm-ddTHH:MM]",
         type=dparser.isoparse,
     )
@@ -64,7 +73,10 @@ if __name__ == "__main__":
         print("     ", k, "->", str(vars(args)[k]))
     gerenate_fov_plot(args.rad, args.beam, args.event)
     if args.model == "gemini2D":
-        execute_gemini2D_simulations(args)
+        if args.fan:
+            execute_gemini2D_fan_simulations(args)
+        else:
+            execute_gemini2D_simulations(args)
     if args.model == "iri2D":
         execute_iri2D_simulations(args)
     if args.model == "iri3D":

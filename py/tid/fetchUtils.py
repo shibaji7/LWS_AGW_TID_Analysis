@@ -338,7 +338,7 @@ class FetchData(object):
         vhm=None,
         tec_mat_file=None,
         tec_param="cdvTECgrid2",
-        power_vlim=[20, 50],
+        power_vlim=[-200, 200],
         tec_vlim=[-0.05, 0.05],
     ):
         """
@@ -380,7 +380,7 @@ class FetchData(object):
                 angle_th=angle_th,
                 vhm=vhm,
             )
-            rt.addParamPlot(
+            ax, _ = rt.addParamPlot(
                 self.frame,
                 b,
                 "",
@@ -390,6 +390,8 @@ class FetchData(object):
                 vlim=power_vlim,
                 cmap="Spectral"
             )
+            ax.axvline(dt.datetime(2024,4,10,15), color="k", lw=1.2, ls="--")
+            ax.axvline(dt.datetime(2024,4,10,17), color="k", lw=1.2, ls="--")
             if tec_mat_file:
                 rt.ovearlay_TEC(
                     tec,

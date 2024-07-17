@@ -105,7 +105,7 @@ class GEMINI2D(object):
     def __init__(self, date_str, cfg, folder="dataset/GEMINI3D/", param="nsall", grid_file="coordinates.mat"):
         self.date_str = date_str
         self.cfg = cfg
-        self.folder = folder
+        self.folder = f"{folder}{date_str}/"
         self.param = param
         self.grid_file = grid_file
         self.load_grid()
@@ -212,7 +212,7 @@ class GEMINI2D(object):
         date_str,
         folder="dataset/GEMINI3D/",
     ):
-        files = glob.glob(folder + date_str + "*")
+        files = glob.glob(folder + date_str + f"/{date_str}*")
         files.sort()
         dates = []
         for fname in files:

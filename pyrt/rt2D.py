@@ -70,7 +70,7 @@ class RayTrace2D(object):
     def _estimate_bearing_(self):
         """Estimate laitude and logitude bearings"""
         fname = self.folder + f"bearing_{'%02d'%self.beam}.mat"
-        bearing = self.hdw.boresight.physical + (self.beam - self.hdw.beams/2) * self.hdw.beam_separation
+        bearing = self.hdw.boresight.physical - ((self.beam - self.hdw.beams/2) * self.hdw.beam_separation)
         logger.info(f"Bearing angle of beam {self.beam} is {bearing} deg")
         lat, lon = (self.hdw.geographic.lat, self.hdw.geographic.lon)
         p = (lat, lon)
@@ -210,6 +210,15 @@ def execute_gemini2D_simulation(
     )
     return
 
+def execute_gemini2D_fan_simulations(
+    args,
+):
+    """
+    Execute GEMINI2D simulation for ray tracing
+    """
+    
+    return
+
 def execute_gemini2D_simulations(
     args,
 ):
@@ -236,7 +245,7 @@ def execute_gemini2D_simulations(
         )
     else:
         beam_soundings_rays = []
-        for d in days[:args.time_steps_min]:
+        for d in days[args.time_steps_start:args.time_steps_end]:
             args.event = d
             rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
             if not os.path.exists(rtobj.folder + rtobj.fig_name):
@@ -272,7 +281,6 @@ def execute_gemini2D_simulations(
             beam_soundings_rays.append(
                 Rays2D.read_rays(d, args.rad, args.beam, cfg, folder, rt_name)
             )
-            if d > dt.datetime(2016, 7, 8, 11): break
         if args.method == "rti":
             rtiPlots.create_RTI(
                 folder, 

@@ -28,9 +28,10 @@ CASES = [
     "vhm",
 ]
 case = "RTI"
-rads = ["fhe", "fhw", "bks"]
+rads = ["fhw"]
+power_vlim=[-50, 50]
 dates = [
-    dt.datetime(2017, 5, 27),
+    dt.datetime(2024, 4, 10),
 ]
 bm_gate_cells = [(7, 25)]
 fdMap = {}
@@ -47,7 +48,7 @@ if case == "RTI":
             fd.plot_RTI(
                 tec_mat_file=None,
                 tec_param=None,
-                power_vlim=[5, 20],
+                power_vlim=power_vlim,
                 tec_vlim=None,
                 date_range=[d, d + dt.timedelta(1)]
             )
