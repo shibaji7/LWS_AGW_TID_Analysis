@@ -102,10 +102,10 @@ class IRI2D(object):
 
 class GEMINI2D(object):
     
-    def __init__(self, date_str, cfg, folder="dataset/GEMINI3D/", param="nsall", grid_file="coordinates.mat"):
+    def __init__(self, date_str, cfg, folder="dataset/GEMINI3D/", param="nsall", grid_file="coordinates.mat", control=False,):
         self.date_str = date_str
         self.cfg = cfg
-        self.folder = f"{folder}{date_str}/"
+        self.folder = f"{folder}{date_str}-Cnt/" if control else f"{folder}{date_str}/"
         self.param = param
         self.grid_file = grid_file
         self.load_grid()
@@ -211,8 +211,12 @@ class GEMINI2D(object):
     def get_time_keys(
         date_str,
         folder="dataset/GEMINI3D/",
+        control=False,
     ):
-        files = glob.glob(folder + date_str + f"/{date_str}*")
+        files = (
+            glob.glob(folder + f"{date_str}-Cnt" + f"/{date_str}*") 
+            if control else glob.glob(folder + date_str + f"/{date_str}*")
+        )
         files.sort()
         dates = []
         for fname in files:

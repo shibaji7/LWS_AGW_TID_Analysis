@@ -52,7 +52,10 @@ if __name__ == "__main__":
         "-tsmin", "--time_steps_min", default=1, type=int, help="Time steps for the RT simulation"
     )
     parser.add_argument(
-        "-tstart", "--time_steps_start", default=240, type=int, help="Time steps for the RT simulation"
+        "-cnt", "--control", action='store_true', help="Run control"
+    )
+    parser.add_argument(
+        "-tstart", "--time_steps_start", default=0, type=int, help="Time steps for the RT simulation"
     )
     parser.add_argument(
         "-tend", "--time_steps_end", default=360, type=int, help="Time steps for the RT simulation"

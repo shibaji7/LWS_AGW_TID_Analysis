@@ -62,12 +62,17 @@ class RTIPlots(object):
         scatter_type = "gs",
     ):
         o = pd.DataFrame()
+        print(scatter_type)
         for sound in beam_soundings_rays:
             if scatter_type=="all":
                 o = pd.concat([o, sound.ray_power["gs"], sound.ray_power["is"]])
             else:
                 o = pd.concat([o, sound.ray_power[scatter_type]])
+        #print(np.max(o.lag_power/o.lag_power.max()),o.lag_power.max(), o.lag_power.min())
+        #o = o.dropna()
         o.lag_power = 10*np.log10(o.lag_power/o.lag_power.max())
+        o.replace([np.inf, -np.inf], np.nan, inplace=True)
+        #print(o.head())
         ax = self._add_axis()
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
         hours = mdates.HourLocator(byhour=range(0, 24, 1))
@@ -137,10 +142,11 @@ class RTIPlots(object):
         return
     
 def create_RTI(folder, beam_soundings_rays, scatter_type="gs", vlim=[-10, 0]):
+    print(len(beam_soundings_rays))
     rti = RTIPlots(
         80, 
         [beam_soundings_rays[0].date, beam_soundings_rays[-1].date],
-        fr"GEMINI3D/{beam_soundings_rays[0].rad}/{beam_soundings_rays[0].beam}, $f_0$=9 MHz"
+        fr"GEMINI3D/{beam_soundings_rays[0].rad}/{beam_soundings_rays[0].beam}, $f_0$=12 MHz"
     )
     rti.addParamPlot(beam_soundings_rays, scatter_type=scatter_type, vlim=vlim)
     rti.save(folder + f"RTI_{scatter_type.upper()}.png")

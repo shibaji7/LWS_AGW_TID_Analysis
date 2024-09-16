@@ -50,13 +50,19 @@ class RayTrace2D(object):
         rad,
         beam,
         cfg,
+        control=False,
     ):
         self.beam = beam
         self.event = event
         self.rad = rad
-        self.folder = "simulation_results/{dn}/{rad}/{bm}/".format(
-            dn=self.event.strftime("%Y.%m.%d"), rad=self.rad, bm=self.beam
-        )
+        if control:
+            self.folder = "simulation_results/{dn}-Cnt/{rad}/{bm}/".format(
+                dn=self.event.strftime("%Y.%m.%d"), rad=self.rad, bm=self.beam
+            )
+        else:
+            self.folder = "simulation_results/{dn}/{rad}/{bm}/".format(
+                dn=self.event.strftime("%Y.%m.%d"), rad=self.rad, bm=self.beam
+            )
         os.makedirs(self.folder, exist_ok=True)
         self.cfg = cfg
         self.hdw = pydarn.read_hdw_file(self.rad)
@@ -226,17 +232,27 @@ def execute_gemini2D_simulations(
     Execute GEMINI2D simulation for ray tracing
     """
     cfg = read_params_2D()
-    days = GEMINI2D.get_time_keys(args.event.strftime("%Y%m%d"), f"dataset/GEMINI3D/")
+    days = GEMINI2D.get_time_keys(
+        args.event.strftime("%Y%m%d"), 
+        f"dataset/GEMINI3D/",
+        args.control,
+    )
     gem = GEMINI2D(
         args.event.strftime("%Y%m%d"),
         cfg,
         f"dataset/GEMINI3D/",
         "nsall",
         "coordinates.mat",
+        control=args.control,
     )
-    folder = "simulation_results/{dn}/{rad}/{bm}/".format(
-        dn=args.event.strftime("%Y.%m.%d"), rad=args.rad, bm=args.beam
-    )
+    if args.control:
+        folder = "simulation_results/{dn}-Cnt/{rad}/{bm}/".format(
+            dn=args.event.strftime("%Y.%m.%d"), rad=args.rad, bm=args.beam
+        )
+    else:
+        folder = "simulation_results/{dn}/{rad}/{bm}/".format(
+            dn=args.event.strftime("%Y.%m.%d"), rad=args.rad, bm=args.beam
+        )
     if args.method == "movie":
         plots.create_movie(
             folder, 
@@ -247,7 +263,7 @@ def execute_gemini2D_simulations(
         beam_soundings_rays = []
         for d in days[args.time_steps_start:args.time_steps_end]:
             args.event = d
-            rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
+            rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg, control=args.control)
             if not os.path.exists(rtobj.folder + rtobj.fig_name):
                 fname = rtobj.folder + "{dn}_{bm}.mat".format(
                     dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
@@ -296,7 +312,8 @@ def execute_gemini2D_simulations(
             rtiPlots.create_RTI(
                 folder, 
                 beam_soundings_rays,
-                "all"
+                "all",
+                vlim=[-20, -30]
             )
     return
 
