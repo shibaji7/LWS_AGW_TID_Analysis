@@ -371,7 +371,7 @@ class SDCarto(GeoAxes):
         self,
         rad,
         tx=cartopy.crs.PlateCarree(),
-        maxGate=90,
+        maxGate=50,
         beamLimits=None,
         fovColor=None,
         fovAlpha=0.2,
@@ -426,6 +426,17 @@ class SDCarto(GeoAxes):
             ls=ls,
             alpha=0.6,
         )
+        if sbeam+1 == ebeam:
+            xloc, yloc = (
+                np.mean(x[sbeam:ebeam+1, egate+3]), 
+                np.mean(y[sbeam:ebeam+1, egate+3])
+            )
+            self.text(
+                xloc, yloc,
+                sbeam, ha="center", va="center",
+                fontdict=dict(color="b", fontsize="x-small")
+            )
+
         if fovColor:
             contour = transpose(vstack((contour_x, contour_y)))
             polygon = Polygon(contour)
@@ -445,18 +456,18 @@ class SDCarto(GeoAxes):
         df,
         tx,
         fm=cartopy.crs.Geodetic(),
-        p_max=33,
-        p_min=0,
+        p_max=24,
+        p_min=8,
         p_name="p_l",
-        label="Power [dB]",
+        label="Power, dB",
         cmap=plt.cm.plasma,
         cbar=True,
         maxGate=None,
         scan_time=None,
         model="IS",
         fov_dir="front",
+        kind="sct",
         **kwargs,
-
     ):
         """Overlay radar Data"""
         scan_time = scan_time if scan_time else np.rint(df.scan_time.tolist()[0] / 60.0)
@@ -483,31 +494,34 @@ class SDCarto(GeoAxes):
             ].reshape(Xb.shape)
             XYZ = tx.transform_points(fm, lons, lats)
             Px = np.ma.masked_invalid(Px)
-            # im = self.scatter(
-            #     XYZ[:, :, 0],
-            #     XYZ[:, :, 1],
-            #     c=Px.T,
-            #     transform=tx,
-            #     cmap=cmap,
-            #     vmax=p_max,
-            #     vmin=p_min,
-            #     s=0.3,
-            #     marker="o",
-            #     alpha=0.9,
-            #     **kwargs,
-            # )
-            im = self.pcolormesh(
-                XYZ[:, :, 0],
-                XYZ[:, :, 1],
-                Px.T,
-                vmax=p_max,
-                vmin=p_min,
-                transform=tx,
-                cmap=cmap,
-                zorder=2
-            )
+            if kind == "pmap":
+                im = self.pcolormesh(
+                    XYZ[:, :, 0],
+                    XYZ[:, :, 1],
+                    Px.T,
+                    vmax=p_max,
+                    vmin=p_min,
+                    transform=tx,
+                    cmap=cmap,
+                    zorder=2
+                )
+            else:
+                im = self.scatter(
+                    XYZ[:, :, 0].ravel(),
+                    XYZ[:, :, 1].ravel(),
+                    c=Px.T.ravel(),
+                    transform=tx,
+                    cmap=cmap,
+                    vmax=p_max,
+                    vmin=p_min,
+                    s=0.3,
+                    marker="s",
+                    alpha=0.9,
+                    **kwargs,
+                )
             if cbar:
-                self._add_colorbar(im, label=label)
+                #self._add_colorbar(im, label=label)
+                self._add_hcolorbar(im, label=label)
         return
 
     def _add_colorbar(self, im, label=""):
@@ -518,6 +532,30 @@ class SDCarto(GeoAxes):
         cpos = [1.04, 0.1, 0.025, 0.8]
         cax = self.inset_axes(cpos, transform=self.transAxes)
         cb = fig.colorbar(im, ax=self, cax=cax)
+        cb.ax.tick_params(labelsize="x-small")
+        cb.set_label(label, fontsize="x-small")
+        return
+
+    
+
+    def _add_hcolorbar(self, im, label=""):
+        """Add a colorbar to the right of an axis."""
+        fig = self.get_figure()
+        pos = self.get_position()
+        cpos = [
+            pos.x0 + 0.05 * pos.width,
+            pos.y0 - 0.8 * pos.height,
+            pos.width * 1.6,
+            0.05,
+        ]  # this list defines (left, bottom, width, height)
+        cax = self.inset_axes(cpos, transform=self.transAxes)
+        cb = fig.colorbar(
+            im,
+            ax=self,
+            cax=cax,
+            spacing="uniform",
+            orientation="horizontal",
+        )
         cb.set_label(label)
         return
 
@@ -554,25 +592,47 @@ class SDCarto(GeoAxes):
             self._add_hcolorbar(im, label)
         return
 
-    def _add_hcolorbar(self, im, label=""):
-        """Add a colorbar to the right of an axis."""
-        fig = self.get_figure()
-        pos = self.get_position()
-        cpos = [
-            pos.x0 + 0.3 * pos.width,
-            pos.y0 - 0.6 * pos.height,
-            pos.width * 0.5,
-            0.02,
-        ]  # this list defines (left, bottom, width, height)
-        cax = self.inset_axes(cpos, transform=self.transAxes)
-        cb = fig.colorbar(
-            im,
-            ax=self,
-            cax=cax,
-            spacing="uniform",
-            orientation="horizontal",
+    def overlay_station(
+        self,
+        name, lat, lon,
+        tx=cartopy.crs.PlateCarree(),
+        marker="o",
+        zorder=5,
+        markerColor="m",
+        markerSize=2,
+        fontSize="xx-small",
+        font_color="m",
+        xOffset=1.5,
+        yOffset=-1.5,
+    ):
+        """Adding the radar location"""
+        if "aacgm" in self.coords:
+            lat, lon = self.to_aagcm(lat, lon)
+        self.scatter(
+            [lon],
+            [lat],
+            s=markerSize,
+            marker=marker,
+            color=markerColor,
+            zorder=zorder,
+            transform=tx,
+            lw=0.8,
+            alpha=0.4,
         )
-        cb.set_label(label)
+        lat, lon = lat + yOffset, lon + xOffset
+        if "aacgm" in self.coords:
+            lat, lon = self.to_aagcm(lat, lon)
+        x, y = self.projection.transform_point(lon, lat, src_crs=tx)
+        self.text(
+            x,
+            y,
+            name.upper(),
+            ha="center",
+            va="center",
+            transform=self.projection,
+            fontdict={"color": font_color, "size": fontSize},
+            alpha=0.8,
+        )
         return
 
 

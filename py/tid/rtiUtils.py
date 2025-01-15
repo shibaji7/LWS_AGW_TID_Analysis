@@ -72,9 +72,9 @@ class RTI(object):
         beam,
         title,
         vlim=[-200, 200],
-        xlabel="Time (UT)",
+        xlabel="Time, UT",
         zparam="v",
-        label="Velocity (m/s)",
+        label="Velocity, m/s",
         yscale="srange",
         cmap="jet",
         cbar=True,
@@ -87,7 +87,7 @@ class RTI(object):
         if yscale == "srange":
             yrange, ylab, frang = (
                 self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0],
-                "Slant Range (km)",
+                "Slant Range, km",
                 df.frang.tolist()[0],
             )
         else:
@@ -109,14 +109,14 @@ class RTI(object):
                         self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0]
                     )
                 ),
-                "Virtual Height (km)",
+                "Virtual Height, km",
             )
         if ax is None:
             ax = self._add_axis()
             ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
-            hours = mdates.HourLocator(byhour=range(0, 24, 4))
-            ax.xaxis.set_major_locator(hours)
-            ax.set_xlabel("Time (UT)", fontdict={"size": 12, "fontweight": "bold"})
+            ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
+            ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=range(0, 24, 1)))
+            ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
             ax.set_xlim(
                 [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
             )
@@ -153,7 +153,7 @@ class RTI(object):
                 yscale,
             )
         ax.set_ylim(self.ylim)
-        ax.set_xlim(self.xlim)
+        # ax.set_xlim(self.xlim)
         return ax, Y[:, 0]
 
     def overlay_sza(self, fov, ax, beam, gate_range, rsep, frang, yscale):

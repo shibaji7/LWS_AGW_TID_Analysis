@@ -32,6 +32,15 @@ from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
 from cartoUtils import SDCarto
 
 
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
+def get_color_by_number(number, cmap_name='viridis'):
+    """This function takes a number and a colormap name, and returns a color."""
+    cmap = cm.get_cmap(cmap_name)
+    norm = plt.Normalize(0, 26)  # Normalize the number to the colormap range
+    return cmap(norm(number))
+
 class Fan(object):
     """
     This class holds plots for all radars FoVs
@@ -48,6 +57,9 @@ class Fan(object):
         cs=False,
         tec=None,
         tec_times=None,
+        txt_coord=False,
+        cbar=False,
+        add_text=False,
     ):
         # if cs:
         #     plt.style.use(["science", "ieee"])
@@ -56,19 +68,13 @@ class Fan(object):
         self.date = date
         self.nrows, self.ncols = nrows, ncols
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(3 * ncols, 3 * nrows), dpi=300)
+        self.fig = plt.figure(figsize=(2 * ncols, 2 * nrows), dpi=300)
         self.coord = coord
-        plt.suptitle(
-            f"{self.date_string()} / {fig_title}"
-            if fig_title
-            else f"{self.date_string()}",
-            x=0.1,
-            y=0.82,
-            ha="left",
-            fontweight="bold",
-            fontsize=8,
-        )
         self.tec, self.tec_times = tec, tec_times
+        self.fig_title = fig_title
+        self.txt_coord = txt_coord
+        self.cbar = cbar
+        self.add_text = add_text
         return
 
     def add_axes(self):
@@ -85,7 +91,7 @@ class Fan(object):
             plot_date=self.date,
         )
         ax.overaly_coast_lakes(lw=0.4, alpha=0.4)
-        ax.set_extent([-130, -50, 30, 70], crs=cartopy.crs.PlateCarree())
+        ax.set_extent([-110, -75, 35, 60], crs=cartopy.crs.PlateCarree())
         plt_lons = np.arange(-180, 181, 15)
         mark_lons = np.arange(-180, 181, 30)
         plt_lats = np.arange(40, 90, 10)
@@ -95,20 +101,33 @@ class Fan(object):
         gl.xformatter = LONGITUDE_FORMATTER
         gl.yformatter = LATITUDE_FORMATTER
         gl.n_steps = 90
-        ax.mark_latitudes(plt_lats, fontsize="small", color="darkred")
-        ax.mark_longitudes(mark_lons, fontsize="small", color="darkblue")
+        ax.mark_latitudes(plt_lats, fontsize="xx-small", color="darkred")
+        ax.mark_longitudes(mark_lons, fontsize="xx-small", color="darkblue")
         self.proj = proj
         self.geo = cartopy.crs.PlateCarree()
-        ax.text(
-            -0.02,
-            0.99,
-            "Coord: Geo",
-            ha="center",
-            va="top",
-            transform=ax.transAxes,
-            fontsize="small",
-            rotation=90,
-        )
+        if self.txt_coord:
+            ax.text(
+                -0.02,
+                0.99,
+                "Coord: Geo",
+                ha="center",
+                va="top",
+                transform=ax.transAxes,
+                fontsize="x-small",
+                rotation=90,
+            )
+        if self._num_subplots_created == 1 or self.add_text:
+            ax.text(
+                0.05, 1.05,
+                f"{self.date_string()} / {self.fig_title}"
+                if self.fig_title
+                else f"{self.date_string()}",
+                ha="left",
+                va="center",
+                fontweight="bold",
+                fontsize="x-small",
+                transform=ax.transAxes,
+            )
         return ax
 
     def date_string(self, label_style="web"):
@@ -131,19 +150,19 @@ class Fan(object):
             ax.overlay_tec(ipplat, ipplon, dtec, self.proj)
         ax.overlay_radar(rad, font_color=col)
         ax.overlay_fov(rad, lineColor=col)
-        if len(frame) > 0: ax.overlay_data(rad, frame, self.proj, maxGate=maxGate)
+        if len(frame) > 0: ax.overlay_data(rad, frame, self.proj, maxGate=maxGate, cbar=self.cbar)
         if beams and len(beams) > 0:
-            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor="r",
-        lineWidth=1.2) for b in beams]
+            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor=get_color_by_number(b),
+        lineWidth=0.4) for b in beams]
         return
 
-    def generate_fovs(self, fds, beams=[], laytec=False):
+    def generate_fovs(self, fds, beams={}, laytec=False):
         """
         Generate plot with dataset overlaid
         """
         ax = self.add_axes()
         for rad in self.rads:
-            self.generate_fov(rad, fds[rad].frame, beams, ax, laytec, col=fds[rad].color)
+            self.generate_fov(rad, fds[rad].frame, beams[rad], ax, laytec, col=fds[rad].color)
         return ax
 
     def overlay_fovs(self, rad, beams=[], ax=None, col="k"):
@@ -154,8 +173,8 @@ class Fan(object):
         ax.overlay_radar(rad, font_color=col)
         ax.overlay_fov(rad, lineColor=col)
         if beams and len(beams) > 0:
-            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor="r",
-                lineWidth=1.2) for b in beams]
+            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor=get_color_by_number(b),
+                lineWidth=0.3) for b in beams]
         return ax
 
     def save(self, filepath):
