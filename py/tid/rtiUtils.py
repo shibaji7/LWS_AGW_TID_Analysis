@@ -15,12 +15,13 @@ __status__ = "Research"
 
 import matplotlib
 import matplotlib.pyplot as plt
-
-#plt.style.use(["science", "ieee"])
-import mplstyle
+import scienceplots
+plt.style.use(["science", "ieee"])
+# import mplstyle
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import datetime as dt
+plt.rcParams["text.usetex"] = False
 
 import matplotlib.dates as mdates
 import model_vheight as mvh
@@ -56,7 +57,7 @@ class RTI(object):
         self.fig = plt.figure(figsize=(8, 3 * num_subplots), dpi=300)
         if fig_title:
             plt.suptitle(
-                fig_title, x=0.075, y=0.91, ha="left", fontweight="bold", fontsize=15
+                fig_title, x=0.075, y=0.91, ha="left", fontweight="bold", fontsize=12
             )
         self.angle_th = angle_th
         self.vhm = vhm
@@ -113,7 +114,7 @@ class RTI(object):
             )
         if ax is None:
             ax = self._add_axis()
-            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
             ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
             ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=range(0, 24, 1)))
             ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})

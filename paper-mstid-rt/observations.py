@@ -2,13 +2,14 @@ import datetime as dt
 import sys
 import os
 
-sys.path.extend(["py/", "py/txUtils/", "py/tid/", "py/davitPy/"])
+sys.path.extend(["py/", "py/txUtils/", "py/tid/", "py/davitPy/", "paper-mstid-rt/"])
 import tidUtils
 from fetchUtils import FetchData
 from fanUtils import Fan
 from rtiUtils import RTI
 import cartopy.crs as ccrs
 import numpy as np
+import rays
 
 rads = ["fhw", "fhe"]
 dates = [
@@ -33,31 +34,32 @@ rti = RTI(
     fov=None,
     xlim=[dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 28)],
     ylim=[180, 3000],
-    fig_title=None,
+    fig_title="",
     num_subplots=2
 )
 ax, _ = rti.addParamPlot(
     fds["fhe"].frame, 11, 
-    f"Rad: fhe / Beam: 11 / $f_0$= {(fds['fhe'].frame.tfreq.mean()/1e3).round(1)} MHz / 27 May 2017", 
-    vlim=[10, 25], zparam="p_l",
-    label="Power, dB", cmap="plasma", xlabel=""
+    f"Rad: fhe / $f_0$= {(fds['fhe'].frame.tfreq.mean()/1e3).round(1)} MHz / 27 May 2017",
+    vlim=[10, 25], zparam="p_l", xlabel="",
+    label="Power, dB", cmap="plasma",cbar=True,
 )
 ax.text(
-    0.05, 0.95, f"(A)", 
+    0.05, 0.95, f"(A) Beam: 11", 
     ha="left", va="center", 
     transform=ax.transAxes, fontdict=dict(size="small")
 )
 ax, _ = rti.addParamPlot(
-    fds["fhe"].frame, 11, "",
-    vlim=[-30, 30],
-    cmap="Spectral",
+    fds["fhe"].frame, 3, 
+    "",
+    vlim=[10, 25], zparam="p_l",
+    label="Power, dB", cmap="plasma", cbar=False,
 )
 ax.text(
-    0.05, 0.95, f"(B)", 
+    0.05, 0.95, f"(B) Beam: 03", 
     ha="left", va="center", 
     transform=ax.transAxes, fontdict=dict(size="small")
 )
-rti.save(f"figures/Figure5.png")
+rti.save(f"paper-mstid-rt/figures/Figure5.png")
 rti.close()
 
 
@@ -68,8 +70,8 @@ fan = Fan(
 )
 ax = fan.overlay_fovs("fhe", beams=[3, 11], col="b")
 fan.overlay_fovs("fhw", ax=ax, col="r")
-ax.overlay_station("alp", 45.0617, -83.4328)
-fan.save("figures/fov.png")
+# ax.overlay_station("alp", 45.0617, -83.4328)
+fan.save("paper-mstid-rt/figures/fov.png")
 fan.close()
 
 fan = Fan(
@@ -87,6 +89,70 @@ for i, d in enumerate(range(60*18,60*21,30)):
         ha="left", va="center", 
         transform=ax.transAxes, fontdict=dict(size="xx-small")
     )
-fan.save(f"figures/Figure4.png")
+fan.save(f"paper-mstid-rt/figures/Figure4.png")
 fan.close()
 
+
+fan = Fan(
+    ["fhe"],
+    dates[0],
+    nrows=1, ncols=2,
+    add_text=True,
+    extent=[-105, -70, 35, 60],
+)
+date = dates[0] + dt.timedelta(minutes=60*19)
+ds = rays.get_datasets_by_beams("fhe", None, date, date + dt.timedelta(minutes=1))
+fan.date, fan.txt_coord, fan.cbar = date, True, True
+ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe":[]})
+ax.text(
+    0.05, 0.95, f"(A) Observations", 
+    ha="left", va="center", 
+    transform=ax.transAxes, fontdict=dict(size="xx-small")
+)
+fan.date, fan.txt_coord, fan.cbar = date, False, True
+ax = fan.overlay_simulation_fovs("fhe", ds, beams={}, gate_filter=[30, 40])
+ax.text(
+    0.05, 0.95, f"(B) Simulations", 
+    ha="left", va="center", 
+    transform=ax.transAxes, fontdict=dict(size="xx-small")
+)
+fan.save(f"paper-mstid-rt/figures/Figure7.png")
+fan.close()
+
+rti = RTI(
+    100,
+    [dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 28)],
+    fov=None,
+    xlim=[dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 28)],
+    ylim=[180, 3000],
+    fig_title="",
+    num_subplots=2
+)
+ax, _ = rti.addParamPlot(
+    fds["fhe"].frame, 11, 
+    f"Rad: fhe / $f_0$= {(fds['fhe'].frame.tfreq.mean()/1e3).round(1)} MHz / 27 May 2017",
+    vlim=[10, 25], zparam="p_l", xlabel="",
+    label="Power, dB", cmap="plasma",cbar=True,
+)
+ax.text(
+    0.05, 0.95, f"(A) Beam: 11", 
+    ha="left", va="center", 
+    transform=ax.transAxes, fontdict=dict(size="small")
+)
+ds = rays.get_datasets_by_beams(
+    "fhe", [11], 
+    dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 28)
+)
+# ax, _ = rti.addParamPlot(
+#     fds["fhe"].frame, 3, 
+#     "",
+#     vlim=[10, 25], zparam="p_l",
+#     label="Power, dB", cmap="plasma", cbar=False,
+# )
+# ax.text(
+#     0.05, 0.95, f"(B) Simulation", 
+#     ha="left", va="center", 
+#     transform=ax.transAxes, fontdict=dict(size="small")
+# )
+rti.save(f"paper-mstid-rt/figures/Figure6.png")
+rti.close()

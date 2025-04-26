@@ -18,10 +18,11 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-#plt.style.use(["science", "ieee"])
+import scienceplots
+plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
+plt.rcParams["text.usetex"] = False
 import glob
 
 import cartopy
@@ -60,6 +61,7 @@ class Fan(object):
         txt_coord=False,
         cbar=False,
         add_text=False,
+        extent=[-110, -75, 35, 60],
     ):
         # if cs:
         #     plt.style.use(["science", "ieee"])
@@ -75,6 +77,7 @@ class Fan(object):
         self.txt_coord = txt_coord
         self.cbar = cbar
         self.add_text = add_text
+        self.extent = extent
         return
 
     def add_axes(self):
@@ -91,9 +94,9 @@ class Fan(object):
             plot_date=self.date,
         )
         ax.overaly_coast_lakes(lw=0.4, alpha=0.4)
-        ax.set_extent([-110, -75, 35, 60], crs=cartopy.crs.PlateCarree())
-        plt_lons = np.arange(-180, 181, 15)
-        mark_lons = np.arange(-180, 181, 30)
+        ax.set_extent(self.extent, crs=cartopy.crs.PlateCarree())
+        plt_lons = np.linspace(self.extent[0], self.extent[1], 3)
+        mark_lons = np.linspace(self.extent[0], self.extent[1], 3)
         plt_lats = np.arange(40, 90, 10)
         gl = ax.gridlines(crs=cartopy.crs.PlateCarree(), linewidth=0.5)
         gl.xlocator = mticker.FixedLocator(plt_lons)
@@ -125,7 +128,7 @@ class Fan(object):
                 ha="left",
                 va="center",
                 fontweight="bold",
-                fontsize="x-small",
+                fontsize="xx-small",
                 transform=ax.transAxes,
             )
         return ax
@@ -150,7 +153,11 @@ class Fan(object):
             ax.overlay_tec(ipplat, ipplon, dtec, self.proj)
         ax.overlay_radar(rad, font_color=col)
         ax.overlay_fov(rad, lineColor=col)
-        if len(frame) > 0: ax.overlay_data(rad, frame, self.proj, maxGate=maxGate, cbar=self.cbar)
+        if len(frame) > 0: 
+            ax.overlay_data(
+                rad, frame, self.proj, maxGate=maxGate, 
+                cbar=self.cbar, label=r"$P_l$, dB",
+            )
         if beams and len(beams) > 0:
             [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor=get_color_by_number(b),
         lineWidth=0.4) for b in beams]
@@ -163,6 +170,34 @@ class Fan(object):
         ax = self.add_axes()
         for rad in self.rads:
             self.generate_fov(rad, fds[rad].frame, beams[rad], ax, laytec, col=fds[rad].color)
+        return ax
+    
+    def overlay_simulation_fovs(self, rad, df, beams=[], gate_filter=[], ax=None, col="k"):
+        """
+        Generate plot with dataset overlaid
+        """
+        ax = ax if ax else self.add_axes()
+        ax.overlay_radar(rad, font_color=col)
+        ax.overlay_fov(rad, lineColor=col)
+        if len(df) > 0: 
+            if len(gate_filter) == 2:
+                df = df[(df.slist >= gate_filter[0]) & (df.slist <= gate_filter[1])]
+            ax.overlay_data(
+                rad, df, self.proj, 
+                maxGate=45, cbar=self.cbar, 
+                p_name="lag_power", scan_time=1,
+                p_max=int(np.max(df.lag_power)), 
+                p_min=int(np.min(df.lag_power)),
+                label=r"$P_r$, dB",
+            )
+        if beams and len(beams) > 0:
+            [
+                ax.overlay_fov(
+                    rad, beamLimits=[b, b + 1], ls="-", 
+                    lineColor=get_color_by_number(b), lineWidth=0.4
+                ) 
+                for b in beams
+            ]
         return ax
 
     def overlay_fovs(self, rad, beams=[], ax=None, col="k"):
@@ -193,7 +228,6 @@ def create_movie(folder, outfile, pat, fps=3):
     """
     files = glob.glob(f"{folder}/{pat}")
     files.sort()
-    print(files)
     fourcc = cv2.VideoWriter_fourcc(*"XVID")
     img = cv2.imread(files[0])
     height, width, layers = img.shape

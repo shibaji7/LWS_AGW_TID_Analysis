@@ -10,6 +10,7 @@ __pycache__/
 pyrt/dataset*
 *simulation_results*
 *figures/*
+*.mat
 
 
 # Distribution / packaging

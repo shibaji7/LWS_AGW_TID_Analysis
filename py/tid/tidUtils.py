@@ -38,7 +38,7 @@ def get_gridded_parameters(
         plotParamDF.loc[:, xparam] = np.round(plotParamDF[xparam].tolist(), r)
         plotParamDF.loc[:, yparam] = np.round(plotParamDF[yparam].tolist(), r)
     plotParamDF = plotParamDF.groupby([xparam, yparam]).mean().reset_index()
-    plotParamDF = plotParamDF[[xparam, yparam, zparam]].pivot(xparam, yparam)
+    plotParamDF = plotParamDF[[xparam, yparam, zparam]].pivot(index=xparam, columns=yparam)
     x = plotParamDF.index.values
     y = plotParamDF.columns.levels[1].values
     X, Y = np.meshgrid(x, y)
