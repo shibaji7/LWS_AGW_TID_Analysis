@@ -17,9 +17,7 @@ import sys
 sys.path.extend(["py/txUtils/", "py/tid/", "py/davitPy/"])
 from fetchUtils import FetchData
 
-rads = [
-    "fhe","fhw"
-]
+rads = ["fhe", "fhw"]
 fdMap = {}
 dates = [
     dt.datetime(2022, 12, 28),
@@ -29,4 +27,4 @@ for d in dates:
         fd = FetchData.fetch(
             rad, [d, d + dt.timedelta(1)], med_filter={"cpu": 4, "thresh": 0.7}
         )
-        #fd.to_geom()
+        # fd.to_geom()

@@ -50,7 +50,7 @@ def filterBasedOnLimits(
     dataset = music.getDataSet(dataObj, "active")
     time, bmnum, slist, lat, lon, srange = [], [], [], [], [], []
     o_data = copy.copy(dataset.data)
-    #o_data[np.abs(o_data) < pfilt_thresh] = np.nan
+    # o_data[np.abs(o_data) < pfilt_thresh] = np.nan
     data = []
     for i, t in enumerate(dataset.time):
         for j, b in enumerate(dataset.fov.beams):
@@ -82,26 +82,25 @@ def fftBasedOnLimits(
     """
     frame = fd.frame.copy()
     frame = frame[
-        (frame.time>=timeLimit[0]-dt.timedelta(seconds=timeRes/2)) &
-        (frame.time<timeLimit[1]+dt.timedelta(seconds=timeRes/2)) &
-        (frame.bmnum==beam) &
-        (frame.srange==srange)
+        (frame.time >= timeLimit[0] - dt.timedelta(seconds=timeRes / 2))
+        & (frame.time < timeLimit[1] + dt.timedelta(seconds=timeRes / 2))
+        & (frame.bmnum == beam)
+        & (frame.srange == srange)
     ]
-    
-    N = int((timeLimit[1]-timeLimit[0]).total_seconds()/timeRes)
-    t = timeRes*np.arange(N)
-    if N>len(frame):
-        t = t[:len(frame)]
-    if N<len(frame):
-        t = timeRes*np.arange(len(frame))
-    
+
+    N = int((timeLimit[1] - timeLimit[0]).total_seconds() / timeRes)
+    t = timeRes * np.arange(N)
+    if N > len(frame):
+        t = t[: len(frame)]
+    if N < len(frame):
+        t = timeRes * np.arange(len(frame))
+
     from astropy.timeseries import LombScargle
+
     frequency = np.linspace(
-        flim[0], 
-        flim[1], 
-        int(10**(np.log10(flim[1])-np.log10(flim[0])))
+        flim[0], flim[1], int(10 ** (np.log10(flim[1]) - np.log10(flim[0])))
     )
     ls = LombScargle(t, np.asarray(frame.p_l))
     o = pd.DataFrame()
-    o["freq"], o["power"] = ls.autopower() #frequency, ls.power(frequency)
+    o["freq"], o["power"] = ls.autopower()  # frequency, ls.power(frequency)
     return o

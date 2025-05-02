@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-    rtiPlots.py: module to plot RTI plots with various y-axis transformation
+rtiPlots.py: module to plot RTI plots with various y-axis transformation
 """
 
 __author__ = "Chakraborty, S."
@@ -17,7 +17,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import mplstyle
-#plt.style.use(["science", "ieee"])
+
+# plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import datetime as dt
@@ -26,6 +27,7 @@ import numpy as np
 import matplotlib.dates as mdates
 import pandas as pd
 import utils
+
 
 class RTIPlots(object):
     """
@@ -59,28 +61,26 @@ class RTIPlots(object):
         cmap="jet",
         vlim=[-10, 0],
         alpha=1,
-        scatter_type = "gs",
+        scatter_type="gs",
     ):
         o = pd.DataFrame()
         print(scatter_type)
         for sound in beam_soundings_rays:
-            if scatter_type=="all":
+            if scatter_type == "all":
                 o = pd.concat([o, sound.ray_power["gs"], sound.ray_power["is"]])
             else:
                 o = pd.concat([o, sound.ray_power[scatter_type]])
-        #print(np.max(o.lag_power/o.lag_power.max()),o.lag_power.max(), o.lag_power.min())
-        #o = o.dropna()
-        o.lag_power = 10*np.log10(o.lag_power/o.lag_power.max())
+        # print(np.max(o.lag_power/o.lag_power.max()),o.lag_power.max(), o.lag_power.min())
+        # o = o.dropna()
+        o.lag_power = 10 * np.log10(o.lag_power / o.lag_power.max())
         o.replace([np.inf, -np.inf], np.nan, inplace=True)
-        #print(o.head())
+        # print(o.head())
         ax = self._add_axis()
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%H^{%M}"))
         hours = mdates.HourLocator(byhour=range(0, 24, 1))
         ax.xaxis.set_major_locator(hours)
         ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
-        ax.set_xlim(
-                [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
-        )
+        ax.set_xlim([mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])])
         ax.set_ylim(self.ylim)
         X, Y, Z = utils.get_gridded_parameters(
             o, xparam="date", yparam="srange", zparam="lag_power", rounding=False
@@ -88,7 +88,7 @@ class RTIPlots(object):
         im = ax.pcolormesh(
             X,
             Y,
-            #(Y*45)+180,
+            # (Y*45)+180,
             Z.T,
             lw=0.01,
             edgecolors="None",
@@ -102,10 +102,12 @@ class RTIPlots(object):
         self._add_colorbar(self.fig, ax, im, label=r"$\lambda$ Power (dB)")
         ax.set_ylabel("Slant Range (km)", fontdict={"size": 12, "fontweight": "bold"})
         ax.text(
-            0.99, 1.05,
+            0.99,
+            1.05,
             f"Scatter: {scatter_type.upper()}",
-            ha="right", va="center",
-            transform=ax.transAxes
+            ha="right",
+            va="center",
+            transform=ax.transAxes,
         )
         return ax
 
@@ -122,7 +124,7 @@ class RTIPlots(object):
         self.fig.clf()
         plt.close()
         return
-    
+
     def _add_colorbar(
         self,
         fig,
@@ -140,13 +142,14 @@ class RTIPlots(object):
         cb = fig.colorbar(im, ax=ax, cax=cax)
         cb.set_label(label)
         return
-    
+
+
 def create_RTI(folder, beam_soundings_rays, scatter_type="gs", vlim=[-10, 0]):
     print(len(beam_soundings_rays))
     rti = RTIPlots(
-        80, 
+        80,
         [beam_soundings_rays[0].date, beam_soundings_rays[-1].date],
-        fr"GEMINI3D/{beam_soundings_rays[0].rad}/{beam_soundings_rays[0].beam}, $f_0$=12 MHz"
+        rf"GEMINI3D/{beam_soundings_rays[0].rad}/{beam_soundings_rays[0].beam}, $f_0$=12 MHz",
     )
     rti.addParamPlot(beam_soundings_rays, scatter_type=scatter_type, vlim=vlim)
     rti.save(folder + f"RTI_{scatter_type.upper()}.png")

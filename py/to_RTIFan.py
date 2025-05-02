@@ -20,6 +20,7 @@ from fetchUtils import FetchData
 from rtiUtils import RTI
 from model_vheight import chisham_vhm, standard_vhm
 import mplstyle
+
 # Initializations
 CASES = [
     "RTI",
@@ -29,7 +30,7 @@ CASES = [
 ]
 case = "RTI"
 rads = ["fhw"]
-power_vlim=[-50, 50]
+power_vlim = [-50, 50]
 dates = [
     dt.datetime(2024, 4, 10),
 ]
@@ -50,7 +51,7 @@ if case == "RTI":
                 tec_param=None,
                 power_vlim=power_vlim,
                 tec_vlim=None,
-                date_range=[d, d + dt.timedelta(1)]
+                date_range=[d, d + dt.timedelta(1)],
             )
 
 # Conduct 1D-Timeseries analysis
@@ -86,20 +87,18 @@ if case == "vhm":
                     None,
                     [d + dt.timedelta(hours=14), d + dt.timedelta(1)],
                     f"{d.strftime('%Y-%m-%d')}/{rad}/{b}",
-                    num_subplots=1
+                    num_subplots=1,
                 )
                 rt.addParamPlot(
                     fd.frame,
                     b,
                     "",
                     vlim=[0, 600],
-                        cbar=True,
+                    cbar=True,
                     plot_fov=False,
                     zparam="vheight",
-                    label=r"$H_{virtual}$ (km)"
+                    label=r"$H_{virtual}$ (km)",
                 )
-                file = (
-                    tidUtils.get_folder(d) + f"/{rad}-{'%02d'%b}.png"
-                )
+                file = tidUtils.get_folder(d) + f"/{rad}-{'%02d'%b}.png"
                 rt.save(file)
                 rt.close()

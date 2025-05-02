@@ -21,7 +21,8 @@ from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import Size, SubplotDivider
 from mpl_toolkits.axes_grid1.mpl_axes import Axes
 import datetime as dt
-#plt.style.use(["science", "ieee"])
+
+# plt.style.use(["science", "ieee"])
 import mplstyle
 import mpl_toolkits.axisartist.floating_axes as floating_axes
 import numpy as np
@@ -30,17 +31,22 @@ from matplotlib.transforms import Affine2D
 from mpl_toolkits.axisartist.grid_finder import DictFormatter, FixedLocator
 from pylab import gca
 
+
 def gerenate_fov_plot(rad, beam, date):
     import sys
+
     sys.path.extend(["../py/", "../py/tid/", "../py/txUtils/"])
     from fanUtils import Fan
+
     fan = Fan([rad], date, fig_title=f"{rad.upper()} / {'%02d'%beam}", cs=False)
     fan.generate_fov(rad, [], beams=[beam])
     fan.save(filepath=f"simulation_results/{rad.upper()}_{'%02d'%beam}.png")
     return
 
+
 def create_movie(folder, fname, file_ext=".png", movie_ext="mp4"):
     import os
+
     if os.path.exists(f"{folder}{fname}.{movie_ext}"):
         os.remove(f"{folder}{fname}.{movie_ext}")
     cmd = f"ffmpeg -framerate 10 -pattern_type glob -i '{folder}*{file_ext}' -c:v libx264 {folder}{fname}.{movie_ext}"
@@ -59,7 +65,7 @@ def textHighlighted(
     text_alignment=(0, 0),
     xycoords="data",
     textcoords="offset points",
-    **kwargs
+    **kwargs,
 ):
     """
     Plot highlighted annotation (with a white lining)
@@ -357,7 +363,7 @@ def plot_rays(
     for i, elv in enumerate(elvs[::2]):
         ray_path_data, ray_data = (
             rto.rays.ray_path_data[elv],
-            rto.rays.simulation[elv]["ray_data"]
+            rto.rays.simulation[elv]["ray_data"],
         )
         th, r = get_polar(ray_path_data)
         if not showrefract:
@@ -388,7 +394,7 @@ def plot_rays(
     ax.beam = rto.beam
     fig = ax.get_figure()
     fig.savefig(
-        dic+fig_fname,
+        dic + fig_fname,
         bbox_inches="tight",
     )
     plt.close()

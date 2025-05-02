@@ -19,28 +19,31 @@ from pathlib import Path
 import glob
 import os
 from rt2D import (
-    execute_gemini2D_simulation, execute_gemini2D_simulations,
-    execute_iri2D_simulations
+    execute_gemini2D_simulation,
+    execute_gemini2D_simulations,
+    execute_iri2D_simulations,
 )
 from plots import gerenate_fov_plot
 from rt3D import execute_iri3D_simulations
 
+
 def clean():
     files = glob.glob(str(Path.home() / "matlab_crash_dump*"))
     for f in files:
-        if os.path.exists(f): os.remove(f)
+        if os.path.exists(f):
+            os.remove(f)
     return
-
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-m", "--model", default="gemini2D", help="Model name [iri(2D/3D) or gemini(2D/3D)]"
+        "-m",
+        "--model",
+        default="gemini2D",
+        help="Model name [iri(2D/3D) or gemini(2D/3D)]",
     )
-    parser.add_argument(
-        "-md", "--method", default="movie", help="Method rt/rti/movie"
-    )
+    parser.add_argument("-md", "--method", default="movie", help="Method rt/rti/movie")
     parser.add_argument("-r", "--rad", default="fhe", help="Radar code (default fhe)")
     parser.add_argument(
         "-f", "--fan", default=0, type=int, help="Radar Fan runs (default 0)"
@@ -49,16 +52,26 @@ if __name__ == "__main__":
         "-bm", "--beam", default=11, type=int, help="Radar beam (default 3)"
     )
     parser.add_argument(
-        "-tsmin", "--time_steps_min", default=1, type=int, help="Time steps for the RT simulation"
+        "-tsmin",
+        "--time_steps_min",
+        default=1,
+        type=int,
+        help="Time steps for the RT simulation",
+    )
+    parser.add_argument("-cnt", "--control", action="store_true", help="Run control")
+    parser.add_argument(
+        "-tstart",
+        "--time_steps_start",
+        default=0,
+        type=int,
+        help="Time steps for the RT simulation",
     )
     parser.add_argument(
-        "-cnt", "--control", action='store_true', help="Run control"
-    )
-    parser.add_argument(
-        "-tstart", "--time_steps_start", default=0, type=int, help="Time steps for the RT simulation"
-    )
-    parser.add_argument(
-        "-tend", "--time_steps_end", default=360, type=int, help="Time steps for the RT simulation"
+        "-tend",
+        "--time_steps_end",
+        default=360,
+        type=int,
+        help="Time steps for the RT simulation",
     )
     parser.add_argument(
         "-ev",
@@ -68,7 +81,10 @@ if __name__ == "__main__":
         type=dparser.isoparse,
     )
     parser.add_argument(
-        "-sct", "--scatter_type", default="gs", help="scatter type - gs/is",
+        "-sct",
+        "--scatter_type",
+        default="gs",
+        help="scatter type - gs/is",
     )
     args = parser.parse_args()
     logger.info("\n Parameter list for simulation ")

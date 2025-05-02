@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-    fanUtils.py: module to plot Fan plots with various transformation
+fanUtils.py: module to plot Fan plots with various transformation
 """
 
 __author__ = "Chakraborty, S."
@@ -19,6 +19,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import scienceplots
+
 plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
@@ -36,11 +37,13 @@ from cartoUtils import SDCarto
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-def get_color_by_number(number, cmap_name='viridis'):
+
+def get_color_by_number(number, cmap_name="viridis"):
     """This function takes a number and a colormap name, and returns a color."""
     cmap = cm.get_cmap(cmap_name)
     norm = plt.Normalize(0, 26)  # Normalize the number to the colormap range
     return cmap(norm(number))
+
 
 class Fan(object):
     """
@@ -70,7 +73,7 @@ class Fan(object):
         self.date = date
         self.nrows, self.ncols = nrows, ncols
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(2 * ncols, 2 * nrows), dpi=300)
+        self.fig = plt.figure(figsize=(2 * ncols, 2 * nrows), dpi=1000)
         self.coord = coord
         self.tec, self.tec_times = tec, tec_times
         self.fig_title = fig_title
@@ -121,10 +124,13 @@ class Fan(object):
             )
         if self._num_subplots_created == 1 or self.add_text:
             ax.text(
-                0.05, 1.05,
-                f"{self.date_string()} / {self.fig_title}"
-                if self.fig_title
-                else f"{self.date_string()}",
+                0.05,
+                1.05,
+                (
+                    f"{self.date_string()} / {self.fig_title}"
+                    if self.fig_title
+                    else f"{self.date_string()}"
+                ),
                 ha="left",
                 va="center",
                 fontweight="bold",
@@ -141,7 +147,17 @@ class Fan(object):
         date_str = "{:{dd} {tt}} UT".format(stime, dd=dfmt, tt=tfmt)
         return date_str
 
-    def generate_fov(self, rad, frame, beams=[], ax=None, laytec=False, maxGate=45, col="k"):
+    def generate_fov(
+        self,
+        rad,
+        frame,
+        beams=[],
+        discreat=0,
+        ax=None,
+        laytec=False,
+        maxGate=45,
+        col="k",
+    ):
         """
         Generate plot with dataset overlaid
         """
@@ -153,49 +169,105 @@ class Fan(object):
             ax.overlay_tec(ipplat, ipplon, dtec, self.proj)
         ax.overlay_radar(rad, font_color=col)
         ax.overlay_fov(rad, lineColor=col)
-        if len(frame) > 0: 
+        if len(frame) > 0:
             ax.overlay_data(
-                rad, frame, self.proj, maxGate=maxGate, 
-                cbar=self.cbar, label=r"$P_l$, dB",
+                rad,
+                frame,
+                self.proj,
+                maxGate=maxGate,
+                cbar=self.cbar,
+                label=r"$P_l$, dB",
+                plot_discreat=discreat,
+                p_max=18,
+                p_min=12,
             )
         if beams and len(beams) > 0:
-            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor=get_color_by_number(b),
-        lineWidth=0.4) for b in beams]
+            [
+                ax.overlay_fov(
+                    rad,
+                    beamLimits=[b, b + 1],
+                    ls="-",
+                    lineColor=get_color_by_number(b),
+                    lineWidth=0.4,
+                )
+                for b in beams
+            ]
         return
 
-    def generate_fovs(self, fds, beams={}, laytec=False):
+    def add_arc_fov(
+        self,
+        rad,
+        ax=None,
+        lineColor="m",
+        maxGate=30,
+        beamLimits=None,
+        lineWidth=0.4,
+        ls="-",
+    ):
+        """
+        Generate plot with dataset overlaid
+        """
+        ax = ax if ax else self.add_axes()
+        ax.add_arc_fov(
+            rad,
+            lineColor=lineColor,
+            maxGate=maxGate,
+            beamLimits=beamLimits,
+            lineWidth=lineWidth,
+            ls=ls,
+        )
+        return ax
+
+    def generate_fovs(self, fds, beams={}, discreat={}, laytec=False):
         """
         Generate plot with dataset overlaid
         """
         ax = self.add_axes()
         for rad in self.rads:
-            self.generate_fov(rad, fds[rad].frame, beams[rad], ax, laytec, col=fds[rad].color)
+            self.generate_fov(
+                rad,
+                fds[rad].frame,
+                beams[rad],
+                discreat[rad],
+                ax,
+                laytec,
+                col=fds[rad].color,
+            )
         return ax
-    
-    def overlay_simulation_fovs(self, rad, df, beams=[], gate_filter=[], ax=None, col="k"):
+
+    def overlay_simulation_fovs(
+        self, rad, df, beams=[], gate_filter=[], ax=None, col="b"
+    ):
         """
         Generate plot with dataset overlaid
         """
         ax = ax if ax else self.add_axes()
         ax.overlay_radar(rad, font_color=col)
         ax.overlay_fov(rad, lineColor=col)
-        if len(df) > 0: 
+        if len(df) > 0:
             if len(gate_filter) == 2:
                 df = df[(df.slist >= gate_filter[0]) & (df.slist <= gate_filter[1])]
             ax.overlay_data(
-                rad, df, self.proj, 
-                maxGate=45, cbar=self.cbar, 
-                p_name="lag_power", scan_time=1,
-                p_max=int(np.max(df.lag_power)), 
-                p_min=int(np.min(df.lag_power)),
+                rad,
+                df,
+                self.proj,
+                maxGate=45,
+                cbar=self.cbar,
+                p_name="p_l",
+                scan_time=1,
+                p_max=-85,
+                p_min=-90,
                 label=r"$P_r$, dB",
             )
         if beams and len(beams) > 0:
             [
                 ax.overlay_fov(
-                    rad, beamLimits=[b, b + 1], ls="-", 
-                    lineColor=get_color_by_number(b), lineWidth=0.4
-                ) 
+                    rad,
+                    beamLimits=[b, b + 1],
+                    ls="-",
+                    lineColor=get_color_by_number(b),
+                    lineWidth=0.4,
+                )
                 for b in beams
             ]
         return ax
@@ -208,8 +280,16 @@ class Fan(object):
         ax.overlay_radar(rad, font_color=col)
         ax.overlay_fov(rad, lineColor=col)
         if beams and len(beams) > 0:
-            [ax.overlay_fov(rad, beamLimits=[b, b + 1], ls="-", lineColor=get_color_by_number(b),
-                lineWidth=0.3) for b in beams]
+            [
+                ax.overlay_fov(
+                    rad,
+                    beamLimits=[b, b + 1],
+                    ls="-",
+                    lineColor=get_color_by_number(b),
+                    lineWidth=0.3,
+                )
+                for b in beams
+            ]
         return ax
 
     def save(self, filepath):

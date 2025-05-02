@@ -38,7 +38,9 @@ def get_gridded_parameters(
         plotParamDF.loc[:, xparam] = np.round(plotParamDF[xparam].tolist(), r)
         plotParamDF.loc[:, yparam] = np.round(plotParamDF[yparam].tolist(), r)
     plotParamDF = plotParamDF.groupby([xparam, yparam]).mean().reset_index()
-    plotParamDF = plotParamDF[[xparam, yparam, zparam]].pivot(index=xparam, columns=yparam)
+    plotParamDF = plotParamDF[[xparam, yparam, zparam]].pivot(
+        index=xparam, columns=yparam
+    )
     x = plotParamDF.index.values
     y = plotParamDF.columns.levels[1].values
     X, Y = np.meshgrid(x, y)
@@ -56,6 +58,7 @@ def get_folder(date):
     fold = os.path.join(get_config("FOLDER"), date.strftime("%Y-%m-%d"))
     os.makedirs(fold, exist_ok=True)
     return fold
+
 
 def to_date(ts):
     """

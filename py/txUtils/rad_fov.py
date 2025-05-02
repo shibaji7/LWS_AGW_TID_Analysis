@@ -692,8 +692,7 @@ class CalcFov(object):
                     # Adjust elevation angle for any hop > 1 (Chisham et al. 2008)
                     pos_dist = rad_pos + calt
                     phi = numpy.arccos(
-                        (tr_dist**2 + pos_dist**2 - asr**2)
-                        / (2.0 * tr_dist * pos_dist)
+                        (tr_dist**2 + pos_dist**2 - asr**2) / (2.0 * tr_dist * pos_dist)
                     )
                     beta = numpy.arcsin(
                         (tr_dist * numpy.sin(phi / (shop * 2.0))) / (asr / (shop * 2.0))
@@ -703,9 +702,7 @@ class CalcFov(object):
                     if xalt == calt:
                         xalt = (
                             numpy.sqrt(
-                                tr_rad**2
-                                + asr**2
-                                + 2.0 * asr * tr_rad * numpy.sin(tel)
+                                tr_rad**2 + asr**2 + 2.0 * asr * tr_rad * numpy.sin(tel)
                             )
                             - tr_rad
                         )

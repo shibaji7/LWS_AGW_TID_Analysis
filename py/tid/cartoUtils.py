@@ -367,6 +367,38 @@ class SDCarto(GeoAxes):
             )
         return
 
+    def add_arc_fov(
+        self,
+        rad,
+        tx=cartopy.crs.PlateCarree(),
+        maxGate=30,
+        beamLimits=None,
+        lineColor="",
+        lineWidth=0.4,
+        ls="-",
+        model="IS",
+        fov_dir="front",
+    ):
+        hdw = pydarn.read_hdw_file(rad)
+        fov = CalcFov(hdw=hdw, model=model, fov_dir=fov_dir)
+        latFull, lonFull = fov.latFull, fov.lonFull
+        ebeam = hdw.beams
+        if beamLimits is not None:
+            sbeam, ebeam = beamLimits[0], beamLimits[1]
+        else:
+            sbeam = 0
+        lonFull, latFull = lonFull[:, maxGate], latFull[:, maxGate]
+        xyz = self.projection.transform_points(tx, lonFull, latFull)
+        x, y = xyz[:, 0], xyz[:, 1]
+        self.plot(
+            x,
+            y,
+            color=lineColor,
+            linewidth=lineWidth,
+            ls=ls,
+        )
+        return
+
     def overlay_fov(
         self,
         rad,
@@ -426,15 +458,18 @@ class SDCarto(GeoAxes):
             ls=ls,
             alpha=0.6,
         )
-        if sbeam+1 == ebeam:
+        if sbeam + 1 == ebeam:
             xloc, yloc = (
-                np.mean(x[sbeam:ebeam+1, egate+3]), 
-                np.mean(y[sbeam:ebeam+1, egate+3])
+                np.mean(x[sbeam : ebeam + 1, egate + 3]),
+                np.mean(y[sbeam : ebeam + 1, egate + 3]),
             )
             self.text(
-                xloc, yloc,
-                sbeam, ha="center", va="center",
-                fontdict=dict(color="b", fontsize="x-small")
+                xloc,
+                yloc,
+                sbeam,
+                ha="center",
+                va="center",
+                fontdict=dict(color="b", fontsize="x-small"),
             )
 
         if fovColor:
@@ -467,6 +502,7 @@ class SDCarto(GeoAxes):
         model="IS",
         fov_dir="front",
         kind="sct",
+        plot_discreat=0,
         **kwargs,
     ):
         """Overlay radar Data"""
@@ -478,15 +514,16 @@ class SDCarto(GeoAxes):
         if maxGate or hasattr(self, "maxGate"):
             maxGate = maxGate if maxGate else self.maxGate
             df = df[(df.slist >= 7) & (df.slist <= maxGate)]
-        if len(df) > 0:
-            # TODO
-            hdw = pydarn.read_hdw_file(rad)
-            fov = CalcFov(hdw=hdw, model=model, fov_dir=fov_dir)
-            # lats, lons = pydarn.Coords.GEOGRAPHIC(hdw.stid)
-            # lats, lons = lats.T, lons.T
-            lats, lons = fov.latCenter, fov.lonCenter
+        if plot_discreat > 0:
+            o, x = df[df.slist < plot_discreat], df[df.slist >= plot_discreat]
+        else:
+            x, o = df, []
+        hdw = pydarn.read_hdw_file(rad)
+        fov = CalcFov(hdw=hdw, model=model, fov_dir=fov_dir)
+        lats, lons = fov.latCenter, fov.lonCenter
+        if len(x) > 0:
             Xb, Yg, Px = tidUtils.get_gridded_parameters(
-                df, xparam="bmnum", yparam="slist", zparam=p_name
+                x, xparam="bmnum", yparam="slist", zparam=p_name
             )
             Xb, Yg = Xb.astype(int), Yg.astype(int)
             lons, lats = lons[Xb.ravel(), Yg.ravel()].reshape(Xb.shape), lats[
@@ -503,7 +540,7 @@ class SDCarto(GeoAxes):
                     vmin=p_min,
                     transform=tx,
                     cmap=cmap,
-                    zorder=2
+                    zorder=2,
                 )
             else:
                 im = self.scatter(
@@ -520,8 +557,31 @@ class SDCarto(GeoAxes):
                     **kwargs,
                 )
             if cbar:
-                #self._add_colorbar(im, label=label)
+                # self._add_colorbar(im, label=label)
                 self._add_hcolorbar(im, label=label)
+        lats, lons = fov.latCenter, fov.lonCenter
+        if len(o) > 0:
+            Xb, Yg, Px = tidUtils.get_gridded_parameters(
+                o, xparam="bmnum", yparam="slist", zparam=p_name
+            )
+            Xb, Yg = Xb.astype(int), Yg.astype(int)
+            lons, lats = lons[Xb.ravel(), Yg.ravel()].reshape(Xb.shape), lats[
+                Xb.ravel(), Yg.ravel()
+            ].reshape(Xb.shape)
+            XYZ = tx.transform_points(fm, lons, lats)
+            mask = np.isnan(Px).T
+            X, Y = XYZ[:, :, 0], XYZ[:, :, 1]
+            X[mask], Y[mask] = np.nan, np.nan
+            self.scatter(
+                X.ravel(),
+                Y.ravel(),
+                c="gray",
+                transform=tx,
+                s=0.3,
+                marker="s",
+                alpha=0.9,
+                **kwargs,
+            )
         return
 
     def _add_colorbar(self, im, label=""):
@@ -535,8 +595,6 @@ class SDCarto(GeoAxes):
         cb.ax.tick_params(labelsize="x-small")
         cb.set_label(label, fontsize="x-small")
         return
-
-    
 
     def _add_hcolorbar(self, im, label=""):
         """Add a colorbar to the right of an axis."""
@@ -594,7 +652,9 @@ class SDCarto(GeoAxes):
 
     def overlay_station(
         self,
-        name, lat, lon,
+        name,
+        lat,
+        lon,
         tx=cartopy.crs.PlateCarree(),
         marker="o",
         zorder=5,

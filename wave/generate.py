@@ -14,12 +14,13 @@ __status__ = "Research"
 import numpy as np
 import pandas as pd
 
+
 def create_synthetic_data(Amp, Phi, T, t, cad, stn="mit"):
     """
     This function is responsible for creating a
     synthetic magnetic field with following sets
     of parameters.
-    
+
     Parameter:
     ----------
     Amp (list) - Magntitue at different freuency components (m)

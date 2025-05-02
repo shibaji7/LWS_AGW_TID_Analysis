@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-    rtiUtils.py: module to plot RTI plots with various y-axis transformation
+rtiUtils.py: module to plot RTI plots with various y-axis transformation
 """
 
 __author__ = "Chakraborty, S."
@@ -16,11 +16,13 @@ __status__ = "Research"
 import matplotlib
 import matplotlib.pyplot as plt
 import scienceplots
+
 plt.style.use(["science", "ieee"])
 # import mplstyle
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 import datetime as dt
+
 plt.rcParams["text.usetex"] = False
 
 import matplotlib.dates as mdates
@@ -54,7 +56,7 @@ class RTI(object):
         self.fov = fov
         self.num_subplots = num_subplots
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(8, 3 * num_subplots), dpi=300)
+        self.fig = plt.figure(figsize=(8, 3 * num_subplots), dpi=1000)
         if fig_title:
             plt.suptitle(
                 fig_title, x=0.075, y=0.91, ha="left", fontweight="bold", fontsize=12
@@ -64,7 +66,10 @@ class RTI(object):
         self.ylim = ylim
         self.xlim = xlim
         import matplotlib as mpl
-        mpl.rcParams.update({"xtick.labelsize": 12, "ytick.labelsize":12, "font.size":12})
+
+        mpl.rcParams.update(
+            {"xtick.labelsize": 12, "ytick.labelsize": 12, "font.size": 12}
+        )
         return
 
     def addParamPlot(
@@ -399,7 +404,14 @@ def plot_FFT(o, beam, srange, fname):
     ax.set_ylim(1e-3, 1)
     ax.set_xlabel("Frequency, Hz")
     ax.set_ylabel("Power, Hz")
-    ax.text(0.1, 1.05, "Range Cell: [%d,%d]"%(beam, srange), va="center", ha="left", transform=ax.transAxes)
+    ax.text(
+        0.1,
+        1.05,
+        "Range Cell: [%d,%d]" % (beam, srange),
+        va="center",
+        ha="left",
+        transform=ax.transAxes,
+    )
     fig.savefig(fname, bbox_inches="tight", facecolor=(1, 1, 1, 1))
     fig.clf()
     plt.close()

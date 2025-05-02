@@ -14,11 +14,13 @@ __status__ = "Research"
 import numpy as np
 import pywt
 
+
 def get_families(short=False):
     """
     Get all wavelete families in PyWavelets
     """
     return pywt.families(short)
+
 
 def get_wavelist(kind="all", family="morl"):
     """
@@ -26,13 +28,16 @@ def get_wavelist(kind="all", family="morl"):
     """
     return pywt.wavelist(family, kind)
 
-def cwt_wavelete_transform(time, signal, waveletname="morl", scales=np.arange(1, 300), dt=60.0):
+
+def cwt_wavelete_transform(
+    time, signal, waveletname="morl", scales=np.arange(1, 300), dt=60.0
+):
     """
     Conduct wavelete transform
-    
+
     Parameters:
     -----------
-    
+
     signal: Y-signal (array)
     waveletname: Name of the wavelete (str)
     scales: Scales of the CWT (array)
@@ -40,7 +45,7 @@ def cwt_wavelete_transform(time, signal, waveletname="morl", scales=np.arange(1,
     """
     [coefficients, frequencies] = pywt.cwt(signal, scales, waveletname, dt)
     power = (abs(coefficients)) ** 2
-    period = 1. / (frequencies*dt)
+    period = 1.0 / (frequencies * dt)
     fdata = {
         "time": time,
         "waveletname": waveletname,
@@ -49,18 +54,21 @@ def cwt_wavelete_transform(time, signal, waveletname="morl", scales=np.arange(1,
         "coefficients": coefficients,
         "frequencies": frequencies,
         "power": power,
-        "period": period
+        "period": period,
     }
     return fdata
 
 
 import matplotlib.pyplot as plt
+
+
 def plot_wavelet(
-    fdata, waveletname = 'morl', 
-    cmap = plt.cm.seismic, 
-    title = 'Wavelet Transform (Power Spectrum) of signal', 
-    ylabel = 'Period (Minutes)', 
-    xlabel = 'Time'
+    fdata,
+    waveletname="morl",
+    cmap=plt.cm.seismic,
+    title="Wavelet Transform (Power Spectrum) of signal",
+    ylabel="Period (Minutes)",
+    xlabel="Time",
 ):
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_title(title, fontsize=20)

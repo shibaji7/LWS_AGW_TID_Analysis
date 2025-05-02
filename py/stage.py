@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-    stage.py: module to stagging data into raw format
+stage.py: module to stagging data into raw format
 """
 
 __author__ = "Chakraborty, S."

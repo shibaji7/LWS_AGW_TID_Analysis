@@ -142,30 +142,30 @@ if case == "filter":
                     [d + dt.timedelta(hours=17), d + dt.timedelta(hours=21)],
                     timeRes=60,
                 )
-    #             dat = filterBasedOnLimits(
-    #                 fd,
-    #                 [d, d + dt.timedelta(1)],
-    #                 [20, 60],
-    #                 [d + dt.timedelta(hours=17), d + dt.timedelta(hours=21)],
-    #                 timeRes=60,
-    #                 numtaps=101,
-    #                 cutoffs_min=[15, 40],
-    #                 pfilt_thresh=0.3,
-    #             )
-    #            dat["rsep"], dat["frang"], dat["srange"] = rsep, frang, rsep*dat.slist+frang
-                #dat = dat.dropna()
-    #             plot_RTI(
-    #                 rad,
-    #                 dat,
-    #                 [d + dt.timedelta(hours=17), d + dt.timedelta(hours=21)],
-    #                 tec_mat_file=f"data/{d.strftime('%Y-%m-%d')}/{rad}geom.mat",
-    #             )
-    #             o = fft_analysis(
-    #                 dat,
-    #                 bm_gate_cell[1],
-    #                 bm_gate_cell[0],
-    #                 T=60,
-    #             )
-    #             print(o)
+                #             dat = filterBasedOnLimits(
+                #                 fd,
+                #                 [d, d + dt.timedelta(1)],
+                #                 [20, 60],
+                #                 [d + dt.timedelta(hours=17), d + dt.timedelta(hours=21)],
+                #                 timeRes=60,
+                #                 numtaps=101,
+                #                 cutoffs_min=[15, 40],
+                #                 pfilt_thresh=0.3,
+                #             )
+                #            dat["rsep"], dat["frang"], dat["srange"] = rsep, frang, rsep*dat.slist+frang
+                # dat = dat.dropna()
+                #             plot_RTI(
+                #                 rad,
+                #                 dat,
+                #                 [d + dt.timedelta(hours=17), d + dt.timedelta(hours=21)],
+                #                 tec_mat_file=f"data/{d.strftime('%Y-%m-%d')}/{rad}geom.mat",
+                #             )
+                #             o = fft_analysis(
+                #                 dat,
+                #                 bm_gate_cell[1],
+                #                 bm_gate_cell[0],
+                #                 T=60,
+                #             )
+                #             print(o)
                 fname = f"data/{d.strftime('%Y-%m-%d')}/{rad}-{bm_gate_cell[0]}-{bm_gate_cell[1]}-fft.png"
                 plot_FFT(o, bm_gate_cell[0], bm_gate_cell[1], fname)

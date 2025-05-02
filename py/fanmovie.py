@@ -43,8 +43,8 @@ for d in dates:
         i += 1
 
 scan_time = fds["fhe"].frame.scan_time.iloc[0]
-for d in range(int(1440/(scan_time/60))):
-    date = dates[0] + dt.timedelta(minutes=d*(scan_time/60))
+for d in range(int(1440 / (scan_time / 60))):
+    date = dates[0] + dt.timedelta(minutes=d * (scan_time / 60))
     fname = f"figures/FH/fan/{'%04d'%d}.png"
     if not os.path.exists(fname):
         fan = Fan(rads, date)
@@ -68,7 +68,11 @@ for rad, col in zip(rads, colors):
             fan.overlay_fovs(rad, beams=[b])
             fan.save(fname)
             fan.close()
-            rti = RTI(100, [dates[0], dates[0]+dt.timedelta(1)], f"{dates[0].strftime('%Y-%m-%d')} / {rad.upper()} / {b}")
+            rti = RTI(
+                100,
+                [dates[0], dates[0] + dt.timedelta(1)],
+                f"{dates[0].strftime('%Y-%m-%d')} / {rad.upper()} / {b}",
+            )
             rti.addParamPlot(fds[rad].frame, b, "")
             rti.save(fname.replace("_fov", ""))
             rti.close()

@@ -317,12 +317,9 @@ class FetchData(object):
 
     def get_unique_freq(self):
         df = self.frame.copy()
-        df = df[
-            (df.time>=self.date_range[0]) & 
-            (df.time<=self.date_range[-1])
-        ]
-        df.tfreq = df.tfreq/1e3
-        df["unique_tfreq"] = df.tfreq.apply(lambda x: int(x/0.5)*0.5)
+        df = df[(df.time >= self.date_range[0]) & (df.time <= self.date_range[-1])]
+        df.tfreq = df.tfreq / 1e3
+        df["unique_tfreq"] = df.tfreq.apply(lambda x: int(x / 0.5) * 0.5)
         tf = df.unique_tfreq.unique()
         tfn = [np.min(tf), np.max(tf)]
         tf = "[" + "-".join(str(x) for x in tfn) + "]"
@@ -354,7 +351,7 @@ class FetchData(object):
             tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv"
         )
         self.frame = pd.read_csv(file, parse_dates=["time"])
-        #self.medframe = pd.read_csv(mfile, parse_dates=["time"])
+        # self.medframe = pd.read_csv(mfile, parse_dates=["time"])
 
         if tec_mat_file:
             tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)
@@ -365,16 +362,19 @@ class FetchData(object):
                 tidUtils.get_folder(self.date_range[0]) + f"/{self.rad}-{'%02d'%b}.png"
             )
             tf = self.get_unique_freq()
-            d0, d1 = self.date_range[0], self.date_range[1]-dt.timedelta(seconds=60)
-            date = self.date_range[0].strftime("%d %b, %Y") if d0.day==d1.day else \
-                self.date_range[0].strftime("%d-") + self.date_range[1].strftime("%d %b, %Y")
-            title = fr"Rad: {self.rad} / Beam: {b} / Date:  {date} / $f_0\sim{tf}$ MHz"
+            d0, d1 = self.date_range[0], self.date_range[1] - dt.timedelta(seconds=60)
+            date = (
+                self.date_range[0].strftime("%d %b, %Y")
+                if d0.day == d1.day
+                else self.date_range[0].strftime("%d-")
+                + self.date_range[1].strftime("%d %b, %Y")
+            )
+            title = rf"Rad: {self.rad} / Beam: {b} / Date:  {date} / $f_0\sim{tf}$ MHz"
             rt = RTI(
                 100,
                 date_range,
                 (self.lats, self.lons),
                 [date_range[0], date_range[1]],
-                
                 title,
                 num_subplots=3,
                 angle_th=angle_th,
@@ -388,10 +388,10 @@ class FetchData(object):
                 cbar=True,
                 plot_fov=False,
                 vlim=power_vlim,
-                cmap="Spectral"
+                cmap="Spectral",
             )
-            ax.axvline(dt.datetime(2024,4,10,15), color="k", lw=1.2, ls="--")
-            ax.axvline(dt.datetime(2024,4,10,17), color="k", lw=1.2, ls="--")
+            ax.axvline(dt.datetime(2024, 4, 10, 15), color="k", lw=1.2, ls="--")
+            ax.axvline(dt.datetime(2024, 4, 10, 17), color="k", lw=1.2, ls="--")
             if tec_mat_file:
                 rt.ovearlay_TEC(
                     tec,
@@ -449,7 +449,7 @@ class FetchData(object):
             tidUtils.get_folder(self.date_range[0]), f"{self.rad}_med.csv"
         )
         self.frame = pd.read_csv(file, parse_dates=["time"])
-        #self.medframe = pd.read_csv(mfile, parse_dates=["time"])
+        # self.medframe = pd.read_csv(mfile, parse_dates=["time"])
 
         if tec_mat_file:
             tec, tec_times = tidUtils.read_tec_mat_files(tec_mat_file)
@@ -526,6 +526,7 @@ class FetchData(object):
         Convert to NetCDF files
         """
         print(self.lats.shape)
+
         def extract_3D_data(px="p_l"):
             dat = (
                 np.zeros((len(scans), self.lats.shape[1], self.lats.shape[0])) * np.nan
@@ -601,7 +602,9 @@ class FetchData(object):
             o["beam%02d.lat" % (b + 1)] = self.lats[:, b]
             o["beam%02d.lon" % (b + 1)] = self.lons[:, b]
             o["beam%02d.slist" % (b + 1)] = range(len(self.lats[:, b]))
-            o["beam%02d.srange" % (b + 1)] = np.arange(len(self.lats[:, b]))*rsep + frang
+            o["beam%02d.srange" % (b + 1)] = (
+                np.arange(len(self.lats[:, b])) * rsep + frang
+            )
         o.to_csv(file, index=False, header=True, float_format="%g")
         return
 
@@ -625,7 +628,7 @@ class FetchData(object):
         mfile = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}_med.csv")
         nfile = os.path.join(tidUtils.get_folder(date_range[0]), f"{rad}.nc")
         fd = FetchData(rad, date_range, ftype, files, verbose, nrange_scatter)
-        
+
         if os.path.exists(file):
             fd.frame = pd.read_csv(file, parse_dates=["time"])
             logger.info(f"Data length {rad}: {len(fd.frame)}")
@@ -638,7 +641,7 @@ class FetchData(object):
                 fd.filtered_scans = fd.pandas_to_scans(fd.medframe)
                 logger.info(f"# Scans {rad}: {len(fd.filtered_scans)}")
         else:
-            #if med_filter:
+            # if med_filter:
             _, scans, data_exists = fd.fetch_data(by="scan")
             if data_exists:
                 fd.frame = fd.scans_to_pandas(scans)
@@ -646,8 +649,8 @@ class FetchData(object):
                 logger.info(f"Data length {rad}: {len(fd.frame)}")
                 if len(fd.frame) > 0:
                     fd.frame = fd.frame[
-                        (fd.frame.slist<76)
-                        & (fd.frame.bmnum<np.max(fd.frame.bmnum))
+                        (fd.frame.slist < 76)
+                        & (fd.frame.bmnum < np.max(fd.frame.bmnum))
                     ]
                     fd.frame = fd.frame.progress_apply(fd.__get_location__, axis=1)
                     fd.frame.to_csv(file, index=False, header=True, float_format="%g")

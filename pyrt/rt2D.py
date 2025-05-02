@@ -39,6 +39,7 @@ def read_params_2D(fname="cfg/rt2D.json"):
         param = json.load(f, object_hook=lambda x: SimpleNamespace(**x))
     return param
 
+
 class RayTrace2D(object):
     """
     Ray trace class to trace all the points
@@ -76,7 +77,9 @@ class RayTrace2D(object):
     def _estimate_bearing_(self):
         """Estimate laitude and logitude bearings"""
         fname = self.folder + f"bearing_{'%02d'%self.beam}.mat"
-        bearing = self.hdw.boresight.physical - ((self.beam - self.hdw.beams/2) * self.hdw.beam_separation)
+        bearing = self.hdw.boresight.physical - (
+            (self.beam - self.hdw.beams / 2) * self.hdw.beam_separation
+        )
         logger.info(f"Bearing angle of beam {self.beam} is {bearing} deg")
         lat, lon = (self.hdw.geographic.lat, self.hdw.geographic.lon)
         p = (lat, lon)
@@ -152,9 +155,10 @@ class RayTrace2D(object):
             bm="%02d" % self.beam, date=self.event.strftime("%H%M")
         )
         logger.info("Data-Model comparison: reading rays....")
-        self.rays = Rays2D.read_rays(self.event, self.rad, self.beam, self.cfg, self.folder, self.sim_fname)
+        self.rays = Rays2D.read_rays(
+            self.event, self.rad, self.beam, self.cfg, self.folder, self.sim_fname
+        )
         return
-        
 
     def compile(self, density):
         """Compute RT using Pharlap"""
@@ -177,9 +181,12 @@ class RayTrace2D(object):
         logger.info(f"Running command: {cmd}")
         os.system(cmd)
         logger.info("Data-Model comparison: reading rays....")
-        self.rays = Rays2D.read_rays(self.event, self.rad, self.beam, self.cfg, self.folder, self.sim_fname)
+        self.rays = Rays2D.read_rays(
+            self.event, self.rad, self.beam, self.cfg, self.folder, self.sim_fname
+        )
         return
-    
+
+
 def execute_gemini2D_simulation(
     args,
 ):
@@ -202,7 +209,7 @@ def execute_gemini2D_simulation(
         rtobj.bearing_object["lat"],
         rtobj.bearing_object["lon"],
         rtobj.bearing_object["ht"],
-        dlat=0.2, 
+        dlat=0.2,
         dlon=0.2,
         to_file=fname,
     )
@@ -212,9 +219,10 @@ def execute_gemini2D_simulation(
         rtobj.fig_name,
         rtobj,
         f"GEMINI3D + {args.rad.upper()}/{str(args.beam)}/{str(cfg.frequency)}",
-        maxground = cfg.max_ground_range_km+10,
+        maxground=cfg.max_ground_range_km + 10,
     )
     return
+
 
 def execute_gemini2D_fan_simulations(
     args,
@@ -222,8 +230,9 @@ def execute_gemini2D_fan_simulations(
     """
     Execute GEMINI2D simulation for ray tracing
     """
-    
+
     return
+
 
 def execute_gemini2D_simulations(
     args,
@@ -233,7 +242,7 @@ def execute_gemini2D_simulations(
     """
     cfg = read_params_2D()
     days = GEMINI2D.get_time_keys(
-        args.event.strftime("%Y%m%d"), 
+        args.event.strftime("%Y%m%d"),
         f"dataset/GEMINI3D/",
         args.control,
     )
@@ -255,30 +264,32 @@ def execute_gemini2D_simulations(
         )
     if args.method == "movie":
         plots.create_movie(
-            folder, 
+            folder,
             "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam),
-            "_{bm}.png".format(bm="%02d" % args.beam)
+            "_{bm}.png".format(bm="%02d" % args.beam),
         )
     else:
         beam_soundings_rays = []
-        for d in days[args.time_steps_start:args.time_steps_end]:
+        for d in days[args.time_steps_start : args.time_steps_end]:
             args.event = d
-            rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg, control=args.control)
+            rtobj = RayTrace2D(
+                args.event, args.rad, args.beam, cfg, control=args.control
+            )
             if not os.path.exists(rtobj.folder + rtobj.fig_name):
                 fname = rtobj.folder + "{dn}_{bm}.mat".format(
                     dn=args.event.strftime("%H.%M"), bm="%02d" % args.beam
                 )
-                if (args.method == "rt"):
-                    if (not os.path.exists(fname)):
+                if args.method == "rt":
+                    if not os.path.exists(fname):
                         logger.info(f"Create matlab file: {fname}")
                         gem.fetch_dataset_by_locations(
-                            d, 
+                            d,
                             rtobj.bearing_object["lat"],
                             rtobj.bearing_object["lon"],
-                            rtobj.bearing_object["ht"], 
-                            dlat=0.2, 
+                            rtobj.bearing_object["ht"],
+                            dlat=0.2,
                             dlon=0.2,
-                            to_file=fname
+                            to_file=fname,
                         )
                         rtobj.compile(gem.param_val)
                         os.system("rm -rf ~/matlab_crash_dump*")
@@ -288,8 +299,8 @@ def execute_gemini2D_simulations(
                         folder,
                         rtobj.fig_name,
                         rtobj,
-                        fr"GEMINI3D + {args.rad.upper()}/{str(args.beam)}, $f_0$={str(cfg.frequency)} MHz",
-                        maxground = cfg.max_ground_range_km+10,
+                        rf"GEMINI3D + {args.rad.upper()}/{str(args.beam)}, $f_0$={str(cfg.frequency)} MHz",
+                        maxground=cfg.max_ground_range_km + 10,
                     )
             rt_name = folder + "{date}.{bm}_rt.mat".format(
                 bm="%02d" % args.beam, date=d.strftime("%H%M")
@@ -298,49 +309,35 @@ def execute_gemini2D_simulations(
                 Rays2D.read_rays(d, args.rad, args.beam, cfg, folder, rt_name)
             )
         if args.method == "rti":
-            rtiPlots.create_RTI(
-                folder, 
-                beam_soundings_rays,
-                "gs"
-            )
-            rtiPlots.create_RTI(
-                folder, 
-                beam_soundings_rays,
-                "is",
-                vlim=[-15, -25]
-            )
-            rtiPlots.create_RTI(
-                folder, 
-                beam_soundings_rays,
-                "all",
-                vlim=[-20, -30]
-            )
+            rtiPlots.create_RTI(folder, beam_soundings_rays, "gs")
+            rtiPlots.create_RTI(folder, beam_soundings_rays, "is", vlim=[-15, -25])
+            rtiPlots.create_RTI(folder, beam_soundings_rays, "all", vlim=[-20, -30])
     return
+
 
 def execute_iri2D_simulations(args):
     """
     Execute IRI2D simulation for ray tracing
     """
     cfg = read_params_2D()
-    times = [args.event+dt.timedelta(minutes=i) for i in range(args.time_steps_min)]
+    times = [args.event + dt.timedelta(minutes=i) for i in range(args.time_steps_min)]
     folder = "simulation_results/{dn}/{rad}/".format(
-            dn=args.event.strftime("%Y.%m.%d"), rad=args.rad
-        )
+        dn=args.event.strftime("%Y.%m.%d"), rad=args.rad
+    )
     beam_soundings_rays = []
     tid_prop = dict(
-        lamb_x = 1000,
-        v_x = 0.1,
-        a_lim = [0.1, 1],
-        t = 0,
+        lamb_x=1000,
+        v_x=0.1,
+        a_lim=[0.1, 1],
+        t=0,
     )
     if args.method == "movie":
         plots.create_movie(
-            folder, 
-            "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam)
+            folder, "{rad}_{bm}".format(rad=args.rad, bm="%02d" % args.beam)
         )
     for ti, d in enumerate(times):
         args.event = d
-        tid_prop["t"] = ti*60
+        tid_prop["t"] = ti * 60
         rtobj = RayTrace2D(args.event, args.rad, args.beam, cfg)
         if not os.path.exists(rtobj.folder + rtobj.fig_name):
             fname = rtobj.folder + "{dn}_{bm}.mat".format(
@@ -349,7 +346,7 @@ def execute_iri2D_simulations(args):
             movie = True
             logger.info(f"Create matlab file: {fname}")
             iri = IRI2D(
-                d, 
+                d,
                 rtobj.bearing_object["lat"],
                 rtobj.bearing_object["lon"],
                 rtobj.bearing_object["ht"],
@@ -364,7 +361,7 @@ def execute_iri2D_simulations(args):
                 rtobj.fig_name,
                 rtobj,
                 f"IRI2D + {args.rad.upper()}/{str(args.beam)}/{str(cfg.frequency)}",
-                maxground = cfg.max_ground_range_km+10,
+                maxground=cfg.max_ground_range_km + 10,
             )
         rt_name = folder + "{date}.{bm}_rt.mat".format(
             bm="%02d" % args.beam, date=d.strftime("%H%M")
@@ -374,5 +371,7 @@ def execute_iri2D_simulations(args):
         )
         os.system("rm -rf ~/matlab_crash_dump*")
     if args.method == "rti":
-        rtiPlots.create_RTI(rtobj.folder, beam_soundings_rays, scatter_type=args.scatter_type)
+        rtiPlots.create_RTI(
+            rtobj.folder, beam_soundings_rays, scatter_type=args.scatter_type
+        )
     return
