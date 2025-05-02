@@ -11,7 +11,7 @@ import cartopy.crs as ccrs
 import numpy as np
 import rays
 
-figures = [1, 3, 4, 7, 8]
+figures = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 rads = ["fhw", "fhe"]
 dates = [
     dt.datetime(2017, 5, 27),
@@ -403,3 +403,15 @@ if 12 in figures:
         )
     fan.save(f"paper-mstid-rt/figures/Figure12.png")
     fan.close()
+
+
+if 13 in figures:
+    rtos = [
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19, 30), "fhe", 11, [21.6, 21.6]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [21.6, 21.6]),
+    ]
+    rp = rays.PlotRays(rtos[0], nrows=1, ncols=2)
+    rp.lay_rays(text="(A)", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
+    rp.lay_rays(rto=rtos[1], ylabel="", zoomed_in=[[500, 1200], [150, 250]])
+    rp.save(f"paper-mstid-rt/figures/Figure13.png")
+    rp.close()

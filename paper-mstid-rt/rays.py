@@ -251,7 +251,7 @@ from mpl_toolkits.axisartist.grid_finder import DictFormatter, FixedLocator
 
 
 class PlotRays(object):
-    def __init__(self, rto, nrows=2, ncols=2, ylim=[], xlim=[]):
+    def __init__(self, rto, nrows=2, ncols=2, ylim=[], xlim=[], xtolim=1700):
         self.nrows = nrows
         self.ncols = ncols
         self.rto = rto
@@ -260,6 +260,7 @@ class PlotRays(object):
         self.ylim = ylim
         self.axnum = 0
         self.fig = plt.figure(figsize=(8 * ncols, 3 * nrows), dpi=1000)
+        self.xtolim = xtolim
         return
 
     def set_rto(self):
@@ -306,13 +307,9 @@ class PlotRays(object):
             )
         return o, cmap, label, norm
 
-    def lay_rays_by_frequency_deviations(
-        self,
-    ):
-        return
-
     def lay_rays(
         self,
+        xlim_max=2000,
         kind="pf",
         zoomed_in=[],
         lcolor="k",
@@ -331,14 +328,34 @@ class PlotRays(object):
         ax = ax if ax else self.create_figure_pane(xlabel, ylabel)
 
         o, cmap, label, norm = self.get_parameter(kind)
+        ## Check needs interpolation
+        if self.xtolim <= xlim_max:
+            index_xlim = np.abs(self.xtolim - self.rto.bearing.dist.ravel()).argmin()
+            dist, height = (
+                self.rto.bearing.dist.ravel(),
+                self.rto.bearing.heights.ravel(),
+            )
+            d = self.rto.bearing.dist.ravel()[1] - self.rto.bearing.dist.ravel()[0]
+            dist_ext = np.arange(self.xtolim, xlim_max, d)
+            o_ext = np.array(
+                [o[:, index_xlim].tolist() for i in range(len(dist_ext))]
+            ).T
+            dist = np.concatenate((dist[:index_xlim], dist_ext))
+            o = np.concatenate((o[:, :index_xlim], o_ext), axis=1)
+        else:
+            dist, height = (
+                self.rto.bearing.dist.ravel(),
+                self.rto.bearing.heights.ravel(),
+            )
         im = ax.pcolormesh(
-            self.rto.bearing.dist.ravel(),
-            self.rto.bearing.heights.ravel(),
+            dist,
+            height,
             o,
             norm=norm,
             cmap=cmap,
             alpha=0.8,
         )
+        ax.set_xlim(right=xlim_max)
         if add_cbar:
             pos = ax.get_position()
             cpos = [
@@ -419,7 +436,7 @@ class PlotRays(object):
         ax = self.fig.add_subplot(fignum)
         ax.set_ylabel(ylabel, fontdict={"size": 12, "fontweight": "bold"})
         ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
-        ax.set_xlim(self.xlim if len(self.xlim) == 2 else [0, 1600])
+        ax.set_xlim(self.xlim if len(self.xlim) == 2 else [0, 2500])
         ax.set_ylim(self.ylim if len(self.ylim) == 2 else [0, 400])
         return ax
 
