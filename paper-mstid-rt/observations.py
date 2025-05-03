@@ -11,7 +11,8 @@ import cartopy.crs as ccrs
 import numpy as np
 import rays
 
-figures = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+figures = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+figures = [2]
 rads = ["fhw", "fhe"]
 dates = [
     dt.datetime(2017, 5, 27),
@@ -42,6 +43,20 @@ if 1 in figures:
     fan.overlay_fovs("fhw", ax=ax, col="r")
     # ax.overlay_station("alp", 45.0617, -83.4328)
     fan.save("paper-mstid-rt/figures/Figure01.png")
+    fan.close()
+
+if 2 in figures:
+    date = dates[0] + dt.timedelta(minutes=int(60 * 19.5))
+    fan = Fan(
+        ["fhe"],
+        date,
+        nrows=1,
+        ncols=2,
+        add_text=True,
+        extent=[-105, -70, 35, 60],
+    )
+    ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []}, discreat={"fhe": 0})
+    fan.save("paper-mstid-rt/figures/Figure02.png")
     fan.close()
 
 if 3 in figures:
@@ -109,7 +124,7 @@ if 4 in figures:
     )
     gates = [38, 35, 29, 33, 37, 35]
     for i, d in enumerate(
-        (np.array([17.25, 17.5, 19, 19.25, 20.0, 21.0]) * 60).astype(int)
+        (np.array([17.5, 18, 19, 19.5, 20.0, 20.5]) * 60).astype(int)
     ):
         date = dates[0] + dt.timedelta(minutes=int(d))
         fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
@@ -213,7 +228,7 @@ if 8 in figures:
     date = dates[0] + dt.timedelta(minutes=int(60 * 19.5))
     ds = rays.get_datasets_by_beams("fhe", None, date, date + dt.timedelta(minutes=1))
     fan.date, fan.txt_coord, fan.cbar = date, True, True
-    ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []})
+    ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []}, discreat={"fhe": 0})
     ax.text(
         0.05,
         0.95,
@@ -370,28 +385,20 @@ if 12 in figures:
         ncols=2,
         add_text=True,
     )
-    gates = [35, 35, 29, 33, 37, 35]
+    gates = [38, 35, 29, 33, 37, 35]
+    mgates = [32, 32, 28, 28, 26, 29]
     for i, d in enumerate(
-        (
-            np.array(
-                [
-                    17.5,
-                    18,
-                    19,
-                    20.0,
-                ]
-            )
-            * 60
-        ).astype(int)
+        (np.array([17.5, 18, 19, 19.50, 20.0, 20.5]) * 60).astype(int)
     ):
         date = dates[0] + dt.timedelta(minutes=int(d))
-        fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
+        fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.5), (d == 60 * 20)
         ds = rays.get_datasets_by_beams(
             "fhe", None, date, date + dt.timedelta(minutes=1), [18, 30]
         )
         ax = fan.overlay_simulation_fovs("fhe", ds, beams={}, gate_filter=[])
         fan.add_arc_fov("fhe", ax=ax, maxGate=25, lineColor="k", lineWidth=0.6)
-        fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="k", lineWidth=0.6)
+        fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.6)
+        fan.add_arc_fov("fhe", ax=ax, maxGate=mgates[i], lineColor="lightgreen", lineWidth=0.6)
         ax.text(
             0.05,
             0.95,
@@ -412,6 +419,6 @@ if 13 in figures:
     ]
     rp = rays.PlotRays(rtos[0], nrows=1, ncols=2)
     rp.lay_rays(text="(A)", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
-    rp.lay_rays(rto=rtos[1], ylabel="", zoomed_in=[[500, 1200], [150, 250]])
+    rp.lay_rays(rto=rtos[1], text="(B)", ylabel="", zoomed_in=[[500, 1200], [150, 250]])
     rp.save(f"paper-mstid-rt/figures/Figure13.png")
     rp.close()
