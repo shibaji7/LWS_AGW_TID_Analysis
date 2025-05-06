@@ -21,6 +21,10 @@ from loguru import logger
 from scipy.io import loadmat
 import datetime as dt
 
+import matplotlib.colors as colors
+
+import tidUtils
+
 import glob
 
 
@@ -234,6 +238,17 @@ class RayTraceObject(object):
             limit_elvs=limit_elvs,
         )
         return
+    
+    def compile(self, kind="ray_path"):
+        df = pd.DataFrame()
+        if kind == "ray_path":
+            df = pd.concat(
+                [
+                    getattr(self, kind)[k]
+                    for k in list(getattr(self, kind).keys())
+                ]
+            )
+        return df
 
 
 import matplotlib.pyplot as plt
@@ -471,3 +486,188 @@ class PlotRays(object):
         self.zoom_ax.set_ylabel("Height, km", fontdict={"size": 8})
         ax.indicate_inset_zoom(self.zoom_ax)
         return
+
+
+class PlotChannels(object):
+    def __init__(self, rto, nrows=2, ncols=2, ylim=[], xlim=[], xtolim=1700):
+        self.nrows = nrows
+        self.ncols = ncols
+        self.rto = rto
+        self.set_rto()
+        self.xlim = xlim
+        self.ylim = ylim
+        self.axnum = 0
+        self.fig = plt.figure(figsize=(8 * ncols, 3 * nrows), dpi=1000)
+        self.xtolim = xtolim
+        return
+
+    def set_rto(self):
+        self.event = self.rto.event
+        self.edens = self.rto.edens
+        self.pf = self.rto.pf
+        self.ref_indx = self.rto.ref_indx
+        self.rad = self.rto.rad
+        self.beam = self.rto.beam
+        return
+
+    def save(self, filepath):
+        self.fig.savefig(filepath, bbox_inches="tight", facecolor=(1, 1, 1, 1))
+        return
+
+    def close(self):
+        self.fig.clf()
+        plt.close()
+        return
+
+    def get_parameter(self, kind):
+        
+
+        if kind == "pf":
+            o, cmap, label, norm = (
+                getattr(self, kind),
+                "plasma",
+                r"$f_0$ [MHz]",
+                colors.Normalize(4, 6),
+            )
+        if kind == "edens":
+            o, cmap, label, norm = (
+                getattr(self, kind),
+                "plasma",
+                r"$N_e$ [$/cm^{-3}$]",
+                colors.LogNorm(1e5, 1e6),
+            )
+        if kind == "ref_indx":
+            o, cmap, label, norm = (
+                getattr(self, kind),
+                "plasma",
+                r"$\eta$",
+                colors.Normalize(0.8, 1),
+            )
+        return o, cmap, label, norm
+
+    def lay_rays(
+        self,
+        xlim_max=2000,
+        kind="pf",
+        zoomed_in=[],
+        lcolor="k",
+        tag_distance: float = -1,
+        ax=None,
+        xlabel=r"Ground range, km",
+        ylabel=r"Height, km",
+        add_time=True,
+        add_cbar=True,
+        add_tag=True,
+        text="(A)",
+        rto=None,
+    ):
+        self.rto = rto if rto else self.rto
+        self.set_rto()
+        df = self.rto.compile()
+        ax = ax if ax else self.create_figure_pane(xlabel, ylabel)
+
+        X, Y, Z = tidUtils.get_gridded_parameters(df, "elv", "phase_path", "refractive_index", rounding=False)
+        im = ax.scatter(
+            X.ravel(),
+            Y.ravel(),
+            c=Z.T.ravel(),
+            s=10, marker="s",
+            norm=colors.Normalize(0.8, 1),
+            cmap="plasma",
+            alpha=0.8,
+        )
+        # ax.set_xlim(right=xlim_max)
+        if add_cbar:
+            pos = ax.get_position()
+            cpos = [
+                pos.x1 + 0.025,
+                pos.y0 + 0.05,
+                0.015,
+                pos.height * 0.6,
+            ]
+            cax = self.fig.add_axes(cpos)
+            cbax = self.fig.colorbar(
+                im, cax, spacing="uniform", orientation="vertical", cmap="plasma"
+            )
+            _ = cbax.set_label(r"$\eta$")
+        if add_time:
+            stitle = "%s UT" % self.event.strftime("%Y-%m-%d %H:%M")
+            ax.text(
+                0.95,
+                1.05,
+                stitle,
+                ha="right",
+                va="center",
+                transform=ax.transAxes,
+                fontdict={"size": 8, "fontweight": "bold"},
+            )
+        if add_tag:
+            stitle = f"Model: GEMINI / {self.rad}-{'%02d'%self.beam}, $f_0$={self.rto.frequency/1e6} MHz"
+            ax.text(
+                0.05,
+                1.05,
+                stitle,
+                ha="left",
+                va="center",
+                transform=ax.transAxes,
+                fontdict={"size": 12, "fontweight": "bold"},
+            )
+
+        ax.text(
+            0.05,
+            0.95,
+            text,
+            ha="left",
+            va="center",
+            transform=ax.transAxes,
+            fontdict={"size": 12},
+        )
+
+        # Create Zoomed in panel
+        if len(zoomed_in):
+            self.__zoomed_in_panel__(ax, kind, zoomed_in, lcolor)
+        return ax
+
+    def create_figure_pane(self, xlabel=r"Ground range, km", ylabel=r"Height, km"):
+        self.axnum += 1
+        fignum = 100 * self.nrows + 10 * self.ncols + self.axnum
+        ax = self.fig.add_subplot(fignum)
+        # ax.set_ylabel(ylabel, fontdict={"size": 12, "fontweight": "bold"})
+        # ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
+        # ax.set_xlim(self.xlim if len(self.xlim) == 2 else [0, 2500])
+        # ax.set_ylim(self.ylim if len(self.ylim) == 2 else [0, 400])
+        return ax
+
+    def __zoomed_in_panel__(self, ax, kind, zoomed_in, lcolor="k"):
+        self.zoom_ax = ax.inset_axes([0.4, 1.3, 0.3, 0.5])
+        o, cmap, _, norm = self.get_parameter(kind)
+        self.zoom_ax.pcolormesh(
+            self.rto.bearing.dist.ravel(),
+            self.rto.bearing.heights.ravel(),
+            o,
+            norm=norm,
+            cmap=cmap,
+            alpha=0.8,
+        )
+        rays = self.rto.rays
+        self.elvs = rays.initial_elev
+        for i, elv in enumerate(self.elvs):
+            ray_path_data, ray_data = (
+                self.rto.ray_path[elv],
+                rays[rays.initial_elev == elv],
+            )
+            th, r = (ray_path_data.ground_range.copy(), ray_path_data.height.copy())
+            self.zoom_ax.plot(th, r, c="k", zorder=3, alpha=0.7, ls="-", lw=0.5)
+
+        self.zoom_ax.set_xlim(zoomed_in[0])
+        self.zoom_ax.set_ylim(zoomed_in[1])
+        th_ticklabels, r_ticklabels = (
+            self.zoom_ax.get_xticklabels(),
+            self.zoom_ax.get_yticklabels(),
+        )
+        self.zoom_ax.set_xlabel("Ground Range, km", fontdict={"size": 8})
+        self.zoom_ax.set_ylabel("Height, km", fontdict={"size": 8})
+        ax.indicate_inset_zoom(self.zoom_ax)
+        return
+
+

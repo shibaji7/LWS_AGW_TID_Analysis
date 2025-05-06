@@ -12,7 +12,7 @@ import numpy as np
 import rays
 
 
-figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13]
+figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 14]
 rads = ["fhw", "fhe"]
 dates = [
     dt.datetime(2017, 5, 27),
@@ -31,14 +31,14 @@ for d in dates:
         fds[rad] = fd
         i += 1
 
-if 13 in figures:
+if 14 in figures:
     rtos = [
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19, 30), "fhe", 11, [21.7, 21.8]),
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [21.7, 21.8]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [18,30]),
     ]
-    rp = rays.PlotRays(rtos[0], nrows=2, ncols=1)
-    rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
-    rp.lay_rays(rto=rtos[1], text="(B)",  add_tag=False, zoomed_in=[[500, 1200], [150, 250]])
-    rp.fig.subplots_adjust(hspace=1)
-    rp.save(f"paper-mstid-rt/figures/Figure13.png")
+    rp = rays.PlotChannels(rtos[0], nrows=2, ncols=1)
+    rp.lay_rays(add_cbar=False)
+    # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
+    rp.lay_rays(rto=rtos[1], text="(B)",  add_tag=False)
+    rp.save(f"paper-mstid-rt/figures/Figure14.png")
     rp.close()
