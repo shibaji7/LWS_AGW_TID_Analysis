@@ -55,6 +55,7 @@ if 2 in figures:
         add_text=True,
         extent=[-105, -70, 35, 60],
     )
+    fan.date, fan.txt_coord, fan.cbar = date, True, True
     ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []}, discreat={"fhe": 0})
     fan.save("paper-mstid-rt/figures/Figure02.png")
     fan.close()
@@ -421,4 +422,16 @@ if 13 in figures:
     rp.lay_rays(text="(A)", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
     rp.lay_rays(rto=rtos[1], text="(B)", ylabel="", zoomed_in=[[500, 1200], [150, 250]])
     rp.save(f"paper-mstid-rt/figures/Figure13.png")
+    rp.close()
+
+if 14 in figures:
+    rtos = [
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [18,30]),
+    ]
+    rp = rays.PlotChannels(rtos[0], nrows=2, ncols=1)
+    rp.lay_rays(add_cbar=False)
+    # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
+    rp.lay_rays(rto=rtos[1], text="(B)",  add_tag=False)
+    rp.save(f"paper-mstid-rt/figures/Figure14.png")
     rp.close()
