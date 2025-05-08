@@ -10,9 +10,9 @@ from rtiUtils import RTI
 import cartopy.crs as ccrs
 import numpy as np
 import rays
+from solar import SolarDataset
 
-
-figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 14]
+figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 14, 15]
 rads = ["fhw", "fhe"]
 dates = [
     dt.datetime(2017, 5, 27),
@@ -31,14 +31,6 @@ for d in dates:
         fds[rad] = fd
         i += 1
 
-if 14 in figures:
-    rtos = [
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [18,30]),
-    ]
-    rp = rays.PlotChannels(rtos[0], nrows=2, ncols=1)
-    rp.lay_rays(add_cbar=False)
-    # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
-    rp.lay_rays(rto=rtos[1], text="(B)",  add_tag=False)
-    rp.save(f"paper-mstid-rt/figures/Figure14.png")
-    rp.close()
+if 15 in figures:
+    sd = SolarDataset([dt.datetime(2017, 5, 27), dt.datetime(2017, 5, 28)])
+    sd.create_stackplots("paper-mstid-rt/figures/Figure15.png")
