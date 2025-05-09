@@ -11,6 +11,8 @@ import cartopy.crs as ccrs
 import numpy as np
 import rays
 
+from solar import SolarDataset
+
 figures = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 figures = [2]
 rads = ["fhw", "fhe"]
@@ -399,7 +401,9 @@ if 12 in figures:
         ax = fan.overlay_simulation_fovs("fhe", ds, beams={}, gate_filter=[])
         fan.add_arc_fov("fhe", ax=ax, maxGate=25, lineColor="k", lineWidth=0.6)
         fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.6)
-        fan.add_arc_fov("fhe", ax=ax, maxGate=mgates[i], lineColor="lightgreen", lineWidth=0.6)
+        fan.add_arc_fov(
+            "fhe", ax=ax, maxGate=mgates[i], lineColor="lightgreen", lineWidth=0.6
+        )
         ax.text(
             0.05,
             0.95,
@@ -427,11 +431,16 @@ if 13 in figures:
 if 14 in figures:
     rtos = [
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [18,30]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [18, 30]),
     ]
     rp = rays.PlotChannels(rtos[0], nrows=2, ncols=1)
     rp.lay_rays(add_cbar=False)
     # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
-    rp.lay_rays(rto=rtos[1], text="(B)",  add_tag=False)
+    rp.lay_rays(rto=rtos[1], text="(B)", add_tag=False)
     rp.save(f"paper-mstid-rt/figures/Figure14.png")
     rp.close()
+
+
+if 15 in figures:
+    sd = SolarDataset([dt.datetime(2017, 5, 27), dt.datetime(2017, 5, 28)])
+    sd.create_stackplots("paper-mstid-rt/figures/Figure15.png")

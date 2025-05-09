@@ -238,15 +238,12 @@ class RayTraceObject(object):
             limit_elvs=limit_elvs,
         )
         return
-    
+
     def compile(self, kind="ray_path"):
         df = pd.DataFrame()
         if kind == "ray_path":
             df = pd.concat(
-                [
-                    getattr(self, kind)[k]
-                    for k in list(getattr(self, kind).keys())
-                ]
+                [getattr(self, kind)[k] for k in list(getattr(self, kind).keys())]
             )
         return df
 
@@ -520,7 +517,6 @@ class PlotChannels(object):
         return
 
     def get_parameter(self, kind):
-        
 
         if kind == "pf":
             o, cmap, label, norm = (
@@ -566,12 +562,15 @@ class PlotChannels(object):
         df = self.rto.compile()
         ax = ax if ax else self.create_figure_pane(xlabel, ylabel)
 
-        X, Y, Z = tidUtils.get_gridded_parameters(df, "elv", "phase_path", "refractive_index", rounding=False)
+        X, Y, Z = tidUtils.get_gridded_parameters(
+            df, "elv", "phase_path", "refractive_index", rounding=False
+        )
         im = ax.scatter(
             X.ravel(),
             Y.ravel(),
             c=Z.T.ravel(),
-            s=10, marker="s",
+            s=10,
+            marker="s",
             norm=colors.Normalize(0.8, 1),
             cmap="plasma",
             alpha=0.8,
@@ -670,11 +669,14 @@ class PlotChannels(object):
         ax.indicate_inset_zoom(self.zoom_ax)
         return
 
+
 import matplotlib as mpl
+
 mpl.rc("font", size=15)
 from typing import Optional, Sequence
 
 import matplotlib.dates as mdates
+
 
 class StackPlots:
 
@@ -685,7 +687,7 @@ class StackPlots:
         dpi: int = 1000,
         datetime: bool = False,
         polar: bool = False,
-        figsize: tuple = (8,3),
+        figsize: tuple = (8, 3),
     ):
         self.nrows = nrows
         self.ncols = ncols

@@ -614,7 +614,7 @@ class SDCarto(GeoAxes):
             spacing="uniform",
             orientation="horizontal",
         )
-        cb.ax.tick_params(axis='y', labelsize=10)
+        cb.ax.tick_params(axis="y", labelsize=10)
         cb.set_label(label)
         return
 

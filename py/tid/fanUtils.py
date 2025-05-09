@@ -157,6 +157,10 @@ class Fan(object):
         laytec=False,
         maxGate=45,
         col="k",
+        param="p_l",
+        label=r"$P_l$, dB",
+        p_max=18,
+        p_min=12,
     ):
         """
         Generate plot with dataset overlaid
@@ -176,10 +180,11 @@ class Fan(object):
                 self.proj,
                 maxGate=maxGate,
                 cbar=self.cbar,
-                label=r"$P_l$, dB",
+                label=label,
                 plot_discreat=discreat,
-                p_max=18,
-                p_min=12,
+                p_name=param,
+                p_max=p_max,
+                p_min=p_min,
             )
         if beams and len(beams) > 0:
             [
@@ -218,7 +223,17 @@ class Fan(object):
         )
         return ax
 
-    def generate_fovs(self, fds, beams={}, discreat={}, laytec=False):
+    def generate_fovs(
+        self,
+        fds,
+        beams={},
+        discreat={},
+        laytec=False,
+        param="p_l",
+        label=r"$P_l$, dB",
+        p_max=18,
+        p_min=12,
+    ):
         """
         Generate plot with dataset overlaid
         """
@@ -232,6 +247,10 @@ class Fan(object):
                 ax,
                 laytec,
                 col=fds[rad].color,
+                param=param,
+                p_max=p_max,
+                p_min=p_min,
+                label=label,
             )
         return ax
 
