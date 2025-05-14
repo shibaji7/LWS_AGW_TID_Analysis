@@ -537,7 +537,7 @@ class PlotChannels(object):
                 getattr(self, kind),
                 "plasma",
                 r"$\eta$",
-                colors.Normalize(0.8, 1),
+                colors.Normalize(0.8, 9),
             )
         return o, cmap, label, norm
 
@@ -569,13 +569,13 @@ class PlotChannels(object):
             X.ravel(),
             Y.ravel(),
             c=Z.T.ravel(),
-            s=10,
+            s=50,
             marker="s",
-            norm=colors.Normalize(0.8, 1),
+            norm=colors.Normalize(0.82, 0.95),
             cmap="plasma",
-            alpha=0.8,
+            alpha=0.7,
         )
-        # ax.set_xlim(right=xlim_max)
+        ax.set_xlim(right=xlim_max)
         if add_cbar:
             pos = ax.get_position()
             cpos = [
@@ -621,7 +621,8 @@ class PlotChannels(object):
             transform=ax.transAxes,
             fontdict={"size": 12},
         )
-
+        ax.set_xlim(self.xlim)
+        ax.set_ylim(self.ylim)
         # Create Zoomed in panel
         if len(zoomed_in):
             self.__zoomed_in_panel__(ax, kind, zoomed_in, lcolor)
@@ -631,10 +632,6 @@ class PlotChannels(object):
         self.axnum += 1
         fignum = 100 * self.nrows + 10 * self.ncols + self.axnum
         ax = self.fig.add_subplot(fignum)
-        # ax.set_ylabel(ylabel, fontdict={"size": 12, "fontweight": "bold"})
-        # ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
-        # ax.set_xlim(self.xlim if len(self.xlim) == 2 else [0, 2500])
-        # ax.set_ylim(self.ylim if len(self.ylim) == 2 else [0, 400])
         return ax
 
     def __zoomed_in_panel__(self, ax, kind, zoomed_in, lcolor="k"):
