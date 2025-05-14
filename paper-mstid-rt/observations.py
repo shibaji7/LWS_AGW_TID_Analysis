@@ -460,7 +460,7 @@ if 14 in figures:
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [18, 30]),
     ]
-    rp = rays.PlotChannels(rtos[0], nrows=2, ncols=1)
+    rp = rays.PlotChannels(rtos[0], nrows=2, ncols=1, xlim=[18, 24], ylim=[500, 2000])
     rp.lay_rays(add_cbar=False)
     # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
     rp.lay_rays(rto=rtos[1], text="(B)", add_tag=False)

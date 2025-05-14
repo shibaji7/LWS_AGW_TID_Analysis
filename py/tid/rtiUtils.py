@@ -405,7 +405,7 @@ class RTI(object):
             marker="s",
             vmax=np.nanmax(Z)*10,
             vmin=0,
-            alpha=alpha,
+            alpha=0.3,
             s=5,
             zorder=1
         )
