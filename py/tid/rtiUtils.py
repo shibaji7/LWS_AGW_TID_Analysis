@@ -315,6 +315,109 @@ class RTI(object):
         self.fig.clf()
         plt.close()
         return
+    
+    def addParamGsPlot(
+        self,
+        df,
+        beam,
+        title,
+        vlim=[-200, 200],
+        xlabel="Time, UT",
+        zparam="v",
+        label="Velocity, m/s",
+        yscale="srange",
+        cmap="jet",
+        cbar=True,
+        ax=None,
+        alpha=1,
+        sranges=[1500, 3000],
+        dsranges=(),
+        times=[dt.datetime(2017,5,27,16), dt.datetime(2017,5,27,23)],
+    ):
+        df = df[df.bmnum == beam]
+        if yscale == "srange":
+            yrange, ylab, frang = (
+                self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0],
+                "Slant Range, km",
+                df.frang.tolist()[0],
+            )
+        else:
+            yrange, ylab, frang = (self.nGates, "Range Gates", 0)
+        if self.vhm:
+            yscale = "virtual_height"
+            df["virtual_height"] = (
+                [mvh.standard_vhm(s) for s in df.srange]
+                if self.vhm["method"] == "standard"
+                else [mvh.chisham_vhm(s) for s in df.srange]
+            )
+            yrange, ylab = (
+                (
+                    mvh.standard_vhm(
+                        self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0]
+                    )
+                    if self.vhm["method"] == "standard"
+                    else mvh.chisham_vhm(
+                        self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0]
+                    )
+                ),
+                "Virtual Height, km",
+            )
+        dfx = df[
+            (df.srange>=sranges[0])
+            & (df.srange<=sranges[1])
+            & (df.time>=times[0])
+            & (df.time<=times[1])
+        ]
+        if ax is None:
+            ax = self._add_axis()
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
+            ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
+            ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=range(0, 24, 1)))
+            ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
+            ax.set_xlim(
+                [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
+            )
+        ax.set_ylim(0, 3000)
+        ax.set_ylabel(ylab, fontdict={"size": 12, "fontweight": "bold"})
+        Xx, Yx, Zx = tidUtils.get_gridded_parameters(
+            dfx, xparam="time", yparam=yscale, zparam=zparam, rounding=False
+        )
+        X, Y, Z = tidUtils.get_gridded_parameters(
+            df, xparam="time", yparam=yscale, zparam=zparam, rounding=False
+        )
+        im = ax.scatter(
+            Xx.ravel(),
+            Yx.ravel(),
+            c=Zx.T.ravel(),
+            marker="s",
+            cmap=cmap,
+            vmax=vlim[1],
+            vmin=vlim[0],
+            alpha=alpha,
+            s=5,
+            zorder=3
+        )
+        ax.scatter(
+            X.ravel(),
+            Y.ravel(),
+            c=(np.ones_like(Z)*np.ma.getmask(Z)).T.ravel(),
+            cmap="gray",
+            marker="s",
+            vmax=np.nanmax(Z)*10,
+            vmin=0,
+            alpha=alpha,
+            s=5,
+            zorder=1
+        )
+        # ax.plot(dsranges[1], dsranges[0], ls="-", lw=5, color="green")
+        
+        if cbar:
+            self._add_colorbar(self.fig, ax, im, label=label)
+        if title:
+            ax.set_title(title, loc="left", fontdict={"fontweight": "bold"})
+        ax.set_ylim(self.ylim)
+        # ax.set_xlim(self.xlim)
+        return ax, Y[:, 0]
 
 
 def plot_SDTEC_TS(
