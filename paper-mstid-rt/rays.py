@@ -256,7 +256,7 @@ import numpy as np
 
 
 class PlotRays(object):
-    def __init__(self, rto, nrows=2, ncols=2, ylim=[], xlim=[], xtolim=1700):
+    def __init__(self, rto, nrows=2, ncols=2, ylim=[], xlim=[], xtolim=1700, lw=0.1):
         self.nrows = nrows
         self.ncols = ncols
         self.rto = rto
@@ -266,6 +266,7 @@ class PlotRays(object):
         self.axnum = 0
         self.fig = plt.figure(figsize=(8 * ncols, 3 * nrows), dpi=1000)
         self.xtolim = xtolim
+        self.lw = lw
         return
 
     def set_rto(self):
@@ -393,7 +394,7 @@ class PlotRays(object):
             )
             th, r = (ray_path_data.ground_range.copy(), ray_path_data.height.copy())
             ray_label = ray_data["ray_label"].iloc[0]
-            ax.plot(th, r, c=lcolor, zorder=3, alpha=0.7, ls="-", lw=0.1)
+            ax.plot(th, r, c=lcolor, zorder=3, alpha=0.7, ls="-", lw=self.lw)
             col = "k" if ray_label == 1 else "r"
             if ray_label in [-1, 1]:
                 ax.scatter([th.iloc[-1]], [r.iloc[-1]], marker="s", s=3, color=col)
@@ -556,7 +557,10 @@ class PlotChannels(object):
         ax = ax if ax else self.create_figure_pane(xlabel, ylabel)
 
         X, Y, Z = tidUtils.get_gridded_parameters(
-            df, "elv", "phase_path", "refractive_index", rounding=False
+            df, "elv", 
+            "geometric_distance", 
+            #"phase_path", 
+            "refractive_index", rounding=False
         )
         im = ax.scatter(
             X.ravel(),
