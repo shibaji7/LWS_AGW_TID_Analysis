@@ -664,16 +664,18 @@ if 14 in figures:
         ),
     ]
     rp = rays.PlotChannels(rtos[0], nrows=3, ncols=1, xlim=[18, 24], ylim=[500, 2500])
-    rp.lay_rays(text="(A) TID", add_cbar=False, xlabel="", ylabel="Slant Range, km")
+    ax = rp.lay_rays(text="(A) TID", add_cbar=False, xlabel="", ylabel="Slant Range, km")
     # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
-    rp.lay_rays(
+    ax.axvline(22.7, ls="--", color="k", lw=0.5)
+    ax = rp.lay_rays(
         rto=rtos[1], text="(B) Control", add_tag=False, xlabel="Elevation Angle, deg ($^\circ$)",
         ylabel="Slant Range, km"
     )
+    ax.axvline(22.7, ls="--", color="k", lw=0.5)
     ax = rp.create_figure_pane( "","")
     ax.set_xlabel("Slant Range, km", fontdict={"size": 12, "fontweight": "bold"})
     ax.set_ylabel(r"Refractive Index, $\eta$", fontdict={"size": 12, "fontweight": "bold"})
-    rrtos = [
+    rtos = [
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [22.7, 22.7]),
         rays.RayTraceObject(
             dt.datetime(2017, 5, 27, 19), 
@@ -699,10 +701,9 @@ if 14 in figures:
         s=2,
         label="Control"
     )
-    ax.set_ylim(0.75, 1)
+    ax.set_ylim(0.85, 1)
     ax.set_xlim(0, 2500)
     ax.legend(loc=3)
-    print(df.columns)
     rp.fig.subplots_adjust(hspace=0.3)
     rp.save(f"paper-mstid-rt/figures/Figure14.png")
     rp.save(f"paper-mstid-rt/pub_figures/Figure10.png")
