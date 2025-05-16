@@ -20,8 +20,7 @@ sys.path.extend(["py/txUtils/", "py/tid/", "py/davitPy/"])
 import tidUtils
 from fetchUtils import FetchData
 from rtiUtils import RTI, plot_FFT
-from filterUtils import fft_analysis
-from tidFilters import filterBasedOnLimits, fftBasedOnLimits
+from tidFilters import fftBasedOnLimits
 
 # Initializations
 CASES = [

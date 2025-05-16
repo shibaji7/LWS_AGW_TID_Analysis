@@ -11,14 +11,10 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-import copy
 
 import numpy as np
 from fetch_fit_data import Beam, Gate, Scan
 from loguru import logger
-from scipy import signal
-from scipy import stats as st
-from scipy.stats import beta
 
 
 def create_gaussian_weights(mu, sigma, _kernel=3, base_w=5):

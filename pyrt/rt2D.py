@@ -11,24 +11,19 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-import argparse
 import copy
 import datetime as dt
-import glob
 import os
 
 import numpy as np
-import pandas as pd
+import plots
 import pydarn
-from dateutil import parser as dparser
+import rtiPlots
+from density_models_2D import GEMINI2D, IRI2D
 from geopy.distance import great_circle as GC
 from loguru import logger
-from scipy.io import savemat
-from density_models_2D import GEMINI2D, IRI2D
 from rays import Rays2D
-from scipy.io import loadmat
-import plots
-import rtiPlots
+from scipy.io import loadmat, savemat
 
 
 def read_params_2D(fname="cfg/rt2D.json"):

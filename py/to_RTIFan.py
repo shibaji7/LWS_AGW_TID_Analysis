@@ -17,9 +17,8 @@ import sys
 sys.path.extend(["py/txUtils/", "py/tid/", "py/davitPy/"])
 import tidUtils
 from fetchUtils import FetchData
+from model_vheight import standard_vhm
 from rtiUtils import RTI
-from model_vheight import chisham_vhm, standard_vhm
-import mplstyle
 
 # Initializations
 CASES = [

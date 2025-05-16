@@ -11,10 +11,8 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
-import datetime as dt
 
 import numpy as np
-from loguru import logger
 
 
 class Gate(object):

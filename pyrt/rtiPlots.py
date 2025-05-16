@@ -16,15 +16,12 @@ __status__ = "Research"
 import matplotlib
 import matplotlib.pyplot as plt
 
-import mplstyle
-
 # plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
-import datetime as dt
 
-import numpy as np
 import matplotlib.dates as mdates
+import numpy as np
 import pandas as pd
 import utils
 

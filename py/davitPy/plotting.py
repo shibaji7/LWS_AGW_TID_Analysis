@@ -221,8 +221,6 @@ class musicFan(object):
 
             fig = plt.figure(figsize=figsize)
 
-        from scipy import stats
-
         # Make some variables easier to get to...
         currentData = getDataSet(dataObject, dataSet)
         metadata = currentData.metadata
@@ -537,7 +535,6 @@ class musicRTI(object):
     ):
         import davitUtils as utils
         from rti import plot_freq, plot_nave, plot_searchnoise, plot_skynoise
-        from scipy import stats
 
         if axis is None:
             from matplotlib import pyplot as plt
@@ -1048,8 +1045,6 @@ def plotRelativeRanges(dataObj, dataSet="active", time=None, fig=None):
     currentData = getDataSet(dataObj, dataSet)
 
     import matplotlib
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    from matplotlib.figure import Figure
 
     # Get center of FOV.
     ctrBeamInx = currentData.fov.relative_centerInx[0]
@@ -1787,7 +1782,6 @@ def plotFullSpectrum(
     Written by Nathaniel A. Frissell, Fall 2013
 
     """
-    from scipy import stats
 
     return_dict = {}
     currentData = getDataSet(dataObj, dataSet)
@@ -2057,8 +2051,6 @@ def plotDlm(dataObj, dataSet="active", fig=None):
         fig = plt.figure(figsize=figsize)
 
     import copy
-
-    from scipy import stats
 
     currentData = getDataSet(dataObj, dataSet)
 
@@ -2336,7 +2328,6 @@ def plotKarrDetected(
     currentData = getDataSet(dataObj, dataSet)
 
     import matplotlib.patheffects as PathEffects
-    from scipy import stats
 
     # Do plotting here!
     if roiPlot:
@@ -2560,7 +2551,6 @@ def plotKarrAxis(
 
     fig = axis.get_figure()
     import matplotlib.patheffects as PathEffects
-    from scipy import stats
 
     currentData = getDataSet(dataObj, dataSet)
 

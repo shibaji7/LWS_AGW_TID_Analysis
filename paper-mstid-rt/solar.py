@@ -1,10 +1,9 @@
-import os
-import pandas as pd
-import numpy as np
-from loguru import logger
 import datetime as dt
+import os
 
-
+import numpy as np
+import pandas as pd
+from loguru import logger
 from sunpy import timeseries as ts  # type: ignore
 from sunpy.net import Fido  # type: ignore
 from sunpy.net import attrs as a  # type: ignore

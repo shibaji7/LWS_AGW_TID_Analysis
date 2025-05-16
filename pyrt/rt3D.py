@@ -11,14 +11,14 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
+import datetime as dt
 import os
+
+import numpy as np
+import pydarn
+from density_models_3D import Iono3D
 from loguru import logger
 from scipy.io import savemat
-import numpy as np
-from density_models_3D import Iono3D
-import datetime as dt
-
-import pydarn
 
 
 def get_point_at_distance(lat, lon, d, bearing, R=6371):

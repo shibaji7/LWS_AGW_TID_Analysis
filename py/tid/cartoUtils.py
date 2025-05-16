@@ -12,7 +12,6 @@ __email__ = "shibaji7@vt.edu"
 __status__ = "Research"
 
 
-import copy
 import datetime as dt
 
 import aacgmv2
@@ -23,10 +22,10 @@ import numpy as np
 import pydarn
 import tidUtils
 from cartopy.mpl.geoaxes import GeoAxes
+from descartes import PolygonPatch
 from matplotlib.projections import register_projection
 from rad_fov import CalcFov
 from shapely.geometry import LineString, MultiLineString, Polygon, mapping
-from descartes import PolygonPatch
 
 
 class SDCarto(GeoAxes):
@@ -420,7 +419,7 @@ class SDCarto(GeoAxes):
         latFull, lonFull = fov.latFull, fov.lonFull
         self.maxGate = maxGate
         lcolor = lineColor
-        from numpy import concatenate, ones, shape, transpose, vstack
+        from numpy import concatenate, transpose, vstack
 
         sgate = 0
         egate = hdw.gates if not maxGate else maxGate

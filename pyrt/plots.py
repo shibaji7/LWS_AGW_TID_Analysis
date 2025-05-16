@@ -16,18 +16,18 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-from mpl_toolkits.axes_grid1 import Size, SubplotDivider
-from mpl_toolkits.axes_grid1.mpl_axes import Axes
 import datetime as dt
 
-# plt.style.use(["science", "ieee"])
-import mplstyle
+import matplotlib.pyplot as plt
 import mpl_toolkits.axisartist.floating_axes as floating_axes
+
+# plt.style.use(["science", "ieee"])
 import numpy as np
+from matplotlib.collections import LineCollection
 from matplotlib.projections import polar
 from matplotlib.transforms import Affine2D
+from mpl_toolkits.axes_grid1 import Size, SubplotDivider
+from mpl_toolkits.axes_grid1.mpl_axes import Axes
 from mpl_toolkits.axisartist.grid_finder import DictFormatter, FixedLocator
 from pylab import gca
 

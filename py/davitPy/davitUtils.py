@@ -22,7 +22,6 @@ import glob
 import numpy as np
 import pandas as pd
 from loguru import logger
-from numpy import ma
 
 
 def get_config(key, section="LWS"):
@@ -309,7 +308,6 @@ def genCmap(param, scale, colors="lasse", lowGray=False):
     Written by AJ 20120820
     """
     import matplotlib
-    import matplotlib.pyplot as plot
     import numpy
 
     # the MPL colormaps we will be using

@@ -11,21 +11,18 @@ __maintainer__ = "Chakraborty, S."
 __email__ = "chakras4@erau.edu"
 __status__ = "Research"
 
-from types import SimpleNamespace
+import datetime as dt
+import glob
 import os
+from types import SimpleNamespace
 
+import matplotlib.colors as colors
 import numpy as np
 import pandas as pd
+import tidUtils
 from geopy.distance import great_circle as GC
 from loguru import logger
 from scipy.io import loadmat
-import datetime as dt
-
-import matplotlib.colors as colors
-
-import tidUtils
-
-import glob
 
 
 def load_from_file(to_file: str):
@@ -249,17 +246,13 @@ class RayTraceObject(object):
 
 
 import matplotlib.pyplot as plt
+#import scienceplots
 import scienceplots
-
 plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
 plt.rcParams["text.usetex"] = False
-import mpl_toolkits.axisartist.floating_axes as floating_axes
 import numpy as np
-from matplotlib.projections import polar
-from matplotlib.transforms import Affine2D
-from mpl_toolkits.axisartist.grid_finder import DictFormatter, FixedLocator
 
 
 class PlotRays(object):
@@ -623,6 +616,8 @@ class PlotChannels(object):
         )
         ax.set_xlim(self.xlim)
         ax.set_ylim(self.ylim)
+        ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
+        ax.set_ylabel(ylabel, fontdict={"size": 12, "fontweight": "bold"})
         # Create Zoomed in panel
         if len(zoomed_in):
             self.__zoomed_in_panel__(ax, kind, zoomed_in, lcolor)
@@ -700,7 +695,6 @@ class StackPlots:
         self.fig.subplots_adjust(hspace=0.5, wspace=0.3)
         self.plot_id = 0
         self.datetime = datetime
-        pass
 
     def plot_stack_plots(
         self,

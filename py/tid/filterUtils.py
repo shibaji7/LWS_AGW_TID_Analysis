@@ -164,7 +164,7 @@ def fft_analysis(dat, srange, beam, T=60):
     dat = dat[(dat.bmnum == beam) & (dat.srange == srange)]
     import numpy as np
     import pandas as pd
-    from numpy.fft import fft, ifft
+    from numpy.fft import fft
 
     o = pd.DataFrame()
     o["fft"], n = np.array(fft(dat.p_l)), np.arange(len(dat))

@@ -72,7 +72,6 @@ filter          a filter object for VT sig/siStruct objects
 import copy
 import datetime
 import logging
-import time
 
 import numpy as np
 import pydarn
@@ -2351,7 +2350,7 @@ def simulator(
 
 
 def scale_karr(kArr):
-    from scipy import stats
+    pass
 
     """Scale/normalize kArr for plotting and signal detection.
     

@@ -72,7 +72,6 @@ filter          a filter object for VT sig/siStruct objects
 import copy
 import datetime
 import logging
-import time
 
 import numpy as np
 import pydarn
@@ -1586,7 +1585,7 @@ class filter(object):
         worN=None,
         fig=None,
     ):
-        import scipy as sp
+        pass
 
         """Plot the frequency and phase response of the filter object.
 
@@ -1689,7 +1688,7 @@ class filter(object):
         ymax_step=None,
         fig=None,
     ):
-        import scipy as sp
+        pass
 
         """Plot the frequency and phase response of the filter object.
 
@@ -1761,7 +1760,6 @@ class filter(object):
         Written by Nathaniel A. Frissell, Fall 2013
 
         """
-        import scipy as sp
 
         sigobj = getattr(dataObj, dataSet)
         vtsig = sigobj.parent
@@ -2350,7 +2348,7 @@ def simulator(
 
 
 def scale_karr(kArr):
-    from scipy import stats
+    pass
 
     """Scale/normalize kArr for plotting and signal detection.
     

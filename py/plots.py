@@ -275,9 +275,7 @@ class PlotKarr(object):
         cmap = None
         plot_colorbar = True
 
-        import matplotlib.patheffects as PathEffects
         from matplotlib.collections import PolyCollection
-        from scipy import stats
 
         data = np.abs(self.Karr) - np.min(np.abs(self.Karr))
         sd = np.nanstd(data, axis=None)
@@ -388,10 +386,6 @@ def plot_Dlm(Dlm):
     from matplotlib.collections import PolyCollection
 
     fig = plt.figure(figsize=(4, 4), dpi=180)
-
-    import copy
-
-    from scipy import stats
 
     data = np.abs(Dlm)
 

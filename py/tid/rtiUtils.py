@@ -15,7 +15,6 @@ __status__ = "Research"
 
 import matplotlib
 import matplotlib.pyplot as plt
-import scienceplots
 
 plt.style.use(["science", "ieee"])
 # import mplstyle
@@ -28,10 +27,9 @@ plt.rcParams["text.usetex"] = False
 import matplotlib.dates as mdates
 import model_vheight as mvh
 import numpy as np
-import utils
+import tidUtils
 from pysolar.solar import get_altitude_fast
 from scipy.stats import pearsonr
-import tidUtils
 
 
 class RTI(object):
@@ -88,6 +86,8 @@ class RTI(object):
         tec_details=None,
         ax=None,
         alpha=1,
+        major_loc=mdates.HourLocator(byhour=range(0, 24, 2)),
+        minor_loc=mdates.HourLocator(byhour=range(0, 24, 1)),
     ):
         df = df[df.bmnum == beam]
         if yscale == "srange":
@@ -120,8 +120,8 @@ class RTI(object):
         if ax is None:
             ax = self._add_axis()
             ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
-            ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
-            ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=range(0, 24, 1)))
+            ax.xaxis.set_major_locator(major_loc)
+            ax.xaxis.set_minor_locator(minor_loc)
             ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
             ax.set_xlim(
                 [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
@@ -315,7 +315,7 @@ class RTI(object):
         self.fig.clf()
         plt.close()
         return
-    
+
     def addParamGsPlot(
         self,
         df,
@@ -332,7 +332,9 @@ class RTI(object):
         alpha=1,
         sranges=[1500, 3000],
         dsranges=(),
-        times=[dt.datetime(2017,5,27,16), dt.datetime(2017,5,27,23)],
+        times=[dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 27, 23)],
+        major_loc=mdates.HourLocator(byhour=range(0, 24, 2)),
+        minor_loc=mdates.HourLocator(byhour=range(0, 24, 1)),
     ):
         df = df[df.bmnum == beam]
         if yscale == "srange":
@@ -363,16 +365,16 @@ class RTI(object):
                 "Virtual Height, km",
             )
         dfx = df[
-            (df.srange>=sranges[0])
-            & (df.srange<=sranges[1])
-            & (df.time>=times[0])
-            & (df.time<=times[1])
+            (df.srange >= sranges[0])
+            & (df.srange <= sranges[1])
+            & (df.time >= times[0])
+            & (df.time <= times[1])
         ]
         if ax is None:
             ax = self._add_axis()
             ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
-            ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 2)))
-            ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=range(0, 24, 1)))
+            ax.xaxis.set_major_locator(major_loc)
+            ax.xaxis.set_minor_locator(minor_loc)
             ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
             ax.set_xlim(
                 [mdates.date2num(self.drange[0]), mdates.date2num(self.drange[1])]
@@ -395,22 +397,22 @@ class RTI(object):
             vmin=vlim[0],
             alpha=alpha,
             s=5,
-            zorder=3
+            zorder=3,
         )
         ax.scatter(
             X.ravel(),
             Y.ravel(),
-            c=(np.ones_like(Z)*np.ma.getmask(Z)).T.ravel(),
+            c=(np.ones_like(Z) * np.ma.getmask(Z)).T.ravel(),
             cmap="gray",
             marker="s",
-            vmax=np.nanmax(Z)*10,
+            vmax=np.nanmax(Z) * 10,
             vmin=0,
             alpha=0.3,
             s=5,
-            zorder=1
+            zorder=1,
         )
         # ax.plot(dsranges[1], dsranges[0], ls="-", lw=5, color="green")
-        
+
         if cbar:
             self._add_colorbar(self.fig, ax, im, label=label)
         if title:
@@ -467,7 +469,6 @@ def plot_SDTEC_TS(
     )
 
     ax = fig.add_subplot(spec[:, 3:])
-    from scipy import signal
 
     N = int(len(tecy) / len(sdy)) + 1
     tec = tidUtils.interpolate_nans(tecy[::N])

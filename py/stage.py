@@ -17,7 +17,6 @@ import datetime as dt
 import json
 import multiprocessing as mp
 import os
-import sys
 import time
 import traceback
 from functools import partial
@@ -30,11 +29,7 @@ import utils
 from boxcar import BxFilter
 from fetch_fit_data import FetchData
 from loguru import logger
-from plots import RTI, IntervalPlots, histogram_plots
-from scipy.fft import rfft, rfftfreq
-from scipy.interpolate import interp1d
-from scipy.signal import get_window
-from scipy.stats import t as T
+from plots import RTI
 from tqdm import tqdm
 
 

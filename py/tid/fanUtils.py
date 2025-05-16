@@ -18,7 +18,6 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scienceplots
 
 plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
@@ -28,14 +27,11 @@ import glob
 
 import cartopy
 import cv2
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import tidUtils
 from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
-from cartoUtils import SDCarto
-
-
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 
 def get_color_by_number(number, cmap_name="viridis"):

@@ -13,17 +13,14 @@ __status__ = "Research"
 
 import argparse
 import datetime as dt
-from loguru import logger
-from dateutil import parser as dparser
-from pathlib import Path
 import glob
 import os
-from rt2D import (
-    execute_gemini2D_simulation,
-    execute_gemini2D_simulations,
-    execute_iri2D_simulations,
-)
+from pathlib import Path
+
+from dateutil import parser as dparser
+from loguru import logger
 from plots import gerenate_fov_plot
+from rt2D import execute_gemini2D_simulations, execute_iri2D_simulations
 from rt3D import execute_iri3D_simulations
 
 

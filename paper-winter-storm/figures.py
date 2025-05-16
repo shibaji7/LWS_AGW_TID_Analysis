@@ -1,13 +1,11 @@
 import datetime as dt
-import sys
 import os
+import sys
 
 sys.path.extend(["../py/txUtils/", "../py/tid/", "../py/davitPy/"])
-import tidUtils
-from fetchUtils import FetchData
-from fanUtils import Fan
-import cartopy.crs as ccrs
 import numpy as np
+from fanUtils import Fan
+from fetchUtils import FetchData
 
 rads = ["fhw", "fhe"]
 dates = [

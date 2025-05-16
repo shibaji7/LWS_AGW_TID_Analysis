@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 import pydarn
 import tidUtils
-from dataUtils import Beam, Gate, Scan
+from dataUtils import Beam, Scan
 from fanUtils import Fan
 from filterUtils import Boxcar
 from loguru import logger

@@ -15,13 +15,12 @@ import datetime as dt
 import sys
 
 sys.path.extend(["py/txUtils/", "py/tid/", "py/davitPy/"])
-import tidUtils
-from fetchUtils import FetchData
-from fanUtils import Fan, create_movie
-import numpy as np
-from plots import RTI
-
 import os
+
+import numpy as np
+from fanUtils import Fan
+from fetchUtils import FetchData
+from plots import RTI
 
 foldername = "figures/FH"
 rads = ["fhe", "fhw"]

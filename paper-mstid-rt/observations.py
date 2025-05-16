@@ -1,16 +1,13 @@
 import datetime as dt
-import sys
 import os
+import sys
 
 sys.path.extend(["py/", "py/txUtils/", "py/tid/", "py/davitPy/", "paper-mstid-rt/"])
-import tidUtils
-from fetchUtils import FetchData
-from fanUtils import Fan
-from rtiUtils import RTI
-import cartopy.crs as ccrs
 import numpy as np
 import rays
-
+from fanUtils import Fan
+from fetchUtils import FetchData
+from rtiUtils import RTI
 from solar import SolarDataset
 
 figures = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -74,29 +71,220 @@ if 3 in figures:
     )
     frame = fds["fhe"].frame.copy()
     tnums = frame[
-        (frame.bmnum==11) 
-        & (frame.time>=dt.datetime(2017, 5, 27, 16))
-        & (frame.time<=dt.datetime(2017, 5, 27, 23))
+        (frame.bmnum == 11)
+        & (frame.time >= dt.datetime(2017, 5, 27, 16))
+        & (frame.time <= dt.datetime(2017, 5, 27, 23))
     ].time.unique()
     dranges = [
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700, 1700,
-        1700, 1700, 1700, 1700, 1700, 
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
+        1700,
     ]
     ax, _ = rti.addParamGsPlot(
         frame,
@@ -108,7 +296,7 @@ if 3 in figures:
         label=r"$P_l$, dB",
         cmap="plasma",
         cbar=True,
-        dsranges=(dranges, tnums)
+        dsranges=(dranges, tnums),
     )
     ax.text(
         0.05,
@@ -128,7 +316,7 @@ if 3 in figures:
         label="Power, dB",
         cmap="plasma",
         cbar=False,
-        dsranges=(dranges, tnums)
+        dsranges=(dranges, tnums),
     )
     ax.text(
         0.05,
@@ -461,10 +649,13 @@ if 14 in figures:
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 17), "fhe", 11, [18, 30]),
     ]
     rp = rays.PlotChannels(rtos[0], nrows=2, ncols=1, xlim=[18, 24], ylim=[500, 2000])
-    rp.lay_rays(add_cbar=False)
+    rp.lay_rays(add_cbar=False, xlabel="")
     # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
-    rp.lay_rays(rto=rtos[1], text="(B)", add_tag=False)
+    rp.lay_rays(
+        rto=rtos[1], text="(B)", add_tag=False, xlabel="Elevation Angle, deg ($^\circ$)"
+    )
     rp.save(f"paper-mstid-rt/figures/Figure14.png")
+    rp.save(f"paper-mstid-rt/pub_figures/Figure09.png")
     rp.close()
 
 
@@ -477,7 +668,7 @@ if 17 in figures:
     date = dates[0] + dt.timedelta(minutes=int(60 * 18))
     import matplotlib.pyplot as plt
 
-    plt.rcParams.update({'font.size': 8})
+    plt.rcParams.update({"font.size": 8})
     fan = Fan(
         ["fhe"],
         date,
@@ -489,7 +680,11 @@ if 17 in figures:
 
     fan.date, fan.txt_coord, fan.cbar = date, True, True
     ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []}, discreat={"fhe": 0})
-    fan.date, fan.txt_coord, fan.cbar = dates[0] + dt.timedelta(minutes=int(60 * 20)), False, False
+    fan.date, fan.txt_coord, fan.cbar = (
+        dates[0] + dt.timedelta(minutes=int(60 * 20)),
+        False,
+        False,
+    )
     ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []}, discreat={"fhe": 0})
     fan.save("paper-mstid-rt/figures/Figure_Analysis_FoV_18.png")
     fan.close()
@@ -545,4 +740,71 @@ if 18 in figures:
         fontdict=dict(size="small"),
     )
     rti.save("paper-mstid-rt/figures/Figure_Analysis_RTI.png")
+    rti.close()
+
+if 19 in figures:
+    import matplotlib.dates as mdates
+    DS = rays.get_datasets_by_beams(
+        "fhe", [11],
+        start_time = dt.datetime(2017, 5, 27, 16), 
+        end_time = dt.datetime(2017, 5, 27, 21),
+        limit_elvs=[18, 30],
+    )
+    print(DS.head())
+    frame = fds["fhe"].frame.copy()
+    rti = RTI(
+        100,
+        [dt.datetime(2017, 5, 27, 18), dt.datetime(2017, 5, 27, 21)],
+        fov=None,
+        xlim=[dt.datetime(2017, 5, 27, 18), dt.datetime(2017, 5, 27, 21)],
+        ylim=[180, 3000],
+        fig_title="",
+        num_subplots=2,
+    )
+    ax, _ = rti.addParamGsPlot(
+        frame,
+        11,
+        f"Rad: fhe-11/ $f_0$= {(int((frame.tfreq.mean()/1e3)/0.5)+1)*0.5} MHz / 27 May 2017",
+        vlim=[12.5, 17.5],
+        zparam="p_l",
+        xlabel="",
+        label=r"$P_l$, dB",
+        cmap="plasma",
+        cbar=True,
+        major_loc=mdates.MinuteLocator(byminute=range(0, 60, 30)),
+        minor_loc=mdates.MinuteLocator(byminute=range(0, 60, 15)),
+    )
+    ax.text(
+        0.05,
+        0.95,
+        f"(A) Observations",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size="small"),
+    )
+    ax, _ = rti.addParamPlot(
+        DS,
+        11,
+        "",
+        vlim=[-90, -85],
+        zparam="p_l",
+        xlabel="Time, UT",
+        label=r"$P_l$, dB",
+        cmap="plasma",
+        cbar=True,
+        major_loc=mdates.MinuteLocator(byminute=range(0, 60, 30)),
+        minor_loc=mdates.MinuteLocator(byminute=range(0, 60, 15)),
+    )
+    ax.text(
+        0.05,
+        0.95,
+        f"(B) Simulated",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size="small"),
+    )
+    rti.save(f"paper-mstid-rt/figures/Figure19.png")
+    rti.save(f"paper-mstid-rt/pub_figures/Figure08.png")
     rti.close()
