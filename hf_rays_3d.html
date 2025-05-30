@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>pydeck</title>
+        <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.13.0/mapbox-gl.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" />
+    <script src='https://cdn.jsdelivr.net/npm/@deck.gl/jupyter-widget@~9.0.*/dist/index.js'></script>
+    <style>
+    body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#deck-container {
+  width: 100vw;
+  height: 100vh;
+}
+
+#deck-container canvas {
+  z-index: 1;
+  background: none;
+}
+    </style>
+  </head>
+  <body>
+    <div id="deck-container">
+    </div>
+  </body>
+  <script>
+    const container = document.getElementById('deck-container');
+    const jsonInput = {
+  "initialViewState": {
+    "bearing": 0,
+    "latitude": 40,
+    "longitude": -95,
+    "maxZoom": 15,
+    "minZoom": 2,
+    "pitch": 60,
+    "zoom": 3
+  },
+  "layers": [
+    {
+      "@@type": "LineLayer",
+      "autoHighlight": false,
+      "data": [
+        {
+          "end_alt": 100000,
+          "end_lat": 40,
+          "end_lon": -94,
+          "start_alt": 0,
+          "start_lat": 39,
+          "start_lon": -95
+        },
+        {
+          "end_alt": 250000,
+          "end_lat": 42,
+          "end_lon": -93,
+          "start_alt": 100000,
+          "start_lat": 40,
+          "start_lon": -94
+        },
+        {
+          "end_alt": 0,
+          "end_lat": 45,
+          "end_lon": -92,
+          "start_alt": 250000,
+          "start_lat": 42,
+          "start_lon": -93
+        },
+        {
+          "end_alt": 80000,
+          "end_lat": 39,
+          "end_lon": -96,
+          "start_alt": 0,
+          "start_lat": 38,
+          "start_lon": -97
+        },
+        {
+          "end_alt": 220000,
+          "end_lat": 41,
+          "end_lon": -95,
+          "start_alt": 80000,
+          "start_lat": 39,
+          "start_lon": -96
+        },
+        {
+          "end_alt": 0,
+          "end_lat": 43,
+          "end_lon": -94,
+          "start_alt": 220000,
+          "start_lat": 41,
+          "start_lon": -95
+        },
+        {
+          "end_alt": 90000,
+          "end_lat": 38,
+          "end_lon": -92,
+          "start_alt": 0,
+          "start_lat": 37,
+          "start_lon": -93
+        },
+        {
+          "end_alt": 240000,
+          "end_lat": 40,
+          "end_lon": -91,
+          "start_alt": 90000,
+          "start_lat": 38,
+          "start_lon": -92
+        },
+        {
+          "end_alt": 0,
+          "end_lat": 42,
+          "end_lon": -90,
+          "start_alt": 240000,
+          "start_lat": 40,
+          "start_lon": -91
+        }
+      ],
+      "getColor": [
+        255,
+        140,
+        0
+      ],
+      "getSourcePosition": "@@=[start_lon, start_lat, start_alt]",
+      "getTargetPosition": "@@=[end_lon, end_lat, end_alt]",
+      "getWidth": 2,
+      "id": "acfd6d3e-ba82-40f5-90ac-08b20e2c2884",
+      "pickable": false
+    }
+  ],
+  "mapProvider": "carto",
+  "mapStyle": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+  "views": [
+    {
+      "@@type": "MapView",
+      "controller": true
+    }
+  ]
+};
+    const tooltip = {'text': 'HF Ray Segment'};
+    const customLibraries = null;
+    const configuration = null;
+
+    const deckInstance = createDeck({
+                  container,
+      jsonInput,
+      tooltip,
+      customLibraries,
+      configuration
+    });
+
+  </script>
+</html>

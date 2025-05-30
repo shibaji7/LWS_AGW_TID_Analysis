@@ -660,3 +660,15 @@ class FetchData(object):
                 else:
                     logger.info(f"Data does not exists: {rad}!")
         return fd
+
+
+if __name__ == "__main__":
+    import glob
+    files = glob.glob("data/*.bz2")
+    files.sort()
+    FetchData.fetch(
+            "bks",
+            [dt.datetime(2017, 5, 27), dt.datetime(2017, 5, 28)],
+            ftype="fitacf3",
+            files=files
+        )
