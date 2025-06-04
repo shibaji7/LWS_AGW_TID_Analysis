@@ -76,9 +76,15 @@ def load_rays_mat_file(file_loc: str, limit_elvs=[]):
             r_data[key] = sim_data["ray_data"][0, i][key].ravel()[0]
             if key == "initial_elev":
                 e = r_data[key]
+            if key == "ray_label":
+                rl = r_data[key]
+            if key == "plasma_freq_at_apogee":
+                pfa = r_data[key]
         for key in path_data_keys:
             p_data[key] = sim_data["ray_path_data"][0, i][key].ravel()
         p_data["elv"] = e
+        p_data["plasma_freq_at_apogee"] = pfa
+        p_data["ray_label"] = rl
         add = (
             (True if e >= limit_elvs[0] and e <= limit_elvs[1] else False)
             if len(limit_elvs) == 2
@@ -246,8 +252,9 @@ class RayTraceObject(object):
 
 
 import matplotlib.pyplot as plt
-#import scienceplots
-import scienceplots
+
+# import scienceplots
+
 plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
@@ -256,7 +263,18 @@ import numpy as np
 
 
 class PlotRays(object):
-    def __init__(self, rto, nrows=2, ncols=2, ylim=[], xlim=[], xtolim=1700, lw=0.1):
+    def __init__(
+        self,
+        rto,
+        nrows=2,
+        ncols=2,
+        ylim=[],
+        xlim=[],
+        xtolim=1700,
+        lw=0.2,
+        arc=False,
+        figsize=(8, 3),
+    ):
         self.nrows = nrows
         self.ncols = ncols
         self.rto = rto
@@ -264,9 +282,12 @@ class PlotRays(object):
         self.xlim = xlim
         self.ylim = ylim
         self.axnum = 0
-        self.fig = plt.figure(figsize=(8 * ncols, 3 * nrows), dpi=1000)
+        self.fig = plt.figure(
+            figsize=(figsize[0] * ncols, figsize[1] * nrows), dpi=1000
+        )
         self.xtolim = xtolim
         self.lw = lw
+        self.arc = arc
         return
 
     def set_rto(self):
@@ -293,14 +314,14 @@ class PlotRays(object):
         if kind == "pf":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "plasma",
+                "Blues",
                 r"$f_0$ [MHz]",
                 colors.Normalize(4, 6),
             )
         if kind == "edens":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "plasma",
+                "Blues",
                 r"$N_e$ [$/cm^{-3}$]",
                 colors.LogNorm(1e5, 1e6),
             )
@@ -312,6 +333,12 @@ class PlotRays(object):
                 colors.Normalize(0.8, 1),
             )
         return o, cmap, label, norm
+
+    def get_arc_heights(self, height, dist):
+        darc = dist / 6371.0
+        true_height = 6371.0 + height
+        height = true_height * np.cos(darc) - 6371.0
+        return height
 
     def lay_rays(
         self,
@@ -328,6 +355,7 @@ class PlotRays(object):
         add_tag=True,
         text="(A)",
         rto=None,
+        ped_angles=[],
     ):
         self.rto = rto if rto else self.rto
         self.set_rto()
@@ -353,14 +381,23 @@ class PlotRays(object):
                 self.rto.bearing.dist.ravel(),
                 self.rto.bearing.heights.ravel(),
             )
+        dist, height = np.meshgrid(dist, height)
+        if self.arc:
+            height = self.get_arc_heights(height, dist)
         im = ax.pcolormesh(
             dist,
             height,
             o,
             norm=norm,
             cmap=cmap,
-            alpha=0.8,
+            alpha=1,
+            zorder=2,
         )
+        ds = dist[0, :]
+        hs = []
+        for i in range(o.shape[1]):
+            hs.append(height[:, i][np.argmax(o[:, i])])
+        ax.plot(ds, hs, ls="--", lw=0.8, color="k")
         ax.set_xlim(right=xlim_max)
         if add_cbar:
             pos = ax.get_position()
@@ -374,13 +411,20 @@ class PlotRays(object):
             cbax = self.fig.colorbar(
                 im, cax, spacing="uniform", orientation="vertical", cmap="plasma"
             )
-            _ = cbax.set_label(label)
+            _ = cbax.set_label(label, fontsize=11)
+            cbax.ax.tick_params(axis="both", labelsize=11)
         rays = self.rto.rays
         self.elvs = rays.initial_elev
         if tag_distance > 100:
             ax.plot(
                 [tag_distance, tag_distance],
-                [0, 100],
+                (
+                    self.get_arc_heights(
+                        np.array([0, 100]), np.array([tag_distance, tag_distance])
+                    )
+                    if self.arc
+                    else [0, 100]
+                ),
                 c="k",
                 zorder=4,
                 alpha=0.7,
@@ -393,8 +437,21 @@ class PlotRays(object):
                 rays[rays.initial_elev == elv],
             )
             th, r = (ray_path_data.ground_range.copy(), ray_path_data.height.copy())
+            if self.arc:
+                r = self.get_arc_heights(r, th)
+                gr, h = self.get_height_range(ray_path_data)
+                ax.scatter(gr, h, marker="s", s=0.2, color="k", zorder=2)
             ray_label = ray_data["ray_label"].iloc[0]
-            ax.plot(th, r, c=lcolor, zorder=3, alpha=0.7, ls="-", lw=self.lw)
+            lw = self.lw
+            alpha = 0.3
+            if ray_path_data.ray_label.iloc[0] == -2:
+                lcolor = "r"
+            elif ray_path_data.ray_label.iloc[0] == 1:
+                lcolor = "k"
+            if len(ped_angles) > 0:
+                if np.round(ray_path_data.elv.iloc[0], 1) in ped_angles:
+                    lcolor, alpha, lw = "darkgreen", 1, 1
+            ax.plot(th, r, c=lcolor, zorder=3, alpha=alpha, ls="-", lw=lw)
             col = "k" if ray_label == 1 else "r"
             if ray_label in [-1, 1]:
                 ax.scatter([th.iloc[-1]], [r.iloc[-1]], marker="s", s=3, color=col)
@@ -433,21 +490,67 @@ class PlotRays(object):
 
         # Create Zoomed in panel
         if len(zoomed_in):
-            self.__zoomed_in_panel__(ax, kind, zoomed_in, lcolor)
+            self.__zoomed_in_panel__(ax, kind, zoomed_in, lcolor, ped_angles)
         return ax
+
+    def get_height_range(
+        self, df, group=np.array([500, 750, 1000, 1250, 1500, 1750, 2000])
+    ):
+        f_ground_range = np.poly1d(np.polyfit(df.group_range, df.ground_range, 1))
+        f_height = np.poly1d(np.polyfit(df.group_range, df.height, 1))
+        gr, h = f_ground_range(group), f_height(group)
+        gr, h = [], []
+        for g in group:
+            id = (df.group_range - g).abs().idxmin()
+            if id < len(df) - 1:
+                gr.append(df.ground_range.iloc[id])
+                h.append(df.height.iloc[id])
+            else:
+                gr.append(np.nan)
+                h.append(np.nan)
+        h, gr = np.array(h), np.array(gr)
+        h = self.get_arc_heights(h, gr)
+        return gr, h
 
     def create_figure_pane(self, xlabel=r"Ground range, km", ylabel=r"Height, km"):
         self.axnum += 1
         fignum = 100 * self.nrows + 10 * self.ncols + self.axnum
         ax = self.fig.add_subplot(fignum)
-        ax.set_ylabel(ylabel, fontdict={"size": 12, "fontweight": "bold"})
-        ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
-        ax.set_xlim(self.xlim if len(self.xlim) == 2 else [0, 2500])
-        ax.set_ylim(self.ylim if len(self.ylim) == 2 else [0, 400])
+        # Create Arc
+        if self.arc:
+            R = 6371.0
+            theta = np.deg2rad(np.linspace(0, 90, 91))
+            x, y = R * np.cos(theta), R * np.sin(theta) - R
+            ax.plot(x, y, ls="-", color="k", lw=1)
+            ax.text(
+                -150,
+                200,
+                ylabel,
+                ha="left",
+                va="center",
+                fontdict={"size": 12, "fontweight": "bold"},
+                rotation=90,
+            )
+            ax.text(
+                1000,
+                -150,
+                "Ground Range, km",
+                ha="center",
+                va="top",
+                fontdict={"size": 12, "fontweight": "bold"},
+            )
+            ax.set_facecolor("0.98")
+            ax.fill_between(x, -300 * np.ones_like(y), y, color="gray", alpha=0.5)
+        else:
+            ax.set_ylabel(ylabel, fontdict={"size": 12, "fontweight": "bold"})
+            ax.set_xlabel(xlabel, fontdict={"size": 12, "fontweight": "bold"})
+        ax.set_xlim(self.xlim if len(self.xlim) == 2 else [0, 2000])
+        ax.set_ylim(self.ylim if len(self.ylim) == 2 else [-300, 400])
+        ax.tick_params(axis="both", labelsize=11)
         return ax
 
-    def __zoomed_in_panel__(self, ax, kind, zoomed_in, lcolor="k"):
-        self.zoom_ax = ax.inset_axes([0.4, 1.3, 0.3, 0.5])
+    def __zoomed_in_panel__(self, ax, kind, zoomed_in, lcolor="k", ped_angles=[]):
+        self.zoom_ax = ax.inset_axes([0.5, 0.7, 0.5, 0.3])
         o, cmap, _, norm = self.get_parameter(kind)
         self.zoom_ax.pcolormesh(
             self.rto.bearing.dist.ravel(),
@@ -465,7 +568,13 @@ class PlotRays(object):
                 rays[rays.initial_elev == elv],
             )
             th, r = (ray_path_data.ground_range.copy(), ray_path_data.height.copy())
-            self.zoom_ax.plot(th, r, c="k", zorder=3, alpha=0.7, ls="-", lw=0.5)
+            lw = self.lw
+            alpha = 0.3
+            lcolor = "k"
+            if len(ped_angles) > 0:
+                if np.round(ray_path_data.elv.iloc[0], 1) in ped_angles:
+                    lcolor, alpha, lw = "darkgreen", 1, 1
+            self.zoom_ax.plot(th, r, c=lcolor, zorder=3, alpha=alpha, ls="-", lw=lw)
 
         self.zoom_ax.set_xlim(zoomed_in[0])
         self.zoom_ax.set_ylim(zoomed_in[1])
@@ -473,8 +582,8 @@ class PlotRays(object):
             self.zoom_ax.get_xticklabels(),
             self.zoom_ax.get_yticklabels(),
         )
-        self.zoom_ax.set_xlabel("Ground Range, km", fontdict={"size": 8})
-        self.zoom_ax.set_ylabel("Height, km", fontdict={"size": 8})
+        # self.zoom_ax.set_xlabel("Ground Range, km", fontdict={"size": 8})
+        # self.zoom_ax.set_ylabel("Height, km", fontdict={"size": 8})
         ax.indicate_inset_zoom(self.zoom_ax)
         return
 
@@ -515,21 +624,21 @@ class PlotChannels(object):
         if kind == "pf":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "plasma",
+                "Blues",
                 r"$f_0$ [MHz]",
                 colors.Normalize(4, 6),
             )
         if kind == "edens":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "plasma",
+                "Blues",
                 r"$N_e$ [$/cm^{-3}$]",
                 colors.LogNorm(1e5, 1e6),
             )
         if kind == "ref_indx":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "plasma",
+                "Blues",
                 r"$\eta$",
                 colors.Normalize(0.8, 9),
             )
@@ -557,10 +666,12 @@ class PlotChannels(object):
         ax = ax if ax else self.create_figure_pane(xlabel, ylabel)
 
         X, Y, Z = tidUtils.get_gridded_parameters(
-            df, "elv", 
-            "geometric_distance", 
-            #"phase_path", 
-            "refractive_index", rounding=False
+            df,
+            "elv",
+            "geometric_distance",
+            # "phase_path",
+            "refractive_index",
+            rounding=False,
         )
         im = ax.scatter(
             X.ravel(),
@@ -585,7 +696,8 @@ class PlotChannels(object):
             cbax = self.fig.colorbar(
                 im, cax, spacing="uniform", orientation="vertical", cmap="plasma"
             )
-            _ = cbax.set_label(r"$\eta$")
+            _ = cbax.set_label(r"$\eta$", fontsize=11)
+            cbax.ax.tick_params(axis="both", labelsize=11)
         if add_time:
             stitle = "%s UT" % self.event.strftime("%Y-%m-%d %H:%M")
             ax.text(
@@ -631,6 +743,7 @@ class PlotChannels(object):
         self.axnum += 1
         fignum = 100 * self.nrows + 10 * self.ncols + self.axnum
         ax = self.fig.add_subplot(fignum)
+        ax.tick_params(axis="both", labelsize=11)
         return ax
 
     def __zoomed_in_panel__(self, ax, kind, zoomed_in, lcolor="k"):

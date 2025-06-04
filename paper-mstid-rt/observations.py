@@ -577,22 +577,41 @@ if 11 in figures:
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19, 30), "fhe", 11, [18, 30]),
     ]
-    rp = rays.PlotRays(rtos[0], nrows=2, ncols=2)
-    rp.lay_rays(xlabel="", add_cbar=False, text="(A)", tag_distance=1400)
+    rp = rays.PlotRays(rtos[0], nrows=4, ncols=1, arc=True)
     rp.lay_rays(
-        ylabel="",
         xlabel="",
+        add_cbar=False,
+        text="(A)",
+        tag_distance=1400,
+        ped_angles=[
+            24.3,
+        ],
+    )
+    rp.lay_rays(
         rto=rtos[1],
         add_cbar=False,
         add_tag=False,
         text="(B)",
         tag_distance=1400,
+        ped_angles=[22.6],
     )
     rp.lay_rays(
-        rto=rtos[2], add_cbar=False, add_tag=False, text="(C)", tag_distance=1400
+        rto=rtos[2],
+        add_cbar=False,
+        add_tag=False,
+        text="(C)",
+        tag_distance=1400,
+        ped_angles=[22.7, 23, 21.3, 21.7],
     )
-    rp.lay_rays(ylabel="", rto=rtos[3], add_tag=False, text="(D)", tag_distance=1400)
+    rp.lay_rays(
+        rto=rtos[3],
+        add_tag=False,
+        text="(D)",
+        tag_distance=1400,
+        ped_angles=[21.7, 23.4],
+    )
     rp.save(f"paper-mstid-rt/figures/Figure11.png")
+    rp.save(f"paper-mstid-rt/pub_figures/Figure06.png")
     rp.close()
 
 if 12 in figures:
@@ -636,17 +655,31 @@ if 13 in figures:
     rtos = [
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19, 30), "fhe", 11, [21.6, 21.8]),
         rays.RayTraceObject(
-            dt.datetime(2017, 5, 27, 19, 30), 
-            "fhe", 
-            11, [21.6, 21.8],
+            dt.datetime(2017, 5, 27, 19, 30),
+            "fhe",
+            11,
+            [21.6, 21.8],
             run_name="May2017_gemini_control_cosmic",
             model_name="gemini",
-        )
+        ),
     ]
-    rp = rays.PlotRays(rtos[0], nrows=2, ncols=1, lw=0.5)
-    rp.lay_rays(text="(A) TID", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
-    rp.lay_rays(rto=rtos[1], text="(B) Control", ylabel="", zoomed_in=[[500, 1200], [150, 250]], add_tag=False)
-    rp.fig.subplots_adjust(hspace=1.2)
+    rp = rays.PlotRays(
+        rtos[0], nrows=2, ncols=1, lw=0.5, arc=True, figsize=(8, 4), ylim=[-300, 600]
+    )
+    rp.lay_rays(
+        text="(A) TID",
+        zoomed_in=[[500, 1200], [150, 250]],
+        add_cbar=False,
+        ped_angles=[21.7],
+    )
+    rp.lay_rays(
+        rto=rtos[1],
+        text="(B) Control",
+        ylabel="",
+        # zoomed_in=[[500, 1200], [150, 250]],
+        add_tag=False,
+    )
+    # rp.fig.subplots_adjust(hspace=1.2)
     rp.save(f"paper-mstid-rt/figures/Figure13.png")
     rp.save(f"paper-mstid-rt/pub_figures/Figure09.png")
     rp.close()
@@ -655,32 +688,39 @@ if 14 in figures:
     rtos = [
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
         rays.RayTraceObject(
-            dt.datetime(2017, 5, 27, 19), 
-            "fhe", 
-            11, 
+            dt.datetime(2017, 5, 27, 19),
+            "fhe",
+            11,
             [18, 30],
             run_name="May2017_gemini_control_cosmic",
             model_name="gemini",
         ),
     ]
     rp = rays.PlotChannels(rtos[0], nrows=3, ncols=1, xlim=[18, 24], ylim=[500, 2500])
-    ax = rp.lay_rays(text="(A) TID", add_cbar=False, xlabel="", ylabel="Slant Range, km")
+    ax = rp.lay_rays(
+        text="(A) TID", add_cbar=False, xlabel="", ylabel="Slant Range, km"
+    )
     # rp.lay_rays(text="(A)", xlabel="", zoomed_in=[[500, 1200], [150, 250]], add_cbar=False)
     ax.axvline(22.7, ls="--", color="k", lw=0.5)
     ax = rp.lay_rays(
-        rto=rtos[1], text="(B) Control", add_tag=False, xlabel="Elevation Angle, deg ($^\circ$)",
-        ylabel="Slant Range, km"
+        rto=rtos[1],
+        text="(B) Control",
+        add_tag=False,
+        xlabel="Elevation Angle, deg ($^\circ$)",
+        ylabel="Slant Range, km",
     )
     ax.axvline(22.7, ls="--", color="k", lw=0.5)
-    ax = rp.create_figure_pane( "","")
+    ax = rp.create_figure_pane("", "")
     ax.set_xlabel("Slant Range, km", fontdict={"size": 12, "fontweight": "bold"})
-    ax.set_ylabel(r"Refractive Index, $\eta$", fontdict={"size": 12, "fontweight": "bold"})
+    ax.set_ylabel(
+        r"Refractive Index, $\eta$", fontdict={"size": 12, "fontweight": "bold"}
+    )
     rtos = [
         rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [22.7, 22.7]),
         rays.RayTraceObject(
-            dt.datetime(2017, 5, 27, 19), 
-            "fhe", 
-            11, 
+            dt.datetime(2017, 5, 27, 19),
+            "fhe",
+            11,
             [22.7, 22.7],
             run_name="May2017_gemini_control_cosmic",
             model_name="gemini",
@@ -690,16 +730,19 @@ if 14 in figures:
     ax.scatter(
         df.geometric_distance,
         df.refractive_index,
-        marker="s", color="r",
-        s=2, label="TID"
+        marker="s",
+        color="r",
+        s=2,
+        label="TID",
     )
     df = rtos[1].compile()
     ax.scatter(
         df.geometric_distance,
         df.refractive_index,
-        marker="s", color="b",
+        marker="s",
+        color="b",
         s=2,
-        label="Control"
+        label="Control",
     )
     ax.set_ylim(0.85, 1)
     ax.set_xlim(0, 2500)
@@ -795,10 +838,12 @@ if 18 in figures:
 
 if 19 in figures:
     import matplotlib.dates as mdates
+
     DS = rays.get_datasets_by_beams(
-        "fhe", [11],
-        start_time = dt.datetime(2017, 5, 27, 16), 
-        end_time = dt.datetime(2017, 5, 27, 21),
+        "fhe",
+        [11],
+        start_time=dt.datetime(2017, 5, 27, 16),
+        end_time=dt.datetime(2017, 5, 27, 21),
         limit_elvs=[18, 30],
     )
     print(DS.head())
