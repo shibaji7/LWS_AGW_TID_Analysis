@@ -314,21 +314,21 @@ class PlotRays(object):
         if kind == "pf":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "Blues",
+                "GnBu",
                 r"$f_0$ [MHz]",
-                colors.Normalize(4, 6),
+                colors.Normalize(4.5, 5.5),
             )
         if kind == "edens":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "Blues",
+                "GnBu",
                 r"$N_e$ [$/cm^{-3}$]",
                 colors.LogNorm(1e5, 1e6),
             )
         if kind == "ref_indx":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "plasma",
+                "GnBu",
                 r"$\eta$",
                 colors.Normalize(0.8, 1),
             )
@@ -390,14 +390,14 @@ class PlotRays(object):
             o,
             norm=norm,
             cmap=cmap,
-            alpha=1,
-            zorder=2,
+            alpha=1.,
+            zorder=3,
         )
         ds = dist[0, :]
         hs = []
         for i in range(o.shape[1]):
             hs.append(height[:, i][np.argmax(o[:, i])])
-        ax.plot(ds, hs, ls="--", lw=0.8, color="k")
+        ax.plot(ds, hs, ls="--", lw=0.3, color="k", zorder=3)
         ax.set_xlim(right=xlim_max)
         if add_cbar:
             pos = ax.get_position()
@@ -440,7 +440,7 @@ class PlotRays(object):
             if self.arc:
                 r = self.get_arc_heights(r, th)
                 gr, h = self.get_height_range(ray_path_data)
-                ax.scatter(gr, h, marker="s", s=0.2, color="k", zorder=2)
+                ax.scatter(gr, h, marker=".", s=0.1, color="k", zorder=6)
             ray_label = ray_data["ray_label"].iloc[0]
             lw = self.lw
             alpha = 0.3
@@ -496,9 +496,6 @@ class PlotRays(object):
     def get_height_range(
         self, df, group=np.array([500, 750, 1000, 1250, 1500, 1750, 2000])
     ):
-        f_ground_range = np.poly1d(np.polyfit(df.group_range, df.ground_range, 1))
-        f_height = np.poly1d(np.polyfit(df.group_range, df.height, 1))
-        gr, h = f_ground_range(group), f_height(group)
         gr, h = [], []
         for g in group:
             id = (df.group_range - g).abs().idxmin()
