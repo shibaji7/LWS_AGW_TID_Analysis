@@ -491,6 +491,7 @@ class PlotRays(object):
         # Create Zoomed in panel
         if len(zoomed_in):
             self.__zoomed_in_panel__(ax, kind, zoomed_in, lcolor, ped_angles)
+        ax.tick_params(axis="both", which="both", bottom=True, top=True, left=True, right=True)
         return ax
 
     def get_height_range(
