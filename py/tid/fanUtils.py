@@ -18,6 +18,10 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import scienceplots
+
+#from cartoUtils import SDCarto
+from cartoUtils import SDCarto
 
 plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"

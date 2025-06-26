@@ -204,7 +204,7 @@ class RayTraceObject(object):
         rad,
         beam,
         limit_elvs=[],
-        base_folder="/home/chakras4/OneDrive/trace/outputs/",
+        base_folder="/media/chakras4/ERAU/ERAU Backups/OneDrive/trace/outputs/",
         run_name="May2017_gemini_tid_cosmic2",
         model_name="gemini",
     ):
@@ -254,7 +254,7 @@ class RayTraceObject(object):
 import matplotlib.pyplot as plt
 
 # import scienceplots
-
+import scienceplots
 plt.style.use(["science", "ieee"])
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Tahoma", "DejaVu Sans", "Lucida Grande", "Verdana"]
@@ -314,21 +314,21 @@ class PlotRays(object):
         if kind == "pf":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "GnBu",
+                "PuOr",
                 r"$f_0$ [MHz]",
-                colors.Normalize(4.5, 5.5),
+                colors.Normalize(4, 6),
             )
         if kind == "edens":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "GnBu",
+                "cool",
                 r"$N_e$ [$/cm^{-3}$]",
                 colors.LogNorm(1e5, 1e6),
             )
         if kind == "ref_indx":
             o, cmap, label, norm = (
                 getattr(self, kind),
-                "GnBu",
+                "cool",
                 r"$\eta$",
                 colors.Normalize(0.8, 1),
             )
@@ -393,6 +393,8 @@ class PlotRays(object):
             alpha=1.,
             zorder=3,
         )
+        CS = ax.contour(dist, height, o, linewidths=0.2, zorder=3, colors="k", levels=[4, 4.5, 5, 5.5, 6.0])
+        # ax.clabel(CS, inline=True, fontsize=10)
         ds = dist[0, :]
         hs = []
         for i in range(o.shape[1]):
@@ -558,6 +560,14 @@ class PlotRays(object):
             cmap=cmap,
             alpha=0.8,
         )
+        self.zoom_ax.contour(
+            self.rto.bearing.dist.ravel(),
+            self.rto.bearing.heights.ravel(),
+            o, 
+            linewidths=0.2, zorder=3, colors="k", 
+            levels=[4, 4.5, 5, 5.5, 6.0]
+        )
+        
         rays = self.rto.rays
         self.elvs = rays.initial_elev
         for i, elv in enumerate(self.elvs):
