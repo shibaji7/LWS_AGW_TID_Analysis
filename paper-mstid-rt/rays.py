@@ -393,7 +393,7 @@ class PlotRays(object):
             alpha=1.,
             zorder=3,
         )
-        CS = ax.contour(dist, height, o, linewidths=0.2, zorder=3, colors="k", levels=[4, 4.5, 5, 5.5, 6.0])
+        # CS = ax.contour(dist, height, o, linewidths=0.2, zorder=3, colors="k", levels=[4, 4.5, 5, 5.5, 6.0])
         # ax.clabel(CS, inline=True, fontsize=10)
         ds = dist[0, :]
         hs = []
@@ -560,13 +560,13 @@ class PlotRays(object):
             cmap=cmap,
             alpha=0.8,
         )
-        self.zoom_ax.contour(
-            self.rto.bearing.dist.ravel(),
-            self.rto.bearing.heights.ravel(),
-            o, 
-            linewidths=0.2, zorder=3, colors="k", 
-            levels=[4, 4.5, 5, 5.5, 6.0]
-        )
+        # self.zoom_ax.contour(
+        #     self.rto.bearing.dist.ravel(),
+        #     self.rto.bearing.heights.ravel(),
+        #     o, 
+        #     linewidths=0.2, zorder=3, colors="k", 
+        #     levels=[4, 4.5, 5, 5.5, 6.0]
+        # )
         
         rays = self.rto.rays
         self.elvs = rays.initial_elev
