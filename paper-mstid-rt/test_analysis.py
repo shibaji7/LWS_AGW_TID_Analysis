@@ -95,3 +95,20 @@ if 11 in figures:
     rp.save(f"paper-mstid-rt/figures/Figure11.png")
     rp.save(f"paper-mstid-rt/pub_figures/Figure06.png")
     rp.close()
+
+
+if 11 in figures:
+    rtos = [
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 16) + dt.timedelta(minutes=i), "fhe", 11, [18, 30])
+        for i in range(300)
+    ]
+    for i, rt in enumerate(rtos):
+        rp = rays.PlotRays(rt, nrows=1, ncols=1, arc=True)
+        rp.lay_rays(
+            text="",
+            tag_distance=1400,
+        )
+        rp.save("figures/movies/Figure%04d.png"%i)
+        rp.close()
+
+    
