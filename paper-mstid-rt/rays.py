@@ -145,7 +145,7 @@ def get_datasets_by_beams(
     start_time=None,
     end_time=None,
     limit_elvs=[],
-    base_folder="/home/chakras4/OneDrive/trace/outputs/",
+    base_folder="/home/chakras4/trace/outputs/",
     run_name="May2017_gemini_tid_cosmic2",
     model_name="gemini",
 ):
@@ -204,7 +204,7 @@ class RayTraceObject(object):
         rad,
         beam,
         limit_elvs=[],
-        base_folder="/media/chakras4/ERAU/ERAU Backups/OneDrive/trace/outputs/",
+        base_folder="/home/chakras4/trace/outputs/",
         run_name="May2017_gemini_tid_cosmic2",
         model_name="gemini",
     ):

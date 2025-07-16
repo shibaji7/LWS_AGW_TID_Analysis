@@ -340,14 +340,16 @@ if 4 in figures:
         ncols=2,
         add_text=True,
     )
-    gates = [38, 35, 29, 33, 37, 35]
+    gates = [32, 32, 29, 33, 34, 35]
     for i, d in enumerate(
-        (np.array([17.5, 18, 19, 19.5, 20.0, 20.5]) * 60).astype(int)
+        # (np.array([17.5, 18, 19, 19.5, 20.0, 20.5]) * 60).astype(int)
+        (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
     ):
         date = dates[0] + dt.timedelta(minutes=int(d))
-        fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
+        # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
+        fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
         ax = fan.generate_fovs(
-            fds, beams={"fhe": [11, 3], "fhw": []}, discreat={"fhe": 27, "fhw": 27}
+            fds, beams={"fhe": [11, 3]}, discreat={"fhe": 27}
         )
         fan.add_arc_fov("fhe", ax=ax, maxGate=27, lineColor="k", lineWidth=0.6)
         fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=1.2)
@@ -360,7 +362,8 @@ if 4 in figures:
             transform=ax.transAxes,
             fontdict=dict(size="xx-small"),
         )
-    fan.save(f"paper-mstid-rt/figures/Figure04.png")
+    fan.save(f"paper-mstid-rt/figures/Figure03.png")
+    fan.save(f"paper-mstid-rt/pub_figures/Figure03.png")
     fan.close()
 
 if 5 in figures:
@@ -611,7 +614,7 @@ if 11 in figures:
         ped_angles=[21.7, 23.4],
     )
     rp.save(f"paper-mstid-rt/figures/Figure11.png")
-    rp.save(f"paper-mstid-rt/pub_figures/Figure06.png")
+    rp.save(f"paper-mstid-rt/pub_figures/Figure05.png")
     rp.close()
 
 if 12 in figures:
@@ -622,13 +625,16 @@ if 12 in figures:
         ncols=2,
         add_text=True,
     )
-    gates = [38, 35, 29, 33, 37, 35]
-    mgates = [32, 32, 28, 28, 26, 29]
+    # gates = [38, 35, 29, 33, 37, 35]
+    gates = [32, 32, 29, 33, 34, 35]
+    mgates = [31, 31, 28, 28, 26, 29]
     for i, d in enumerate(
-        (np.array([17.5, 18, 19, 19.50, 20.0, 20.5]) * 60).astype(int)
+        # (np.array([17.5, 18, 19, 19.50, 20.0, 20.5]) * 60).astype(int)
+        (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
     ):
         date = dates[0] + dt.timedelta(minutes=int(d))
-        fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.5), (d == 60 * 20)
+        # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.5), (d == 60 * 20)
+        fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
         ds = rays.get_datasets_by_beams(
             "fhe", None, date, date + dt.timedelta(minutes=1), [18, 30]
         )
@@ -648,6 +654,7 @@ if 12 in figures:
             fontdict=dict(size="xx-small"),
         )
     fan.save(f"paper-mstid-rt/figures/Figure12.png")
+    fan.save(f"paper-mstid-rt/pub_figures/Figure07.png")
     fan.close()
 
 
@@ -681,7 +688,7 @@ if 13 in figures:
     )
     # rp.fig.subplots_adjust(hspace=1.2)
     rp.save(f"paper-mstid-rt/figures/Figure13.png")
-    rp.save(f"paper-mstid-rt/pub_figures/Figure09.png")
+    rp.save(f"paper-mstid-rt/pub_figures/Figure08.png")
     rp.close()
 
 if 14 in figures:
@@ -749,7 +756,7 @@ if 14 in figures:
     ax.legend(loc=3)
     rp.fig.subplots_adjust(hspace=0.3)
     rp.save(f"paper-mstid-rt/figures/Figure14.png")
-    rp.save(f"paper-mstid-rt/pub_figures/Figure10.png")
+    rp.save(f"paper-mstid-rt/pub_figures/Figure09.png")
     rp.close()
 
 
@@ -902,5 +909,5 @@ if 19 in figures:
         fontdict=dict(size="small"),
     )
     rti.save(f"paper-mstid-rt/figures/Figure19.png")
-    rti.save(f"paper-mstid-rt/pub_figures/Figure08.png")
+    rti.save(f"paper-mstid-rt/pub_figures/Figure06.png")
     rti.close()
