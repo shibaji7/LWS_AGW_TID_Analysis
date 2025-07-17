@@ -108,91 +108,91 @@ for d in dates:
 #     rp.close()
 
 
-# if 11 in figures:
-#     rtos = [
-#         rays.RayTraceObject(dt.datetime(2017, 5, 27, 16) + dt.timedelta(minutes=i), "fhe", 11, [18, 30])
-#         for i in range(300)
-#     ]
-#     for i, rt in enumerate(rtos):
-#         rp = rays.PlotRays(rt, nrows=1, ncols=1, arc=True)
-#         rp.lay_rays(
-#             text="",
-#             tag_distance=1400,
+if 11 in figures:
+    rtos = [
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 16) + dt.timedelta(minutes=i), "fhe", 11, [18, 30])
+        for i in range(300)
+    ]
+    for i, rt in enumerate(rtos):
+        rp = rays.PlotRays(rt, nrows=1, ncols=1, arc=True)
+        rp.lay_rays(
+            text="",
+            tag_distance=1400,
+        )
+        rp.save("figures/movies/Figure%04d.png"%i)
+        rp.close()
+
+
+# if 12 in figures:
+#     fan = Fan(
+#         rads,
+#         dates[0],
+#         nrows=3,
+#         ncols=2,
+#         add_text=True,
+#     )
+#     # gates = [38, 35, 29, 33, 37, 35]
+#     gates = [32, 32, 29, 33, 34, 35]
+#     mgates = [31, 31, 28, 30, 30, 29]
+#     for i, d in enumerate(
+#         # (np.array([17.5, 18, 19, 19.50, 20.0, 20.5]) * 60).astype(int)
+#         (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
+#     ):
+#         date = dates[0] + dt.timedelta(minutes=int(d))
+#         # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.5), (d == 60 * 20)
+#         fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
+#         ds = rays.get_datasets_by_beams(
+#             "fhe", None, date, date + dt.timedelta(minutes=1), [18, 30]
 #         )
-#         rp.save("figures/movies/Figure%04d.png"%i)
-#         rp.close()
+#         ax = fan.overlay_simulation_fovs("fhe", ds, beams={}, gate_filter=[])
+#         fan.add_arc_fov("fhe", ax=ax, maxGate=25, lineColor="k", lineWidth=0.6)
+#         fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.6)
+#         fan.add_arc_fov(
+#             "fhe", ax=ax, maxGate=mgates[i], lineColor="lightgreen", lineWidth=0.6
+#         )
+#         ax.text(
+#             0.05,
+#             0.95,
+#             f"({chr(65+i)})",
+#             ha="left",
+#             va="center",
+#             transform=ax.transAxes,
+#             fontdict=dict(size="xx-small"),
+#         )
+#     fan.save(f"paper-mstid-rt/figures/Figure12.png")
+#     fan.save(f"paper-mstid-rt/pub_figures/Figure07.png")
+#     fan.close()
 
-
-if 12 in figures:
-    fan = Fan(
-        rads,
-        dates[0],
-        nrows=3,
-        ncols=2,
-        add_text=True,
-    )
-    # gates = [38, 35, 29, 33, 37, 35]
-    gates = [32, 32, 29, 33, 34, 35]
-    mgates = [31, 31, 28, 30, 30, 29]
-    for i, d in enumerate(
-        # (np.array([17.5, 18, 19, 19.50, 20.0, 20.5]) * 60).astype(int)
-        (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
-    ):
-        date = dates[0] + dt.timedelta(minutes=int(d))
-        # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.5), (d == 60 * 20)
-        fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
-        ds = rays.get_datasets_by_beams(
-            "fhe", None, date, date + dt.timedelta(minutes=1), [18, 30]
-        )
-        ax = fan.overlay_simulation_fovs("fhe", ds, beams={}, gate_filter=[])
-        fan.add_arc_fov("fhe", ax=ax, maxGate=25, lineColor="k", lineWidth=0.6)
-        fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.6)
-        fan.add_arc_fov(
-            "fhe", ax=ax, maxGate=mgates[i], lineColor="lightgreen", lineWidth=0.6
-        )
-        ax.text(
-            0.05,
-            0.95,
-            f"({chr(65+i)})",
-            ha="left",
-            va="center",
-            transform=ax.transAxes,
-            fontdict=dict(size="xx-small"),
-        )
-    fan.save(f"paper-mstid-rt/figures/Figure12.png")
-    fan.save(f"paper-mstid-rt/pub_figures/Figure07.png")
-    fan.close()
-
-if 4 in figures:
-    fan = Fan(
-        rads,
-        dates[0],
-        nrows=3,
-        ncols=2,
-        add_text=True,
-    )
-    gates = [32, 32, 29, 33, 34, 35]
-    for i, d in enumerate(
-        # (np.array([17.5, 18, 19, 19.5, 20.0, 20.5]) * 60).astype(int)
-        (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
-    ):
-        date = dates[0] + dt.timedelta(minutes=int(d))
-        # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
-        fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
-        ax = fan.generate_fovs(
-            fds, beams={"fhe": [11, 3]}, discreat={"fhe": 27}
-        )
-        fan.add_arc_fov("fhe", ax=ax, maxGate=27, lineColor="k", lineWidth=0.6)
-        fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=1.2)
-        ax.text(
-            0.05,
-            0.95,
-            f"({chr(65+i)})",
-            ha="left",
-            va="center",
-            transform=ax.transAxes,
-            fontdict=dict(size="xx-small"),
-        )
-    fan.save(f"paper-mstid-rt/figures/Figure03.png")
-    fan.save(f"paper-mstid-rt/pub_figures/Figure03.png")
-    fan.close()
+# if 4 in figures:
+#     fan = Fan(
+#         rads,
+#         dates[0],
+#         nrows=3,
+#         ncols=2,
+#         add_text=True,
+#     )
+#     gates = [32, 32, 29, 33, 34, 35]
+#     for i, d in enumerate(
+#         # (np.array([17.5, 18, 19, 19.5, 20.0, 20.5]) * 60).astype(int)
+#         (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
+#     ):
+#         date = dates[0] + dt.timedelta(minutes=int(d))
+#         # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
+#         fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
+#         ax = fan.generate_fovs(
+#             fds, beams={"fhe": [11, 3]}, discreat={"fhe": 27}
+#         )
+#         fan.add_arc_fov("fhe", ax=ax, maxGate=27, lineColor="k", lineWidth=0.6)
+#         fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=1.2)
+#         ax.text(
+#             0.05,
+#             0.95,
+#             f"({chr(65+i)})",
+#             ha="left",
+#             va="center",
+#             transform=ax.transAxes,
+#             fontdict=dict(size="xx-small"),
+#         )
+#     fan.save(f"paper-mstid-rt/figures/Figure03.png")
+#     fan.save(f"paper-mstid-rt/pub_figures/Figure03.png")
+#     fan.close()
