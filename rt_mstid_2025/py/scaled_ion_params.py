@@ -130,7 +130,7 @@ def plot_station_panel(ax, scaled, iri_series, stn_info, time_limits):
     freq_ax.set_xlim(time_limits)
     freq_ax.set_ylim(1, 15)
     freq_ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-    freq_ax.xaxis.set_major_formatter(DateFormatter("%H"))
+    freq_ax.xaxis.set_major_formatter(DateFormatter("%H^{%M}"))
     freq_ax.grid(True, linestyle="--", alpha=0.2, linewidth=0.5)
 
     # Heights
@@ -184,10 +184,10 @@ def build_legend(fig):
 
 
 def main():
-    target_date = dt.date(2025, 9, 2)
+    target_date = dt.datetime(2025, 9, 2)
     time_limits = (
-        dt.datetime.combine(target_date, dt.time.min),
-        dt.datetime.combine(target_date + dt.timedelta(days=4), dt.time.min),
+        target_date + dt.timedelta(0),
+        target_date + dt.timedelta(4),
     )
 
     station_files = discover_station_files(target_date.year)
