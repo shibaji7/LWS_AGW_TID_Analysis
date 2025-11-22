@@ -287,7 +287,7 @@ def main():
         handlelength=2.5,
     )
 
-    fig.suptitle("Contour plots during 2-5 Spet 2025 SW/TID", fontsize=18, y=0.86, fontweight="bold")
+    fig.suptitle("Contour plots during 2-5 Sept 2025 SW/TID", fontsize=18, y=0.86, fontweight="bold")
     fig.tight_layout(rect=[0.03, 0.05, 0.92, 0.9])
 
     output_dir = Path("figures/2025")
