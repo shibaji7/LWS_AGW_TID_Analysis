@@ -184,10 +184,10 @@ def build_legend(fig):
 
 
 def main():
-    target_date = dt.datetime(2025, 9, 2)
+    target_date = dt.datetime(2025, 9, 4)
     time_limits = (
-        target_date + dt.timedelta(0),
-        target_date + dt.timedelta(4),
+        target_date + dt.timedelta(hours=16),
+        target_date + dt.timedelta(hours=22),
     )
 
     station_files = discover_station_files(target_date.year)

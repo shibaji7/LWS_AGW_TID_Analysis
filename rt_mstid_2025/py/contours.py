@@ -206,6 +206,7 @@ def plot_station_panel(ax, scaled, profile, iri_series, stn_info, time_limits):
     
     ax.set_yscale("log")
     # ax.set_ylim(100, 500)
+    print(">>>>>>>>>>>>>>>>>>>>>>>>", time_limits)
     ax.set_xlim(time_limits)
     ax.xaxis.set_major_locator(mdates.AutoDateLocator())
     ax.xaxis.set_major_formatter(DateFormatter("%H"))
@@ -219,10 +220,10 @@ def plot_station_panel(ax, scaled, profile, iri_series, stn_info, time_limits):
     ax.axvspan(dt.datetime(2025, 9, 4, 18), dt.datetime(2025, 9, 4, 20), alpha=0.2, color="k")
 
 def main():
-    target_date = dt.date(2025, 9, 2)
+    target_date = dt.datetime(2025, 9, 4)
     time_limits = (
-        dt.datetime.combine(target_date, dt.time.min),
-        dt.datetime.combine(target_date + dt.timedelta(days=4), dt.time.min),
+        target_date + dt.timedelta(0),
+        target_date + dt.timedelta(4),
     )
 
     station_files = discover_station_files(target_date.year)
