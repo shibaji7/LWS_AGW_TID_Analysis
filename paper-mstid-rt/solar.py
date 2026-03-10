@@ -4,9 +4,6 @@ import os
 import numpy as np
 import pandas as pd
 from loguru import logger
-from sunpy import timeseries as ts  # type: ignore
-from sunpy.net import Fido  # type: ignore
-from sunpy.net import attrs as a  # type: ignore
 
 os.environ["OMNIDATA_PATH"] = "/home/chakras4/OMNI/"
 
@@ -27,9 +24,6 @@ class SolarDataset(object):
         """
         self.dates = dates
         self.dfs = {}
-        self.__load_FISM__()
-        self._load_omni_()
-        self.__loadGOES__()
         return
 
     def _load_omni_(self, res=1):
@@ -77,6 +71,9 @@ class SolarDataset(object):
         """
         Load GOES data from remote/local repository
         """
+        from sunpy import timeseries as ts  # type: ignore
+        from sunpy.net import Fido  # type: ignore
+        from sunpy.net import attrs as a  # type: ignore
         self.flare = {}
         self.dfs["goes"], self.goes, self.flareHEK = pd.DataFrame(), [], None
         result = Fido.search(
@@ -205,6 +202,75 @@ class SolarDataset(object):
             xlim=dates,
         )
         print(self.omni.columns)
+        sp.save_fig(fname)
+        sp.close()
+        return
+
+    def create_stackplots_omni(self, fname):
+        sp = StackPlots(3, 1, datetime=True)
+        _, ax = sp.plot_stack_plots(
+            np.array(self.omni.time),
+            self.omni.BzGSE,
+            color="b",
+            xlabel="",
+            ylabel=r"IMF ($B_i$), nT",
+            ylim=[-20, 20],
+            label=r"$B_z$",
+            xlim=self.dates,
+            title="Geospace Condition / {}".format(self.dates[0].strftime("%d %b %Y")),
+        )
+        sp.plot_stack_plots(
+            np.array(self.omni.time),
+            self.omni.ByGSE,
+            color="k",
+            xlabel="",
+            ylabel="",
+            ylim=[-20, 20],
+            label=r"$B_y$",
+            ax=ax,
+            xlim=self.dates,
+        )
+        ax.legend(loc=1)
+        _, ax = sp.plot_stack_plots(
+            np.array(self.omni.time),
+            self.omni.FlowSpeed,
+            color="k",
+            xlabel="",
+            ylabel="SW Speed, km/s",
+            ylim=[250, 500],
+            xlim=self.dates,
+        )
+        sp.plot_stack_plots(
+            np.array(self.omni.time),
+            self.omni.ProtonDensity,
+            color="r",
+            xlabel="",
+            ylabel="Proton Density, /cc",
+            ylim=[0, 100],
+            ax=ax.twinx(),
+            ylabel_color="r",
+            xlim=self.dates,
+        )
+        _, ax = sp.plot_stack_plots(
+            np.array(self.omni.time),
+            self.omni.AsyH,
+            color="k",
+            xlabel="Time, UT",
+            ylabel="AsyH, nT",
+            ylim=[0, 100],
+            xlim=self.dates,
+        )
+        sp.plot_stack_plots(
+            np.array(self.omni.time),
+            self.omni.AE,
+            color="r",
+            xlabel="Time, UT",
+            ylabel="AE, nT",
+            ylim=[0, 1200],
+            ax=ax.twinx(),
+            ylabel_color="r",
+            xlim=self.dates,
+        )
         sp.save_fig(fname)
         sp.close()
         return

@@ -312,7 +312,7 @@ class SDCarto(GeoAxes):
         markerSize=2,
         fontSize="xx-small",
         font_color="k",
-        xOffset=5,
+        xOffset=-3,
         yOffset=-1.5,
         annotate=True,
     ):
@@ -501,7 +501,8 @@ class SDCarto(GeoAxes):
         model="IS",
         fov_dir="front",
         kind="sct",
-        plot_discreat=0,
+        discreat=0,
+        plot_discreat=True,
         **kwargs,
     ):
         """Overlay radar Data"""
@@ -513,8 +514,8 @@ class SDCarto(GeoAxes):
         if maxGate or hasattr(self, "maxGate"):
             maxGate = maxGate if maxGate else self.maxGate
             df = df[(df.slist >= 7) & (df.slist <= maxGate)]
-        if plot_discreat > 0:
-            o, x = df[df.slist < plot_discreat], df[df.slist >= plot_discreat]
+        if discreat > 0:
+            o, x = df[df.slist < discreat], df[df.slist >= discreat]
         else:
             x, o = df, []
         hdw = pydarn.read_hdw_file(rad)
@@ -559,7 +560,7 @@ class SDCarto(GeoAxes):
                 # self._add_colorbar(im, label=label)
                 self._add_hcolorbar(im, label=label)
         lats, lons = fov.latCenter, fov.lonCenter
-        if len(o) > 0:
+        if len(o) > 0 and plot_discreat:
             Xb, Yg, Px = tidUtils.get_gridded_parameters(
                 o, xparam="bmnum", yparam="slist", zparam=p_name
             )

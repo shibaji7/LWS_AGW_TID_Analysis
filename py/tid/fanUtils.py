@@ -65,6 +65,7 @@ class Fan(object):
         cbar=False,
         add_text=False,
         extent=[-110, -75, 35, 60],
+        figsize=(2, 2),
     ):
         # if cs:
         #     plt.style.use(["science", "ieee"])
@@ -73,7 +74,7 @@ class Fan(object):
         self.date = date
         self.nrows, self.ncols = nrows, ncols
         self._num_subplots_created = 0
-        self.fig = plt.figure(figsize=(2 * ncols, 2 * nrows), dpi=1000)
+        self.fig = plt.figure(figsize=(figsize[0] * ncols, figsize[1] * nrows), dpi=1000)
         self.coord = coord
         self.tec, self.tec_times = tec, tec_times
         self.fig_title = fig_title
@@ -88,7 +89,8 @@ class Fan(object):
         Instatitate figure and axes labels
         """
         self._num_subplots_created += 1
-        proj = cartopy.crs.Stereographic(central_longitude=-90.0, central_latitude=45.0)
+        # proj = cartopy.crs.Stereographic(central_longitude=-90.0, central_latitude=45.0)
+        proj = cartopy.crs.PlateCarree(central_longitude=-90.0)
         ax = self.fig.add_subplot(
             100 * self.nrows + 10 * self.ncols + self._num_subplots_created,
             projection="SDCarto",
@@ -153,6 +155,7 @@ class Fan(object):
         frame,
         beams=[],
         discreat=0,
+        plot_discreat=True,
         ax=None,
         laytec=False,
         maxGate=45,
@@ -181,7 +184,8 @@ class Fan(object):
                 maxGate=maxGate,
                 cbar=self.cbar,
                 label=label,
-                plot_discreat=discreat,
+                plot_discreat=plot_discreat,
+                discreat=discreat,
                 p_name=param,
                 p_max=p_max,
                 p_min=p_min,
@@ -228,22 +232,25 @@ class Fan(object):
         fds,
         beams={},
         discreat={},
+        plot_discreat={},
         laytec=False,
         param="p_l",
         label=r"$P_l$, dB",
         p_max=18,
         p_min=12,
+        ax=None,
     ):
         """
         Generate plot with dataset overlaid
         """
-        ax = self.add_axes()
+        ax = self.add_axes() if ax is None else ax
         for rad in self.rads:
             self.generate_fov(
                 rad,
                 fds[rad].frame,
                 beams[rad],
                 discreat[rad],
+                plot_discreat[rad],
                 ax,
                 laytec,
                 col=fds[rad].color,

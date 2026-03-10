@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 import sys
+from pathlib import Path
 
 sys.path.extend(["py/", "py/txUtils/", "py/tid/", "py/davitPy/", "paper-mstid-rt/"])
 import numpy as np
@@ -38,8 +39,8 @@ if 1 in figures:
         txt_coord=True,
         cbar=False,
     )
-    ax = fan.overlay_fovs("fhe", beams=[3, 11], col="b")
-    fan.overlay_fovs("fhw", ax=ax, col="r")
+    ax = fan.overlay_fovs("fhe", beams=[3, 11], col="r")
+    fan.overlay_fovs("fhw", ax=ax, col="b")
     # ax.overlay_station("alp", 45.0617, -83.4328)
     fan.save("paper-mstid-rt/figures/Figure01.png")
     fan.close()
@@ -911,3 +912,248 @@ if 19 in figures:
     rti.save(f"paper-mstid-rt/figures/Figure19.png")
     rti.save(f"paper-mstid-rt/pub_figures/Figure06.png")
     rti.close()
+
+
+if 21 in figures:
+    from solar import SolarDataset
+    sol = SolarDataset([
+        dt.datetime(2017, 5, 27),
+        dt.datetime(2017, 5, 28), 
+    ])
+    sol._load_omni_()
+    sol.create_stackplots_omni("paper-mstid-rt/figures/Figure_Analysis_Solar1.png")
+    sol = SolarDataset([
+        dt.datetime(2012, 12, 21),
+        dt.datetime(2012, 12, 22) 
+    ])
+    sol._load_omni_()
+    sol.create_stackplots_omni("paper-mstid-rt/figures/Figure_Analysis_Solar2.png")
+
+if 22 in figures:
+    nexrad = load_nexrad_data(
+        date=dt.datetime(2017, 5, 27),
+        mat_dir=Path(__file__).resolve().parent.parent / "data",
+        downsample_step=4,
+        start_time=dt.datetime(2017, 5, 27, 18),
+        end_time=dt.datetime(2017, 5, 27, 21),
+    )
+    print(
+        f"Loaded NEXRAD from {nexrad['file'].name}: "
+        f"{len(nexrad['time'])} timestamps, "
+        f"lat={nexrad['lat'].shape}, lon={nexrad['lon'].shape}"
+    )
+
+
+if 20 in figures:
+    beam = 3
+    rti = RTI(
+        100,
+        [dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        fov=None,
+        xlim=[dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        ylim=[180, 3000],
+        fig_title="",
+        num_subplots=2,
+    )
+    frame = fds["fhw"].frame.copy()
+    ax, _ = rti.addParamGsPlot(
+        frame,
+        beam,
+        f"27 May 2017 / $f_0$= {(frame.tfreq.mean()/1e3).round(1)} MHz / Rad: fhw",
+        vlim=[10, 20],
+        zparam="p_l",
+        xlabel="",
+        label=r"$P_l$, dB",
+        cmap="plasma",
+        cbar=True,
+        times=[dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        sranges=[1400, 3000],
+    )
+    ax.text(
+        0.05,
+        0.95,
+        f"(A) Beam: {beam}",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size=15),
+    )
+    beam = 11
+    frame = fds["fhw"].frame.copy()
+    ax, _ = rti.addParamGsPlot(
+        frame,
+        beam,
+        "",
+        vlim=[10, 20],
+        zparam="p_l",
+        label=r"$P_l$, dB",
+        cmap="plasma",
+        cbar=False,
+        times=[dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        sranges=[1400, 3000],
+    )
+    ax.text(
+        0.05,
+        0.95,
+        f"(B) Beam: {beam}",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size=15),
+    )
+    rti.save("paper-mstid-rt/figures/Figure_Analysis_RTI.png")
+    rti.close()
+
+
+
+if 22 in figures:
+    from nexrad_utils import get_nexrad_data_by_date
+    from tec import _load_mat
+    fan = Fan(
+        rads,
+        dates[0],
+        nrows=3,
+        ncols=2,
+        add_text=True,
+        # extent=[-110, -75, 28, 60],
+        extent=[-103, -75, 28, 48],
+        figsize=(2.5, 2)
+    )
+    gates = [35, 29, 34, 37, 34, 35]
+    for i, d in enumerate(
+        (np.array([18, 19, 19.5, 20.0, 20.5, 21.0]) * 60).astype(int)
+        # (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
+    ):
+        date = dates[0] + dt.timedelta(minutes=int(d))
+        nexrad_data, tec_data = (
+            get_nexrad_data_by_date(
+                date,
+                mat_dir="data",
+                downsample_step=4,
+            ),
+            _load_mat(f"data/dvTEC/vTECdata_{date.strftime('%H%M')}.mat")
+        )
+        # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
+        fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
+        ax = fan.add_axes()
+        fan.add_arc_fov("fhe", ax=ax, maxGate=27, lineColor="k", lineWidth=0.3)
+        fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.5)
+        ax.text(
+            0.05,
+            0.95,
+            f"({chr(65+i)})",
+            ha="left",
+            va="center",
+            transform=ax.transAxes,
+            fontdict=dict(size="xx-small"),
+        )
+        im = ax.pcolormesh(
+            nexrad_data["lon"],
+            nexrad_data["lat"],
+            nexrad_data["precip"][:, :, 0],
+            shading="nearest",
+            cmap="hot_r",
+            vmin=0, vmax=7,
+            transform=fan.geo,
+            alpha=0.8,
+            zorder=2,
+        )
+        if i == 1:
+            cpos = [1.04, 0.1, 0.025, 0.8]
+            cax = ax.inset_axes(cpos, transform=ax.transAxes)
+            cb = fan.fig.colorbar(im, ax=ax, cax=cax)
+            cb.ax.tick_params(labelsize="x-small")
+            cb.set_label("Precipitation (mm/10 min)", fontsize="x-small")
+        im = ax.pcolormesh(
+            tec_data["lon"],
+            tec_data["lat"],
+            tec_data["tec"].T,
+            shading="nearest",
+            cmap="Blues",
+            vmin=-0.1, vmax=0.1,
+            transform=fan.geo,
+            alpha=0.8,
+            zorder=1
+        )
+        if i == 3:
+            cpos = [1.04, 0.1, 0.025, 0.8]
+            cax = ax.inset_axes(cpos, transform=ax.transAxes)
+            cb = fan.fig.colorbar(im, ax=ax, cax=cax)
+            cb.ax.tick_params(labelsize="x-small")
+            cb.set_label("dTEC (TECU)", fontsize="x-small")
+        fan.generate_fovs(
+            fds, beams={"fhe": []}, discreat={"fhe": 27}, ax=ax,
+            plot_discreat={"fhe": False},
+        )
+        # if i==3: break
+    # fan.save(f"paper-mstid-rt/figures/Figure03.png")
+    fan.fig.subplots_adjust(wspace=0.05, hspace=0.05)
+    fan.fig.savefig(f"paper-mstid-rt/pub_figures/FigureSp02.png", bbox_inches="tight", dpi=300)
+    fan.close()
+
+if 23 in figures:
+    scaled = pd.read_csv("data/scaled.csv")
+    scaled["datetime"] = pd.to_datetime(
+        scaled["datetime"].str.replace(r"\s+-\d+\s+", " ", regex=True)
+    )
+    plot_dates = [dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 28, 0)]
+    scaled = scaled[
+        (scaled["datetime"] >= plot_dates[0]) & (scaled["datetime"] <= plot_dates[1])
+    ]
+    sp = rays.StackPlots(2, 1, datetime=True, figsize=(7, 3), dpi=300)
+
+    _, ax = sp.plot_stack_plots(
+        np.array(scaled["datetime"]),
+        scaled["foF2"],
+        ylabel="Frequency (MHz)",
+        color="#4C78A8",
+        xlim=plot_dates,
+        xlabel="",
+        text="(A)",
+        title="Digisonde @Boulder BC840 / 27 May 2017",
+    )
+    ax.lines[-1].remove()
+    ax.scatter(
+        scaled["datetime"], scaled["foF2"], s=18, color="#4C78A8", alpha=0.85, label="foF2"
+    )
+    ax.scatter(
+        scaled["datetime"], scaled["foEs"], s=18, color="#F58518", alpha=0.85, label="foEs"
+    )
+    ax.set_ylim(0, 8)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="upper left", fontsize=13, scatterpoints=3)
+    ax.tick_params(axis="both", labelsize=13)
+    ax.set_ylabel("Frequency (MHz)", fontsize=13)
+    ax.set_title(
+        "Digisonde @Boulder BC840 / 27 May 2017",
+        fontsize=14,
+    )
+    ax.texts[-1].set_fontsize(13)
+
+    _, ax = sp.plot_stack_plots(
+        np.array(scaled["datetime"]),
+        scaled["hmF2"],
+        ylabel="Height (km)",
+        color="#4C78A8",
+        xlim=plot_dates,
+        xlabel="Time, UT",
+        text="(B)",
+    )
+    ax.lines[-1].remove()
+    ax.scatter(
+        scaled["datetime"], scaled["hmF2"], marker="D", s=18, color="#4C78A8", alpha=0.85, label="hmF2"
+    )
+    ax.scatter(
+        scaled["datetime"], scaled["h`Es"], marker="D", s=18, color="#F58518", alpha=0.85, label="h'Es"
+    )
+    ax.set_ylim(90, 350)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="upper left", fontsize=13, scatterpoints=3)
+    ax.tick_params(axis="both", labelsize=13)
+    ax.set_ylabel("Height (km)", fontsize=13)
+    ax.set_xlabel("Time, UT", fontsize=13)
+    ax.texts[-1].set_fontsize(13)
+
+    sp.save_fig("paper-mstid-rt/figures/Figure23.png")
+    sp.save_fig("paper-mstid-rt/pub_figures/FigureSp03.png")
+    sp.close()
