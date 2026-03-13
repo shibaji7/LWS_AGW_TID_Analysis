@@ -312,7 +312,7 @@ class SDCarto(GeoAxes):
         markerSize=2,
         fontSize="xx-small",
         font_color="k",
-        xOffset=-3,
+        xOffset=3,
         yOffset=-1.5,
         annotate=True,
     ):
@@ -375,7 +375,7 @@ class SDCarto(GeoAxes):
         lineColor="",
         lineWidth=0.4,
         ls="-",
-        model="IS",
+        model="GS",
         fov_dir="front",
     ):
         hdw = pydarn.read_hdw_file(rad)
@@ -410,7 +410,7 @@ class SDCarto(GeoAxes):
         lineColor="k",
         lineWidth=0.4,
         ls="-",
-        model="IS",
+        model="GS",
         fov_dir="front",
     ):
         """Overlay radar FoV"""
@@ -498,7 +498,7 @@ class SDCarto(GeoAxes):
         cbar=True,
         maxGate=None,
         scan_time=None,
-        model="IS",
+        model="GS",
         fov_dir="front",
         kind="sct",
         discreat=0,

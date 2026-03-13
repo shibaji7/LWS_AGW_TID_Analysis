@@ -397,7 +397,7 @@ class RTI(object):
             vmax=vlim[1],
             vmin=vlim[0],
             alpha=alpha,
-            s=5,
+            s=2,
             zorder=3,
         )
         ax.scatter(
@@ -409,7 +409,7 @@ class RTI(object):
             vmax=np.nanmax(Z) * 10,
             vmin=0,
             alpha=0.3,
-            s=5,
+            s=2,
             zorder=1,
         )
         # ax.plot(dsranges[1], dsranges[0], ls="-", lw=5, color="green")

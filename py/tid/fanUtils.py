@@ -89,8 +89,8 @@ class Fan(object):
         Instatitate figure and axes labels
         """
         self._num_subplots_created += 1
-        # proj = cartopy.crs.Stereographic(central_longitude=-90.0, central_latitude=45.0)
-        proj = cartopy.crs.PlateCarree(central_longitude=-90.0)
+        proj = cartopy.crs.Stereographic(central_longitude=-90.0, central_latitude=45.0)
+        # proj = cartopy.crs.PlateCarree(central_longitude=-90.0)
         ax = self.fig.add_subplot(
             100 * self.nrows + 10 * self.ncols + self._num_subplots_created,
             projection="SDCarto",

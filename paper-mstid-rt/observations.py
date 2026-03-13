@@ -53,10 +53,11 @@ if 2 in figures:
         nrows=1,
         ncols=2,
         add_text=True,
-        extent=[-105, -70, 35, 60],
+        extent=[-105, -85, 35, 50],
     )
     fan.date, fan.txt_coord, fan.cbar = date, True, True
-    ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []}, discreat={"fhe": 0})
+    ax = fan.generate_fovs(dict(fhe=fds["fhe"]), beams={"fhe": []}, discreat={"fhe": 0}, 
+                           plot_discreat={"fhe": False},)
     fan.save("paper-mstid-rt/figures/Figure02.png")
     fan.close()
 
@@ -328,7 +329,7 @@ if 3 in figures:
         transform=ax.transAxes,
         fontdict=dict(size="small"),
     )
-    rti.save(f"paper-mstid-rt/figures/Figure03.png")
+    rti.save(f"paper-mstid-rt/figures/Figure04.png")
     rti.close()
 
 
@@ -340,6 +341,7 @@ if 4 in figures:
         nrows=3,
         ncols=2,
         add_text=True,
+        extent=[-105, -85, 35, 50],
     )
     gates = [32, 32, 29, 33, 34, 35]
     for i, d in enumerate(
@@ -350,10 +352,15 @@ if 4 in figures:
         # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.25), (d == 60 * 20)
         fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
         ax = fan.generate_fovs(
-            fds, beams={"fhe": [11, 3]}, discreat={"fhe": 27}
+            fds, beams={"fhe": [11, 3], "fhw": []}, 
+            discreat={"fhe": 27, "fhw": 27},
+            plot_discreat={"fhe": True, "fhw": True},
         )
-        fan.add_arc_fov("fhe", ax=ax, maxGate=27, lineColor="k", lineWidth=0.6)
-        fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=1.2)
+        fan.add_arc_fov("fhe", ax=ax, maxGate=27, lineColor="k", lineWidth=0.3)
+        fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.8)
+
+        fan.add_arc_fov("fhw", ax=ax, maxGate=27, lineColor="k", lineWidth=0.3)
+        fan.add_arc_fov("fhw", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.8)
         ax.text(
             0.05,
             0.95,
@@ -575,11 +582,12 @@ if 10 in figures:
     rti.close()
 
 if 11 in figures:
+    beam = 19
     rtos = [
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17, 30), "fhe", 11, [18, 30]),
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 18, 15), "fhe", 11, [18, 30]),
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", 11, [18, 30]),
-        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19, 30), "fhe", 11, [18, 30]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 17, 30), "fhe", beam, [18, 30]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 18, 15), "fhe", beam, [18, 30]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19), "fhe", beam, [18, 30]),
+        rays.RayTraceObject(dt.datetime(2017, 5, 27, 19, 30), "fhe", beam, [18, 30]),
     ]
     rp = rays.PlotRays(rtos[0], nrows=4, ncols=1, arc=True)
     rp.lay_rays(
@@ -615,7 +623,8 @@ if 11 in figures:
         ped_angles=[21.7, 23.4],
     )
     rp.save(f"paper-mstid-rt/figures/Figure11.png")
-    rp.save(f"paper-mstid-rt/pub_figures/Figure05.png")
+    # rp.save(f"paper-mstid-rt/pub_figures/Figure06.png")
+    rp.save(f"paper-mstid-rt/pub_figures/FigureSp05.png")
     rp.close()
 
 if 12 in figures:
@@ -625,10 +634,11 @@ if 12 in figures:
         nrows=3,
         ncols=2,
         add_text=True,
+        extent=[-105, -85, 35, 50],
     )
     # gates = [38, 35, 29, 33, 37, 35]
     gates = [32, 32, 29, 33, 34, 35]
-    mgates = [31, 31, 28, 28, 26, 29]
+    mgates = [31, 31, 28, 32, 30, 29]
     for i, d in enumerate(
         # (np.array([17.5, 18, 19, 19.50, 20.0, 20.5]) * 60).astype(int)
         (np.array([18+(4/6),18+(5/6), 19, 19+(1/6), 19+(2/6), 19+(3/6)]) * 60).astype(int)
@@ -637,9 +647,11 @@ if 12 in figures:
         # fan.date, fan.txt_coord, fan.cbar = date, (d == 60 * 17.5), (d == 60 * 20)
         fan.date, fan.txt_coord, fan.cbar = date, i==0, i==4
         ds = rays.get_datasets_by_beams(
-            "fhe", None, date, date + dt.timedelta(minutes=1), [18, 30]
+            "fhe", None, date, date + dt.timedelta(minutes=1), [18, 30],
+            run_name = "May2017_gemini_tid_cosmic2_bkp0"
         )
-        ax = fan.overlay_simulation_fovs("fhe", ds, beams={}, gate_filter=[])
+        print(ds.bmnum.unique())
+        ax = fan.overlay_simulation_fovs("fhe", ds, beams={}, gate_filter=[], col="r")
         fan.add_arc_fov("fhe", ax=ax, maxGate=25, lineColor="k", lineWidth=0.6)
         fan.add_arc_fov("fhe", ax=ax, maxGate=gates[i], lineColor="m", lineWidth=0.6)
         fan.add_arc_fov(
@@ -655,7 +667,7 @@ if 12 in figures:
             fontdict=dict(size="xx-small"),
         )
     fan.save(f"paper-mstid-rt/figures/Figure12.png")
-    fan.save(f"paper-mstid-rt/pub_figures/Figure07.png")
+    fan.save(f"paper-mstid-rt/pub_figures/Figure08.png")
     fan.close()
 
 
@@ -910,7 +922,7 @@ if 19 in figures:
         fontdict=dict(size="small"),
     )
     rti.save(f"paper-mstid-rt/figures/Figure19.png")
-    rti.save(f"paper-mstid-rt/pub_figures/Figure06.png")
+    rti.save(f"paper-mstid-rt/pub_figures/Figure07.png")
     rti.close()
 
 
@@ -1003,6 +1015,8 @@ if 20 in figures:
     )
     rti.save("paper-mstid-rt/figures/Figure_Analysis_RTI.png")
     rti.close()
+
+
 
 
 
@@ -1157,3 +1171,66 @@ if 23 in figures:
     sp.save_fig("paper-mstid-rt/figures/Figure23.png")
     sp.save_fig("paper-mstid-rt/pub_figures/FigureSp03.png")
     sp.close()
+
+
+if 24 in figures:
+    beam = 6
+    rti = RTI(
+        100,
+        [dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        fov=None,
+        xlim=[dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        ylim=[180, 3500],
+        fig_title="",
+        num_subplots=2,
+    )
+    frame = fds["bks"].frame.copy()
+    print(frame)
+    ax, _ = rti.addParamGsPlot(
+        frame,
+        beam,
+        f"27 May 2017 / $f_0$= {(frame.tfreq.mean()/1e3).round(1)} MHz / Rad: bks",
+        vlim=[8, 10],
+        zparam="p_l",
+        xlabel="",
+        label=r"$P_l$, dB",
+        cmap="plasma",
+        cbar=True,
+        times=[dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        sranges=[1400, 3500],
+    )
+    ax.text(
+        0.05,
+        0.95,
+        f"(A) Beam: {beam}",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size=15),
+    )
+    beam = 11
+    frame = fds["bks"].frame.copy()
+    ax, _ = rti.addParamGsPlot(
+        frame,
+        beam,
+        "",
+        vlim=[8, 10],
+        zparam="p_l",
+        label=r"$P_l$, dB",
+        cmap="plasma",
+        cbar=False,
+        times=[dt.datetime(2017, 5, 27, 12), dt.datetime(2017, 5, 27, 22)],
+        sranges=[1400, 3500],
+    )
+    ax.text(
+        0.05,
+        0.95,
+        f"(B) Beam: {beam}",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size=15),
+    )
+    rti.save("paper-mstid-rt/figures/Figure_Analysis_RTI_BKS.png")
+    rti.save("paper-mstid-rt/pub_figures/FigureSp04.png")
+    rti.close()

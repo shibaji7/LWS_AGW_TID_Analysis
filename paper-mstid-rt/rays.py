@@ -323,7 +323,7 @@ class PlotRays(object):
                 getattr(self, kind),
                 "cool",
                 r"$N_e$ [$/cm^{-3}$]",
-                colors.LogNorm(1e5, 1e6),
+                colors.LogNorm(1e4, 1e6),
             )
         if kind == "ref_indx":
             o, cmap, label, norm = (
@@ -395,6 +395,12 @@ class PlotRays(object):
         )
         # CS = ax.contour(dist, height, o, linewidths=0.2, zorder=3, colors="k", levels=[4, 4.5, 5, 5.5, 6.0])
         # ax.clabel(CS, inline=True, fontsize=10)
+        # im = ax.contourf(
+        #     dist, height, o,
+        #     cmap=cmap, alpha=1, 
+        #     zorder=3, 
+        #     levels=np.arange(4.5,5.5,0.2)
+        # )
         ds = dist[0, :]
         hs = []
         for i in range(o.shape[1]):
@@ -634,7 +640,7 @@ class PlotChannels(object):
                 getattr(self, kind),
                 "Blues",
                 r"$f_0$ [MHz]",
-                colors.Normalize(4, 6),
+                colors.Normalize(5, 7),
             )
         if kind == "edens":
             o, cmap, label, norm = (
