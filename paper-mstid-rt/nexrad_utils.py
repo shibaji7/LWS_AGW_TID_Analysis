@@ -348,7 +348,9 @@ def load_fulltimedata(
     })
     df['time'] = pd.to_datetime(df['time'])
     if elevation_cutoff > 0:
+        print(f"Applying elevation cutoff: {elevation_cutoff}°: len before={len(df)}")
         df = df[df['elevation'] >= elevation_cutoff].reset_index(drop=True)
+        print(f"len after={len(df)}")
     return df
 
 if __name__ == "__main__":

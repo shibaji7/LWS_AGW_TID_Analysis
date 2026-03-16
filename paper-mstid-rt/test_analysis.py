@@ -265,7 +265,6 @@ if 5 in figures:
         cmap="RdBu_r",
         snap=True,
     )
-    rti._add_colorbar(rti.fig, ax, pm, label=r"$\delta$vTEC$_{5-40}$, TECU", xOff=0.1)
     ax.text(
         0.05,
         0.95,
@@ -346,6 +345,7 @@ if 5 in figures:
         transform=ax.transAxes,
         fontdict=dict(size="small"),
     )
+    rti._add_colorbar(rti.fig, ax, pm, label=r"dvTEC$_{5-40}$, TECU", xOff=0.0)
 
     rti.save("paper-mstid-rt/pub_figures/Figure05.png")
     rti.close()
