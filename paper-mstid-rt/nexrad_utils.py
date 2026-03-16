@@ -1,5 +1,6 @@
 import datetime as dt
 from pathlib import Path
+import pandas as pd
 
 import numpy as np
 
@@ -79,6 +80,12 @@ def _decode_time_array(time_arr):
         else:
             decoded.append(_round_datetime_to_minute(dt.datetime.utcfromtimestamp(x)))
     return np.array(decoded, dtype=object)
+
+
+def _day_ordinal(day: int) -> str:
+    if 11 <= day <= 13:
+        return f"{day}th"
+    return f"{day}{['th','st','nd','rd','th','th','th','th','th','th'][day % 10]}"
 
 
 def _load_mat(mat_path: Path):
@@ -200,3 +207,164 @@ def get_nexrad_data_by_date(
         "lon": data["lon"],
         "precip": precip_window,
     }
+
+
+def load_fulltimedata(
+    date: str | dt.date | dt.datetime,
+    beam: int = None,
+    mat_dir: str | Path = "data",
+    start_time: str | dt.datetime | None = None,
+    end_time: str | dt.datetime | None = None,
+    elevation_cutoff: float = 0.0,
+) -> dict:
+    """Load a fulltimedata_<date>_WithinBeam<beam>.mat file (MATLAB v7.3 / HDF5).
+
+    Each row in the file is one TEC measurement. The 12 columns are:
+
+        0  – Time (MATLAB Serial Date Number / datenum)
+        1  – Elevation angle (0°–90°)
+        2  – Azimuth angle  (-180° to 180°, 0° = geographic north)
+        3  – IPP latitude
+        4  – IPP longitude
+        5  – Absolute vTEC  (not fully implemented, unreliable)
+        6  – 10-min high-pass filtered vTEC
+        7  – 5–40 min band-pass filtered vTEC
+        8  – 60-min high-pass filtered vTEC
+        9  – 120-min high-pass filtered vTEC
+       10  – Station latitude
+       11  – Station longitude
+
+    Parameters
+    ----------
+    date       : date of the data file
+    beam       : beam number used in the filename
+    mat_dir    : directory that contains the .mat file
+    start_time        : optional lower bound for time filtering
+    end_time          : optional upper bound for time filtering
+    elevation_cutoff  : discard measurements with elevation < this value (degrees, default 0)
+
+    Returns
+    -------
+    dict with keys:
+        file            – Path to the loaded file
+        beam            – beam number
+        utt             – raw UTT MATLAB datenum array (one per UTT timestep)
+        time            – decoded datetime for each measurement (flat, all timesteps concatenated)
+        elevation       – elevation angle per measurement (degrees)
+        azimuth         – azimuth angle per measurement (degrees)
+        ipp_lat         – IPP latitude per measurement
+        ipp_lon         – IPP longitude per measurement
+        vtec_abs        – absolute vTEC (unreliable)
+        vtec_hp10       – 10-min high-pass filtered vTEC
+        vtec_bp5_40     – 5–40 min band-pass filtered vTEC
+        vtec_hp60       – 60-min high-pass filtered vTEC
+        vtec_hp120      – 120-min high-pass filtered vTEC
+        station_lat     – station latitude per measurement
+        station_lon     – station longitude per measurement
+    """
+    try:
+        import h5py
+    except ImportError as exc:
+        raise RuntimeError(
+            "h5py is required to read fulltimedata files. "
+            "Install it in this environment."
+        ) from exc
+
+    day = _normalize_date(date)
+    mat_dir = Path(mat_dir)
+
+    date_str = f"{_day_ordinal(day.day)}{day:%b}{day.year}"
+    if beam is not None:
+        mat_file = mat_dir / f"fulltimedata_{date_str}_WithinBeam{beam}.mat"
+    else:
+        mat_file = mat_dir / f"fulltimedata_05_27_2017-GRE.mat"
+    if not mat_file.exists():
+        raise FileNotFoundError(f"fulltimedata file not found: {mat_file}")
+
+    start_dt = _normalize_datetime(start_time, day) if start_time is not None else None
+    end_dt = _normalize_datetime(end_time, day) if end_time is not None else None
+
+    with h5py.File(mat_file, "r") as h5f:
+        utt = np.array(h5f["UTT"]).squeeze()
+        times = _decode_time_array(utt)
+
+        fd = h5f["fulltimedata"]
+        n_rows = fd.shape[0]
+
+        chunks = {
+            "time": [], "elevation": [], "azimuth": [],
+            "ipp_lat": [], "ipp_lon": [], "vtec_abs": [],
+            "vtec_hp10": [], "vtec_bp5_40": [], "vtec_hp60": [], "vtec_hp120": [],
+            "station_lat": [], "station_lon": [],
+        }
+        _fields = list(chunks.keys())
+
+        for i in range(n_rows):
+            t = times[i]
+
+            if start_dt is not None and t < start_dt:
+                continue
+            if end_dt is not None and t > end_dt:
+                continue
+
+            ref = fd[i, 0]
+            arr = np.array(h5f[ref])
+
+            # Skip null sentinel rows (last rows are empty uint64 zeros)
+            if arr.dtype.kind != "f" or arr.ndim != 2 or arr.shape[0] != 12:
+                continue
+
+            n_meas = arr.shape[1]
+            chunks["time"].append(_decode_time_array(arr[0, :]))
+            chunks["elevation"].append(arr[1, :])
+            chunks["azimuth"].append(arr[2, :])
+            chunks["ipp_lat"].append(arr[3, :])
+            chunks["ipp_lon"].append(arr[4, :])
+            chunks["vtec_abs"].append(arr[5, :])
+            chunks["vtec_hp10"].append(arr[6, :])
+            chunks["vtec_bp5_40"].append(arr[7, :])
+            chunks["vtec_hp60"].append(arr[8, :])
+            chunks["vtec_hp120"].append(arr[9, :])
+            chunks["station_lat"].append(arr[10, :])
+            chunks["station_lon"].append(arr[11, :])
+
+    result = {"file": mat_file, "beam": beam, "utt": utt}
+    result["time"] = np.concatenate(chunks["time"]).astype(object)
+    for field in _fields[1:]:
+        result[field] = np.concatenate(chunks[field]).astype(float)
+    df = pd.DataFrame({
+        'time':        result['time'],
+        'elevation':   result['elevation'],
+        'azimuth':     result['azimuth'],
+        'ipp_lat':     result['ipp_lat'],
+        'ipp_lon':     result['ipp_lon'],
+        'vtec_abs':    result['vtec_abs'],
+        'vtec_hp10':   result['vtec_hp10'],
+        'vtec_bp5_40': result['vtec_bp5_40'],
+        'vtec_hp60':   result['vtec_hp60'],
+        'vtec_hp120':  result['vtec_hp120'],
+        'station_lat': result['station_lat'],
+        'station_lon': result['station_lon'],
+    })
+    df['time'] = pd.to_datetime(df['time'])
+    if elevation_cutoff > 0:
+        df = df[df['elevation'] >= elevation_cutoff].reset_index(drop=True)
+    return df
+
+if __name__ == "__main__":
+    import pandas as pd
+
+    df = load_fulltimedata(
+        '2017-05-27', beam=11,
+        mat_dir='/home/chakras4/Research/Individual_Studies/LWS_AGW_TID_Analysis/data',
+        start_time='16:00', end_time='22:00',
+        elevation_cutoff=20.0,
+    )
+
+    
+
+    print(df)
+    print()
+    print(df.dtypes)
+    print()
+    print(df.describe())

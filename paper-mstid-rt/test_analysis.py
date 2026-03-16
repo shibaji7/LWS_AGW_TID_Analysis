@@ -11,7 +11,7 @@ import pandas as pd
 from rtiUtils import RTI
 
 figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
-figures = [19]
+figures = [5]
 rads = ["fhe", "fhw", "bks"]
 dates = [
     dt.datetime(2017, 5, 27),
@@ -175,235 +175,36 @@ if 19 in figures:
     rti.close()
 
 if 5 in figures:
+    import matplotlib.dates as mdates
+    from rad_fov import CalcFov
+    import pydarn
+    from geopy.distance import great_circle
     
     rti = RTI(
         100,
-        [dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 28)],
+        [dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 27, 22)],
         fov=None,
-        xlim=[dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 28)],
+        xlim=[dt.datetime(2017, 5, 27, 16), dt.datetime(2017, 5, 27, 22)],
         ylim=[180, 3000],
         fig_title="",
         num_subplots=2,
     )
     frame = fds["fhe"].frame.copy()
-    tnums = frame[
-        (frame.bmnum == 11)
-        & (frame.time >= dt.datetime(2017, 5, 27, 16))
-        & (frame.time <= dt.datetime(2017, 5, 27, 23))
-    ].time.unique()
-    dranges = [
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-        1700,
-    ]
+    hdw = pydarn.read_hdw_file("fhe", dt.datetime(2017, 5, 27))
+    fov = CalcFov(hdw=hdw, model="GS", fov_dir="front")
+    station = (hdw.geographic.lat, hdw.geographic.lon)
+    f11 = frame[frame.bmnum == 11].copy()
+    lat, lon = fov.latCenter[10, :], fov.lonCenter[10, :]
+    f11["lat"] = f11.slist.apply(lambda x: lat[int(x)-1])
+    f11["lon"] = f11.slist.apply(lambda x: lon[int(x)-1])
+    # Use great_circle distance as shared Y metric for both radar and TEC
+    f11["gsMapped"] = f11.apply(
+        lambda x: great_circle((x.lat, x.lon), station).kilometers
+        if not np.isnan(x.lat) else np.nan, axis=1
+    )
+
     ax, _ = rti.addParamGsPlot(
-        frame,
+        f11,
         11,
         f"Rad: fhe / $f_0$= {(int((frame.tfreq.mean()/1e3)/0.5)+1)*0.5} MHz / 27 May 2017",
         vlim=[12.5, 17.5],
@@ -412,7 +213,139 @@ if 5 in figures:
         label=r"$P_l$, dB",
         cmap="plasma",
         cbar=True,
-        # dsranges=(dranges, tnums),
+        yscale="gsMapped",
     )
+    ax.set_ylim([100, 1500])
+    ax.set_yticks([100, 500, 1000, 1500])
+    ax.set_ylabel(r"GS Mapped, $(\theta,\phi)$", fontdict={"size": 12, "fontweight": "bold"})
+    f11_valid = f11[(f11.gsMapped >= 0) & (f11.gsMapped <= 1500)].dropna(subset=["lat"])
+    ytick_labels, yticks = [], []
+    for label in ax.get_yticklabels():
+        label_value = int(label.get_text())
+        ilab = (f11_valid["gsMapped"] - label_value).abs().idxmin()
+        ytick_labels.append(f"${f11_valid.loc[ilab, 'lat']:.1f}^\circ$\n${f11_valid.loc[ilab, 'lon']:.1f}^\circ$")
+        yticks.append(f11_valid.loc[ilab, "gsMapped"])
+    ax.set_yticks(yticks)
+    ax.tick_params(axis="y", labelrotation=90)
+    ax.set_yticklabels(ytick_labels, fontdict={"size": 8})
+
+    import sys
+    sys.path.append("paper-mstid-rt/")
+    from nexrad_utils import load_fulltimedata
+    df = load_fulltimedata(
+        '2017-05-27', beam=11,
+        mat_dir='/home/chakras4/Research/Individual_Studies/LWS_AGW_TID_Analysis/data',
+        start_time='16:00', end_time='22:00',
+        elevation_cutoff=20.0,
+    )
+    df["mappedGS"] = df.apply(
+        lambda x: great_circle(
+            (x.ipp_lat, x.ipp_lon), (hdw.geographic.lat, hdw.geographic.lon)
+        ).kilometers, 
+        axis=1
+    )
+    import tidUtils
+    import matplotlib.dates as mdates
+    df["mappedGS"] = df["mappedGS"].round(-1)   # 10-km bins -> ~141 unique Y values
+    X, Y, Z = tidUtils.get_gridded_parameters(
+        df, xparam="time", yparam="mappedGS", zparam="vtec_bp5_40", rounding=False
+    )
+    # X stays as datetime64 — ax has a DateConverter from addParamGsPlot's scatter.
+    # Passing mdates floats would double-convert them → off-screen. Use datetime64 directly.
+    tec_vals = Z.compressed() if np.ma.is_masked(Z) else Z[np.isfinite(Z)]
+    tec_lim = max(abs(np.nanpercentile(tec_vals, 2)), abs(np.nanpercentile(tec_vals, 98)))
+    pm = ax.pcolormesh(
+        X, Y, Z.T,
+        # cmap="RdBu_r",
+        vmin=-tec_lim, vmax=tec_lim,
+        shading="auto",
+        alpha=0.7,
+        lw=0.01,
+        edgecolors="None",
+        cmap="RdBu_r",
+        snap=True,
+    )
+    rti._add_colorbar(rti.fig, ax, pm, label=r"$\delta$vTEC$_{5-40}$, TECU", xOff=0.1)
+    ax.text(
+        0.05,
+        0.95,
+        f"(A) Beam: 11",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size="small"),
+    )
+
+
+    f19 = frame[frame.bmnum == 19].copy()
+    lat, lon = fov.latCenter[18, :], fov.lonCenter[18, :]
+    f19["lat"] = f19.slist.apply(lambda x: lat[int(x)-1])
+    f19["lon"] = f19.slist.apply(lambda x: lon[int(x)-1])
+    f19["gsMapped"] = f19.apply(
+        lambda x: great_circle((x.lat, x.lon), station).kilometers
+        if not np.isnan(x.lat) else np.nan, axis=1
+    )
+    ax, _ = rti.addParamGsPlot(
+        f19,
+        19,
+        "",
+        vlim=[12.5, 17.5],
+        zparam="p_l",
+        xlabel="",
+        label=r"$P_l$, dB",
+        cmap="plasma",
+        cbar=False,
+        yscale="gsMapped",
+    )
+    ax.set_ylim([100, 1500])
+    ax.set_yticks([100, 500, 1000, 1500])
+    ax.set_ylabel(r"GS Mapped, $(\theta,\phi)$", fontdict={"size": 12, "fontweight": "bold"})
+    f19_valid = f19[(f19.gsMapped >= 0) & (f19.gsMapped <= 1500)].dropna(subset=["lat"])
+    ytick_labels, yticks = [], []
+    for label in ax.get_yticklabels():
+        label_value = int(label.get_text())
+        ilab = (f19_valid["gsMapped"] - label_value).abs().idxmin()
+        ytick_labels.append(f"${f19_valid.loc[ilab, 'lat']:.1f}^\circ$\n${f19_valid.loc[ilab, 'lon']:.1f}^\circ$")
+        yticks.append(f19_valid.loc[ilab, "gsMapped"])
+    ax.set_yticks(yticks)
+    ax.tick_params(axis="y", labelrotation=90)
+    ax.set_yticklabels(ytick_labels, fontdict={"size": 8})
+    ax.text(
+        0.05,
+        0.95,
+        f"(B) Beam: 19",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size="small"),
+    )
+
+    df = load_fulltimedata(
+        '2017-05-27', beam=19,
+        mat_dir='/home/chakras4/Research/Individual_Studies/LWS_AGW_TID_Analysis/data',
+        start_time='16:00', end_time='22:00',
+        elevation_cutoff=20.0,
+    )
+    pm = ax.pcolormesh(
+        X, Y, Z.T,
+        # cmap="RdBu_r",
+        vmin=-tec_lim, vmax=tec_lim,
+        shading="auto",
+        alpha=0.7,
+        lw=0.01,
+        edgecolors="None",
+        cmap="RdBu_r",
+        snap=True,
+    )
+    ax.text(
+        0.05,
+        0.95,
+        f"(B) Beam: 19",
+        ha="left",
+        va="center",
+        transform=ax.transAxes,
+        fontdict=dict(size="small"),
+    )
+
     rti.save("paper-mstid-rt/pub_figures/Figure05.png")
     rti.close()

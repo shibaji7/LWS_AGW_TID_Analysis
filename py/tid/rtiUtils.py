@@ -97,6 +97,12 @@ class RTI(object):
                 "Slant Range, km",
                 df.frang.tolist()[0],
             )
+        elif yscale == "gsMapped":
+            yrange, ylab, frang = (
+                self.nGates * df.rsep.tolist()[0] + df.frang.tolist()[0],
+                "GS Map Slant Range, km",
+                df.frang.tolist()[0],
+            )
         else:
             yrange, ylab, frang = (self.nGates, "Range Gates", 0)
         if self.vhm:
