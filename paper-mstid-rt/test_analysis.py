@@ -50,6 +50,7 @@ if 19 in figures:
         dsmth = detrend(smoothed)
         return utime, lgate, smoothed, dsmth
 
+    beam = 19
     beam = 11
     DS = rays.get_datasets_by_beams(
         "fhe",
@@ -111,7 +112,7 @@ if 19 in figures:
         vlim=[-90, -85],
         zparam="p_l",
         xlabel="",
-        label=r"$P_l$, dB",
+        label=r"$P_r$, dB",
         cmap="plasma",
         cbar=True,
         major_loc=mdates.MinuteLocator(byminute=range(0, 60, 30)),
@@ -233,7 +234,7 @@ if 5 in figures:
     sys.path.append("paper-mstid-rt/")
     from nexrad_utils import load_fulltimedata
     df = load_fulltimedata(
-        '2017-05-27', beam=11,
+        '2017-05-27', beam="9to13",
         mat_dir='/home/chakras4/Research/Individual_Studies/LWS_AGW_TID_Analysis/data',
         start_time='16:00', end_time='22:00',
         elevation_cutoff=20.0,
@@ -257,19 +258,19 @@ if 5 in figures:
     pm = ax.pcolormesh(
         X, Y, Z.T,
         # cmap="RdBu_r",
-        vmin=-tec_lim, vmax=tec_lim,
+        vmin=-0.03, vmax=0.03,
         shading="auto",
         alpha=0.7,
         lw=0.01,
         edgecolors="None",
-        cmap="RdBu_r",
+        cmap="Blues_r",
         snap=True,
     )
     ax.text(
-        0.05,
         0.95,
+        1.05,
         f"(A) Beam: 11",
-        ha="left",
+        ha="right",
         va="center",
         transform=ax.transAxes,
         fontdict=dict(size="small"),
@@ -290,7 +291,7 @@ if 5 in figures:
         "",
         vlim=[12.5, 17.5],
         zparam="p_l",
-        xlabel="",
+        xlabel="Time, UT",
         label=r"$P_l$, dB",
         cmap="plasma",
         cbar=False,
@@ -309,38 +310,39 @@ if 5 in figures:
     ax.set_yticks(yticks)
     ax.tick_params(axis="y", labelrotation=90)
     ax.set_yticklabels(ytick_labels, fontdict={"size": 8})
-    ax.text(
-        0.05,
-        0.95,
-        f"(B) Beam: 19",
-        ha="left",
-        va="center",
-        transform=ax.transAxes,
-        fontdict=dict(size="small"),
-    )
 
     df = load_fulltimedata(
-        '2017-05-27', beam=19,
+        '2017-05-27', beam="17to21",
         mat_dir='/home/chakras4/Research/Individual_Studies/LWS_AGW_TID_Analysis/data',
         start_time='16:00', end_time='22:00',
         elevation_cutoff=20.0,
     )
+    df["mappedGS"] = df.apply(
+        lambda x: great_circle(
+            (x.ipp_lat, x.ipp_lon), (hdw.geographic.lat, hdw.geographic.lon)
+        ).kilometers, 
+        axis=1
+    )
+    df["mappedGS"] = df["mappedGS"].round(-1) 
+    X, Y, Z = tidUtils.get_gridded_parameters(
+        df, xparam="time", yparam="mappedGS", zparam="vtec_bp5_40", rounding=False
+    )
     pm = ax.pcolormesh(
         X, Y, Z.T,
         # cmap="RdBu_r",
-        vmin=-tec_lim, vmax=tec_lim,
+        vmin=-0.03, vmax=0.03,
         shading="auto",
         alpha=0.7,
         lw=0.01,
         edgecolors="None",
-        cmap="RdBu_r",
+        cmap="Blues_r",
         snap=True,
     )
     ax.text(
-        0.05,
         0.95,
+        1.05,
         f"(B) Beam: 19",
-        ha="left",
+        ha="right",
         va="center",
         transform=ax.transAxes,
         fontdict=dict(size="small"),

@@ -281,6 +281,7 @@ def load_fulltimedata(
     if not mat_file.exists():
         raise FileNotFoundError(f"fulltimedata file not found: {mat_file}")
 
+    print(f"Matfile: {mat_file}")
     start_dt = _normalize_datetime(start_time, day) if start_time is not None else None
     end_dt = _normalize_datetime(end_time, day) if end_time is not None else None
 
