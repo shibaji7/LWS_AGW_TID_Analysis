@@ -11,7 +11,7 @@ import pandas as pd
 from rtiUtils import RTI
 
 figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
-figures = [5]
+figures = [19]
 rads = ["fhe", "fhw", "bks"]
 dates = [
     dt.datetime(2017, 5, 27),
@@ -95,7 +95,7 @@ if 19 in figures:
         major_loc=mdates.MinuteLocator(byminute=range(0, 60, 30)),
         minor_loc=mdates.MinuteLocator(byminute=range(0, 60, 15)),
     )
-    ax.plot(ugtime, obs_smoothed, ls="-", lw=3, color="g")
+    ax.plot(ugtime, obs_smoothed, ls="-", lw=3, color="k")
     ax.text(
         0.05,
         0.95,
@@ -127,7 +127,7 @@ if 19 in figures:
         transform=ax.transAxes,
         fontdict=dict(size="small"),
     )
-    ax.plot(utime, model_smoothed, ls="-", lw=3, color="m")
+    ax.plot(utime, model_smoothed, ls="-", lw=3, color="g")
 
     ax = rti._add_axis()
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("$%H^{%M}$"))
@@ -139,8 +139,8 @@ if 19 in figures:
     )
     ax.set_ylabel("Detrened ($\delta$) Slant Range, (km)")
     ax.set_ylim([-200, 200])
-    ax.plot(utime, model_dsmth, ls="-", lw=1.0, color="m", label="Model")
-    ax.plot(ugtime, obs_dsmth, ls="-", lw=1.0, color="g", label="Observations")
+    ax.plot(utime, model_dsmth, ls="-", lw=1.0, color="g", label="Model")
+    ax.plot(ugtime, obs_dsmth, ls="-", lw=1.0, color="k", label="Observations")
     ax.legend(loc="lower right", fontsize=8, framealpha=0.5)
     ax.text(
         0.05,
@@ -170,7 +170,7 @@ if 19 in figures:
         transform=inset_ax.transAxes,
         fontdict=dict(size=9),
     )
-    rti.save(f"paper-mstid-rt/figures/Figure19.png")
+    # rti.save(f"paper-mstid-rt/figures/Figure19.png")
     # rti.save(f"paper-mstid-rt/pub_figures/Figure07.png")
     rti.save(f"paper-mstid-rt/pub_figures/FigureSp06.png")
     rti.close()
