@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 from rtiUtils import RTI
 
-figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
-figures = [19]
+figures = [1, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25]
+figures = [25]
 rads = ["fhe", "fhw", "bks"]
 dates = [
     dt.datetime(2017, 5, 27),
@@ -30,6 +30,22 @@ for d in dates:
         setattr(fd, "color", colors[i])
         fds[rad] = fd
         i += 1
+
+if 25 in figures:
+    data = fds["fhe"].frame.copy()
+    print(data.srange.head())
+    print(data.columns)
+    from model_vheight import chisham_vhm
+    vheights = [chisham_vhm(s) for s in data.srange]
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(4,4))
+    ax.hist(vheights, bins=30, color='skyblue', histtype="step")
+    ax.set_title("Virtual Heights, Chisham[2008] model")
+    ax.set_xlabel("Virtual Heights, km")
+    ax.set_ylabel("Counts")
+    ax.set_yscale("log")
+    fig.savefig("paper-mstid-rt/figures/Figure25.png")
+    # print(vheights)
 
 if 19 in figures:
     import matplotlib.dates as mdates
