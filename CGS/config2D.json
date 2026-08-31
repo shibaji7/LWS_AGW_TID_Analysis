@@ -1,0 +1,50 @@
+{
+    "model": "iri",
+    "event": "2017-05-27T16:00:00Z",
+    "time_window": 10,
+    "time_gaps": 1,
+    "route": {
+        "start": {
+            "lat": 40.7128,
+            "lon": -74.0060
+        },
+        "end": {
+            "lat": 34.0522,
+            "lon": -118.2437
+        },
+        "bearing": 270
+    },
+    "density_file_location": "",
+    "density_file_name": "",
+    "max_ground_range_km": 3000,
+    "number_of_ground_step_km": 200,
+    "start_height_km": 50,
+    "end_height_km": 500,
+    "height_incriment_km": 0.25,
+    "scale": "log",
+    "kind": "linear",
+    "frequency": 10.5,
+    "start_elevation": 70,
+    "end_elevation": 110,
+    "elevation_inctiment": 1,
+    "nhops": 1,
+    "rise_time_sec": 60,
+    "threshold": 1e-5,
+    "radius_earth": 6371,
+    "iri_param": {
+        "f107": 150.0,
+        "foF2_coeff": "CCIR",
+        "hmF2_model": "SHU2015",
+        "coord": "GEO"
+    },
+    "worker": 12,
+    "ray_trace_plot_kind": "pf",
+    "ray_trace_plot_lim": {
+        "pf": [4, 6],
+        "edens": [1e4, 1e6],
+        "ref_indx": [0.6, 0.95],
+        "pf_units": "MHz",
+        "edens_units": "cm^-3",
+        "ref_indx_units": ""
+    }
+}
