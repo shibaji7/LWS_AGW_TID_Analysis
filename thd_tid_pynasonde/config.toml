@@ -1,0 +1,167 @@
+# Configuration for the CONUS DIDBASE download + RSF scaling/plotting pipeline.
+#
+# Loaded by utils.py (SZA regimes / station-year RSF overrides) and read
+# directly by the CLI scripts for their default years/paths/plot windows.
+# Every script still accepts its previous environment-variable overrides;
+# this file only changes the *defaults*.
+
+[download]
+years = [2024, 2025, 2026]
+month_start = 4          # April
+month_end = 9            # September
+output_dir = "Data/didbase_giro_scaled"
+retries = 3
+# Raw ionogram formats fetched by `didbase_pipeline.py --raw`, tried in order
+# per station-day; the first format with data wins. Feeds plot_viterbi.py.
+raw_formats = ["RSF", "MMM"]
+
+[stations]
+country_names = ["USA", "US", "U.S.A.", "UNITED STATES", "UNITED STATES OF AMERICA"]
+lat_min = 24
+lat_max = 50
+lon_min = -125
+lon_max = -66
+# Stations present in DIDBASE but missing from the public Digisonde
+# instrument catalogue; supplied here from prior project metadata.
+[[stations.extra]]
+ursi = "WS833"
+country = "USA"
+lat = 32.40
+long = -106.40
+location = "White Sands Missile Range (project station metadata)"
+
+# ---------------------------------------------------------------------------
+# Solar-zenith-angle regimes for local RSF Viterbi scaling (rsf_batch_scaler.py)
+# ---------------------------------------------------------------------------
+[sza_regimes]
+day_max_deg = 80.0        # SZA <  80 deg -> "day"
+twilight_max_deg = 100.0  # 80-100 deg    -> "twilight"; >=100 deg -> "night"
+
+[sza_regimes.day]
+dbscan_eps = 0.010
+dbscan_min_samples = 4
+min_amp_dB = 27.0
+[sza_regimes.day.E]
+h_lo = 100.0
+h_hi = 150.0
+sigma_trans_km = 8.0
+max_jump_km = 20.0
+f_lo = 2.0
+f_hi = 5.0
+[sza_regimes.day.F2]
+h_lo = 180.0
+h_hi = 420.0
+sigma_trans_km = 25.0
+max_jump_km = 40.0
+f_lo = 2.0
+f_hi = 12.0
+
+[sza_regimes.twilight]
+dbscan_eps = 0.010
+dbscan_min_samples = 4
+min_amp_dB = 27.0
+[sza_regimes.twilight.E]
+h_lo = 100.0
+h_hi = 150.0
+sigma_trans_km = 10.0
+max_jump_km = 25.0
+f_lo = 2.0
+f_hi = 5.0
+[sza_regimes.twilight.F2]
+h_lo = 220.0
+h_hi = 470.0
+sigma_trans_km = 35.0
+max_jump_km = 55.0
+f_lo = 2.0
+f_hi = 12.0
+
+[sza_regimes.night]
+dbscan_eps = 0.010
+dbscan_min_samples = 4
+min_amp_dB = 27.0
+[sza_regimes.night.E]
+h_lo = 100.0
+h_hi = 150.0
+sigma_trans_km = 12.0
+max_jump_km = 30.0
+f_lo = 2.0
+f_hi = 4.5
+[sza_regimes.night.F2]
+h_lo = 250.0
+h_hi = 550.0
+sigma_trans_km = 50.0
+max_jump_km = 70.0
+f_lo = 2.0
+f_hi = 12.0
+
+# ---------------------------------------------------------------------------
+# RSF Viterbi scaler (rsf_batch_scaler.py / plot_viterbi.py)
+# ---------------------------------------------------------------------------
+[rsf_scaler]
+tuning_preset = "balanced"
+e_layer_max_sza = 100.0
+rfi_enabled = true
+rfi_max_echoes_per_bin = 100
+rfi_freq_bin_mhz = 0.05
+max_trace_freq_gap_mhz = 1.0
+min_trace_reliability = 0.4
+min_trace_points = 10
+bridge_min_segment_points = 8
+bridge_max_height_step_km = 50.0
+adaptive_amp_margin_db = 10.0
+
+# Per-station, per-year overrides for scaler behavior that does not
+# generalize across stations or sessions. A station/year combination not
+# listed here uses the plain SZA-regime defaults above -- add an entry only
+# after checking plot_viterbi.py diagnostics for that station/year.
+[rsf_scaler.station_overrides.AL945.2024]
+rfi_enabled = false
+e_skip_sza_f_hi_clamp = true
+prefilter_min_amp_dB = { E = 40.0, F2 = 40.0 }
+
+[rsf_scaler.station_overrides.BC840.2024]
+rfi_enabled = true
+e_skip_sza_f_hi_clamp = true
+max_trace_freq_gap_mhz = 0.4
+prefilter_min_amp_dB = { E = 55.0, F2 = 55.0 }
+
+[rsf_scaler.station_overrides.AU930.2024]
+rfi_enabled = true
+e_skip_sza_f_hi_clamp = true
+max_trace_freq_gap_mhz = 0.8
+prefilter_min_amp_dB = { E = 20.0, F2 = 20.0 }
+f2_f_lo_mhz = 4.0
+masked_freq_bands_mhz = [[5.15, 5.25], [10.55, 10.65], [10.95, 11.25]]
+bridge_trace_gaps = true
+
+# ---------------------------------------------------------------------------
+# Plotting defaults
+# ---------------------------------------------------------------------------
+[viterbi_plot]
+ut_start = 0.0
+ut_end = 24.0
+keep_every = 6
+output_dir = "Data/viterbi_diagnostics"
+
+[foe_sza_plot]
+parameter = "foE_mhz"
+output_dir = "Data/figures/param_vs_sza"
+
+[tsplot]
+parameter = "foF2"
+output_dir = "Data/figures/timeseries"
+
+# Batch mode: one figure per (discovered station) x (parameter), for every
+# station under Data/didbase_giro_scaled/. `make plot-ts` / RSF_TSPLOT_DAILY=1
+# uses this to produce one figure per station per DAY (the default);
+# RSF_TSPLOT_ALL=1 instead spans the whole downloaded date range per figure.
+[tsplot_all]
+parameters = ["foF2", "hmF2"]
+output_dir = "Data/figures/giro_scaled"
+
+# Smoothed overlay on foF2/hmF2 (and any other parameter) time-series plots.
+# Any pandas time-offset alias: "15min", "30min", "1h", "2h30min", ... A
+# time-based (not fixed-sample-count) rolling mean, so gaps in the native
+# sounding cadence don't distort it. Empty string disables the overlay.
+[smoothing]
+window = "30min"
