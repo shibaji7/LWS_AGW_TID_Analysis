@@ -254,30 +254,30 @@ def plot_day_ts(df: pd.DataFrame, day: date, out_path: Path | None = None,
     return fig
 
 
-def plot_qc_day(seg: pd.DataFrame, filtered, band, day: date, out_path: Path,
-                station: str, param: str, font_size: int = 9) -> plt.Figure:
-    """Two panels for one QC-passed day: cleaned longest segment (top) and its
-    TID-band band-pass (bottom). ``filtered`` may be None if the segment is too short."""
-    fig, (ax, bx) = plt.subplots(2, 1, figsize=(6, 5), sharex=True, constrained_layout=True)
-    units = _units_for(param)
-    ax.plot(seg["datetime"], seg[param], color="tab:blue", lw=0.8, marker=".", ms=3)
-    ax.set_ylabel(f"{param}" + (f" [{units}]" if units else ""), fontsize=font_size)
-    ax.set_title(f"{station} - {param} - {day.isoformat()} (QC-passed longest segment)",
-                 fontsize=font_size, loc="left")
-    if filtered is not None:
-        bx.plot(filtered.index, filtered.values, color="tab:red", lw=1.2)
-    else:
-        bx.text(0.5, 0.5, "segment too short for band-pass", transform=bx.transAxes, ha="center")
-    bx.axhline(0, color="k", lw=0.5)
-    bx.set_ylabel(f"band-pass {band[0]:g}-{band[1]:g} min" + (f" [{units}]" if units else ""), fontsize=font_size)
+def plot_qc_day(raw: pd.DataFrame, seg: pd.DataFrame, day: date, out_path: Path,
+                station: str, param: str, font_size: int = 9,
+                smooth_window: str = SMOOTH_WINDOW) -> plt.Figure:
+    """One QC-passed day: all raw samples as grey scatter (alpha 0.6) with the
+    smoothed cleaned longest segment overlaid in red (see ``smooth_series``)."""
+    fig, ax = plt.subplots(1, 1, figsize=(6, 3.5), constrained_layout=True)
+    sub = raw.dropna(subset=[param])
+    ax.scatter(sub["datetime"], sub[param], s=6, color="grey", alpha=0.6, lw=0,
+               label="raw", zorder=2)
+    smoothed = smooth_series(seg, param, smooth_window)
+    if not smoothed.empty:
+        ax.plot(smoothed.index, smoothed.values, color="red", lw=1.6,
+                label=f"{smooth_window} mean (QC segment)", zorder=3)
+        ax.legend(fontsize=font_size - 2, loc="best", framealpha=0.75, edgecolor="none")
     day_start = pd.Timestamp(day)
-    bx.set_xlim(day_start, day_start + pd.Timedelta(days=1))
-    bx.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-    bx.xaxis.set_major_locator(mdates.HourLocator(interval=3))
-    bx.set_xlabel("UT", fontsize=font_size)
-    for a_ in (ax, bx):
-        a_.tick_params(axis="both", labelsize=font_size - 1)
-        a_.grid(ls=":", lw=0.4, alpha=0.5)
+    ax.set_xlim(day_start, day_start + pd.Timedelta(days=1))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    ax.xaxis.set_major_locator(mdates.HourLocator(interval=3))
+    ax.set_xlabel("UT", fontsize=font_size)
+    units = _units_for(param)
+    ax.set_ylabel(f"{param}" + (f" [{units}]" if units else ""), fontsize=font_size)
+    ax.set_title(f"{station} - {param} - {day.isoformat()}", fontsize=font_size, loc="left")
+    ax.tick_params(axis="both", labelsize=font_size - 1)
+    ax.grid(ls=":", lw=0.4, alpha=0.5)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     logger.info(f"Saved: {out_path}")
@@ -286,7 +286,7 @@ def plot_qc_day(seg: pd.DataFrame, filtered, band, day: date, out_path: Path,
 
 def plot_all_daily(params: list[str] = ALL_PARAMS, output_dir: Path = ALL_OUTPUT_DIR,
                     data_dir: Path = DATA_DIR) -> None:
-    """One figure per QC-passed (station, day, param): cleaned segment + band-pass.
+    """One figure per QC-passed (station, day, param): all raw samples (grey scatter) + smoothed QC segment (red).
 
     Days are selected from ``Data/quality/day_quality.csv`` (run ``quality.py``
     first); failed days are skipped.
@@ -305,9 +305,8 @@ def plot_all_daily(params: list[str] = ALL_PARAMS, output_dir: Path = ALL_OUTPUT
         df = quality.load_day(csv_path, list(group.param))
         for param in group.param:
             seg, m = quality.clean_day(df, param, c)
-            filtered, band = quality.bandpass(seg, param, m["cadence_min"])
             out = output_dir / station / f"{param}_ts_{station}_{day.strftime('%Y%m%d')}.png"
-            plt.close(plot_qc_day(seg, filtered, band, day, out, station, param))
+            plt.close(plot_qc_day(df, seg, day, out, station, param))
             saved += 1
     logger.info(f"plot_all_daily: saved {saved} figures, skipped {skipped} failed QC -> {output_dir}")
 
