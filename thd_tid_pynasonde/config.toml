@@ -173,7 +173,7 @@ window = "30min"
 parameters = ["foF2", "hmF2", "foE", "hE"]
 hampel_window_min = 60.0   # rolling-median window for spike detection
 hampel_k = 4.0             # spike if |x - median| > k * scaled MAD
-max_gap_min = 20.0         # split segments at gaps above max(this, 2.5 * cadence)
+max_gap_min = 60.0         # split segments at gaps above max(this, 2.5 * cadence)
 min_segment_h = 4.0        # longest clean segment must span at least this long
 min_coverage = 0.8         # valid samples / expected samples within that segment
 max_spike_frac = 0.10      # fraction of range-valid samples flagged as spikes
@@ -193,3 +193,16 @@ period_min_short = 15.0
 period_min_long = 60.0
 nyquist_margin = 2.2   # short limit raised to margin * cadence (15-min cadence -> 33 min)
 order = 4
+mask_gap_min = 30.0    # band-pass (and red smooth) is blanked inside gaps wider than this
+
+# ---------------------------------------------------------------------------
+# Quiet-day curves (analysis.py)
+# ---------------------------------------------------------------------------
+[analysis]
+kp_max = 3.0             # max 3-hourly Kp on the day and the previous day (<=)
+symh_min = -30.0         # min SYM-H [nT] on the day and the previous day (>)
+ae_max = 500.0           # max AE [nT] on the day and the previous day (<)
+min_omni_coverage = 0.8  # fraction of a day's 5-min OMNI samples that must be finite
+bin_min = 15.0           # UT time-of-day bin width [min]
+min_days = 5             # minimum quiet days contributing to a bin, else NaN
+by_year = false          # false: pool years per calendar month; true: curve per month per year
