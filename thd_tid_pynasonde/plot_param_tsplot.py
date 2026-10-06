@@ -37,6 +37,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from loguru import logger
 
+import quality
 import utils
 
 _CFG = utils.load_config()["tsplot"]
@@ -253,27 +254,62 @@ def plot_day_ts(df: pd.DataFrame, day: date, out_path: Path | None = None,
     return fig
 
 
+def plot_qc_day(seg: pd.DataFrame, filtered, band, day: date, out_path: Path,
+                station: str, param: str, font_size: int = 9) -> plt.Figure:
+    """Two panels for one QC-passed day: cleaned longest segment (top) and its
+    TID-band band-pass (bottom). ``filtered`` may be None if the segment is too short."""
+    fig, (ax, bx) = plt.subplots(2, 1, figsize=(6, 5), sharex=True, constrained_layout=True)
+    units = _units_for(param)
+    ax.plot(seg["datetime"], seg[param], color="tab:blue", lw=0.8, marker=".", ms=3)
+    ax.set_ylabel(f"{param}" + (f" [{units}]" if units else ""), fontsize=font_size)
+    ax.set_title(f"{station} - {param} - {day.isoformat()} (QC-passed longest segment)",
+                 fontsize=font_size, loc="left")
+    if filtered is not None:
+        bx.plot(filtered.index, filtered.values, color="tab:red", lw=1.2)
+    else:
+        bx.text(0.5, 0.5, "segment too short for band-pass", transform=bx.transAxes, ha="center")
+    bx.axhline(0, color="k", lw=0.5)
+    bx.set_ylabel(f"band-pass {band[0]:g}-{band[1]:g} min" + (f" [{units}]" if units else ""), fontsize=font_size)
+    day_start = pd.Timestamp(day)
+    bx.set_xlim(day_start, day_start + pd.Timedelta(days=1))
+    bx.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    bx.xaxis.set_major_locator(mdates.HourLocator(interval=3))
+    bx.set_xlabel("UT", fontsize=font_size)
+    for a_ in (ax, bx):
+        a_.tick_params(axis="both", labelsize=font_size - 1)
+        a_.grid(ls=":", lw=0.4, alpha=0.5)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    logger.info(f"Saved: {out_path}")
+    return fig
+
+
 def plot_all_daily(params: list[str] = ALL_PARAMS, output_dir: Path = ALL_OUTPUT_DIR,
                     data_dir: Path = DATA_DIR) -> None:
-    """One figure per (station) x (day) x (param), for every downloaded day."""
-    saved, skipped = 0, 0
-    for station, day, csv_path in _downloaded_day_csvs(data_dir):
-        raw = pd.read_csv(csv_path, parse_dates=["datetime"])
-        for param in params:
-            if param not in raw.columns:
-                logger.warning(f"{csv_path} has no {param!r} column; skipping")
-                skipped += 1
-                continue
-            sub = raw[["datetime", param]].copy()
-            sub[param] = pd.to_numeric(sub[param], errors="coerce")
-            if sub[param].notna().sum() == 0:
-                skipped += 1
-                continue
+    """One figure per QC-passed (station, day, param): cleaned segment + band-pass.
+
+    Days are selected from ``Data/quality/day_quality.csv`` (run ``quality.py``
+    first); failed days are skipped.
+    """
+    if not quality.QC_PATH.is_file():
+        raise SystemExit(f"{quality.QC_PATH} not found; run quality.py first.")
+    table = quality.load_quality()
+    qc = table[table.param.isin(params)]
+    passed = qc[qc.passed]
+    logger.info(f"QC: {len(passed)}/{len(qc)} station-day-params passed; plotting those")
+    c = quality.cfg()
+    saved, skipped = 0, len(qc) - len(passed)
+    for (station, day_s), group in passed.groupby(["station", "date"]):
+        day = date.fromisoformat(day_s)
+        csv_path = Path(data_dir) / str(day.year) / station / f"{day_s}.csv"
+        df = quality.load_day(csv_path, list(group.param))
+        for param in group.param:
+            seg, m = quality.clean_day(df, param, c)
+            filtered, band = quality.bandpass(seg, param, m["cadence_min"])
             out = output_dir / station / f"{param}_ts_{station}_{day.strftime('%Y%m%d')}.png"
-            fig = plot_day_ts(sub, day, out_path=out, station=station, param=param)
-            plt.close(fig)
+            plt.close(plot_qc_day(seg, filtered, band, day, out, station, param))
             saved += 1
-    logger.info(f"plot_all_daily: saved {saved} figures, skipped {skipped} (no data) -> {output_dir}")
+    logger.info(f"plot_all_daily: saved {saved} figures, skipped {skipped} failed QC -> {output_dir}")
 
 
 def plot_all(params: list[str] = ALL_PARAMS, output_dir: Path = ALL_OUTPUT_DIR,

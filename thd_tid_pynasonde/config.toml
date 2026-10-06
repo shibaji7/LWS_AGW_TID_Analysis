@@ -156,7 +156,7 @@ output_dir = "Data/figures/timeseries"
 # uses this to produce one figure per station per DAY (the default);
 # RSF_TSPLOT_ALL=1 instead spans the whole downloaded date range per figure.
 [tsplot_all]
-parameters = ["foF2", "hmF2"]
+parameters = ["foF2", "hmF2", "foE", "hE"]
 output_dir = "Data/figures/giro_scaled"
 
 # Smoothed overlay on foF2/hmF2 (and any other parameter) time-series plots.
@@ -165,3 +165,31 @@ output_dir = "Data/figures/giro_scaled"
 # sounding cadence don't distort it. Empty string disables the overlay.
 [smoothing]
 window = "30min"
+
+# ---------------------------------------------------------------------------
+# Quality control of downloaded scaled parameters (quality.py)
+# ---------------------------------------------------------------------------
+[quality]
+parameters = ["foF2", "hmF2", "foE", "hE"]
+hampel_window_min = 60.0   # rolling-median window for spike detection
+hampel_k = 4.0             # spike if |x - median| > k * scaled MAD
+max_gap_min = 20.0         # split segments at gaps above max(this, 2.5 * cadence)
+min_segment_h = 4.0        # longest clean segment must span at least this long
+min_coverage = 0.8         # valid samples / expected samples within that segment
+max_spike_frac = 0.10      # fraction of range-valid samples flagged as spikes
+max_noise_rel = 3.0        # sample-to-sample noise vs. station/parameter median
+[quality.range]            # physical limits [lo, hi]
+foF2 = [1.0, 20.0]
+hmF2 = [150.0, 600.0]
+foE = [0.5, 6.0]
+hE = [80.0, 200.0]
+[quality.min_scale]        # MAD floor so quantised/flat data are not over-flagged
+MHz = 0.1
+km = 5.0
+
+# TID-band zero-phase band-pass used in the plots (periods in minutes).
+[bandpass]
+period_min_short = 15.0
+period_min_long = 60.0
+nyquist_margin = 2.2   # short limit raised to margin * cadence (15-min cadence -> 33 min)
+order = 4
