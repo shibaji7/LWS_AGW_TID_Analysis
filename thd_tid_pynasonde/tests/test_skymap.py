@@ -32,6 +32,31 @@ class WaveletTests(unittest.TestCase):
         self.assertAlmostEqual(P, 45.0, delta=6.0)
 
 
+class SunTests(unittest.TestCase):
+    def test_terminators_michigan_april(self):
+        t = dict(skymap.solar_terminators(pd.Timestamp("2024-04-02"), 45.07, -83.56))
+        self.assertAlmostEqual(t["sunrise"].hour + t["sunrise"].minute / 60, 11.2, delta=0.4)
+        self.assertAlmostEqual(t["sunset"].hour + t["sunset"].minute / 60, 23.9, delta=0.4)
+
+    def test_lomb_scargle_peaks_at_signal_period(self):
+        idx = pd.date_range("2025-06-01", periods=150, freq="7.5min").delete([20, 21, 60])
+        y = pd.Series(np.sin(2 * np.pi * ((idx - idx[0]).total_seconds() / 60) / 40.0), index=idx)
+        periods = np.geomspace(10, 120, 80)
+        self.assertAlmostEqual(periods[int(np.argmax(skymap.lomb_scargle(y, periods)))], 40.0, delta=4.0)
+
+    def test_tilt_despike_removes_single_outlier(self):
+        rng = np.random.default_rng(1)
+        n, T = 60, pd.Timestamp("2025-06-01")
+        rows = []
+        for i in range(n):
+            xs = rng.normal(0.0 if i != 30 else 12.0, 1.0, 400)
+            rows.append(pd.DataFrame(dict(file_time=T + pd.Timedelta(minutes=7.5 * i), x_coord=xs, y_coord=rng.normal(0, 1, 400),
+                                          spect_dop=0.0, group_range=300.0)))
+        t = skymap.tilt_series(pd.concat(rows), C)
+        self.assertTrue(np.isnan(t.ew.iloc[30]))
+        self.assertEqual(int(t.ew.isna().sum()), 1)
+
+
 class FilterTests(unittest.TestCase):
     def echoes(self):
         rng = np.random.default_rng(0)

@@ -6,7 +6,7 @@ For one station/day, from the SKY files downloaded by ``didbase_pipeline.py --sk
 2. Filter echoes to the bulk F-region plasma: range window, zenith angle <= 25 deg
    and a per-sounding Doppler outlier filter (``[skymap]`` in config.toml).
 3. Per sounding: echo count, zenith/azimuth histograms and the echo *centre*
-   (mean x/y position) as the ionospheric tilt. ASSUMPTION: SKY ``x_coord`` is
+   (median x/y position) as the ionospheric tilt. ASSUMPTION: SKY ``x_coord`` is
    East-West (+East) and ``y_coord`` North-South (+North), in degrees from zenith.
 4. Continuous Morse wavelet transform (gamma=3, beta=20) of the E-W and N-S tilt.
 5. Overlay the ``mstid.py`` events for the day.
@@ -94,12 +94,19 @@ def filter_echoes(df: pd.DataFrame, c: dict | None = None) -> pd.DataFrame:
 
 
 def tilt_series(echoes: pd.DataFrame, c: dict | None = None) -> pd.DataFrame:
-    """Per-sounding echo count and centre (mean x = E-W, mean y = N-S) [deg]."""
+    """Per-sounding echo count and centre (median x = E-W, median y = N-S) [deg], de-spiked."""
     c = c or scfg()
     g = echoes.groupby("file_time")
-    t = pd.DataFrame({"n_echoes": g.size(), "ew": g.x_coord.mean(), "ns": g.y_coord.mean(),
+    t = pd.DataFrame({"n_echoes": g.size(), "ew": g.x_coord.median(), "ns": g.y_coord.median(),
                       "mean_dop": g.spect_dop.mean(), "mean_range": g.group_range.mean()})
     t.loc[t.n_echoes < c["min_echoes"], ["ew", "ns", "mean_dop"]] = np.nan
+    for col in ("ew", "ns"):  # drop isolated bad soundings (Hampel) so one outlier cannot dominate the wavelet
+        v = t[col].to_numpy()
+        ok = ~np.isnan(v)
+        if ok.sum() > 7:
+            sp = quality.hampel_mask(v[ok], c["despike_window"], c["despike_k"], c["despike_min_scale_deg"])
+            idx = np.flatnonzero(ok)[sp]
+            t.iloc[idx, t.columns.get_loc(col)] = np.nan
     return t
 
 
@@ -164,99 +171,212 @@ def ridge_in_window(grid, periods, power, coi, start, end):
 
 
 # ---------------------------------------------------------------------------
-# 5. Figure for one event day
+# 5. Sunrise/sunset, Lomb-Scargle
 # ---------------------------------------------------------------------------
 
-def plot_event_day(station: str, day: pd.Timestamp, out_path: Path | None = None) -> dict:
+def solar_terminators(day: pd.Timestamp, lat: float, lon: float) -> list[tuple[str, pd.Timestamp]]:
+    """Sunrise/sunset UT times on ``day`` (SZA crossing 90 deg, 1-min grid; formula good to ~1 deg)."""
+    t = pd.date_range(day, day + pd.Timedelta(days=1), freq="1min")
+    sza = np.array([utils._solar_zenith_angle(x.to_pydatetime(), lat, lon) for x in t])
+    out = []
+    for i in np.flatnonzero((sza[:-1] - 90.0) * (sza[1:] - 90.0) < 0):
+        out.append(("sunrise" if sza[i + 1] < sza[i] else "sunset", t[i]))
+    return out
+
+
+def lomb_scargle(series: pd.Series, periods: np.ndarray):
+    """Normalised Lomb-Scargle power of an irregularly sampled tilt series vs period [min]."""
+    from scipy.signal import lombscargle
+    s = series.dropna()
+    if len(s) < 8:
+        return np.full(len(periods), np.nan)
+    t = (s.index - s.index[0]).total_seconds().to_numpy() / 60.0
+    return lombscargle(t, s.to_numpy() - s.mean(), 2 * np.pi / periods, normalize=True)
+
+
+# ---------------------------------------------------------------------------
+# 6. Per-event folder: figures/skymap/<station>/<date>/
+# ---------------------------------------------------------------------------
+
+EVENT_COLOURS = {"foF2": "tab:blue", "hmF2": "tab:orange", "foE": "tab:green", "hE": "tab:red"}
+
+
+def _decorate(axes, day, events, terms, xlabel=True):
+    import matplotlib.dates as mdates
+    for a in np.atleast_1d(axes):
+        for r in events.itertuples():
+            a.axvspan(r.start, r.end, color=EVENT_COLOURS.get(r.param, "k"), alpha=0.15, lw=0)
+        for lab, t in terms:
+            a.axvspan(t - pd.Timedelta(minutes=30), t + pd.Timedelta(minutes=30), color="gold", alpha=0.3, lw=0)
+            a.axvline(t, color="goldenrod", lw=1.0, ls="--")
+        a.grid(ls=":", alpha=0.4)
+        a.tick_params(labelsize=8)
+        a.set_xlim(day, day + pd.Timedelta(days=1))
+    last = np.atleast_1d(axes)[-1]
+    last.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    last.xaxis.set_major_locator(mdates.HourLocator(interval=3))
+    if xlabel:
+        last.set_xlabel("UT   (gold: sunrise/sunset +/- 30 min; shaded colours: mstid events)")
+
+
+def _event_table(station, day):
+    path = OUT_DIR / "mstid_events.csv"
+    if not path.is_file():
+        return pd.DataFrame(columns=["param", "start", "end", "period_min"])
+    e = pd.read_csv(path, parse_dates=["date", "start", "end"])
+    return e[(e.station == station) & (e.date == day)]
+
+
+def plot_ionosonde(station, day, events, terms, out):
+    """foF2 and hmF2 (grey) against the quiet-day median/IQR (red)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import mstid
+    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True, constrained_layout=True)
+    path = quality.DATA_DIR / str(day.year) / station / f"{day.date().isoformat()}.csv"
+    raw = quality.load_day(path, ["foF2", "hmF2"])
+    for a, p, u in ((ax[0], "foF2", "MHz"), (ax[1], "hmF2", "km")):
+        a.scatter(raw.datetime, raw[p], s=7, color="grey", alpha=0.6, lw=0, label="data")
+        base = mstid.load_baseline(station, p)
+        if base is not None and not base[base.month == day.month].empty:
+            b = mstid.baseline_at(base[base.month == day.month], raw["datetime"])
+            a.fill_between(raw.datetime, b["q25"], b["q75"], color="red", alpha=0.2, lw=0)
+            a.plot(raw.datetime, b["median"], color="red", lw=1.5, label="quiet median / IQR")
+        a.set_ylabel(f"{p} [{u}]")
+    ax[0].legend(fontsize=7, loc="best")
+    ax[0].set_title(f"{station} {day.date()}  foF2 / hmF2   events: "
+                    + (", ".join(f"{r.param} {r.start:%H:%M}-{r.end:%H:%M}" for r in events.itertuples()) or "none"),
+                    fontsize=8, loc="left")
+    _decorate(ax, day, events, terms)
+    fig.savefig(out, dpi=110)
+    plt.close(fig)
+
+
+def plot_skymaps(ech, station, day, out_dir, per_page=9):
+    """3x3 polar skymaps (North up, azimuth clockwise, radius = zenith deg); + Doppler cross, - circle."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    times = np.sort(ech.file_time.unique())
+    groups = {t: g for t, g in ech.groupby("file_time")}
+    vmax = float(np.nanpercentile(np.abs(ech.spect_dop), 98)) or 1.0
+    n_pages = -(-len(times) // per_page)
+    for page in range(n_pages):
+        fig, axes = plt.subplots(3, 3, figsize=(11, 11), subplot_kw=dict(projection="polar"), constrained_layout=True)
+        for a in axes.flat:
+            a.set_visible(False)
+        for a, t in zip(axes.flat, times[page * per_page:(page + 1) * per_page]):
+            g = groups[t]
+            a.set_visible(True)
+            a.set_theta_zero_location("N")
+            a.set_theta_direction(-1)
+            a.set_rlim(0, 25)
+            a.set_rticks([5, 10, 15, 20, 25])
+            a.tick_params(labelsize=6)
+            th = np.radians(g.azimuth.to_numpy())
+            for mask, marker in ((g.spect_dop >= 0, "+"), (g.spect_dop < 0, "o")):
+                sc = a.scatter(th[mask.to_numpy()], g.zenith[mask], c=g.spect_dop[mask], cmap="coolwarm", vmin=-vmax,
+                               vmax=vmax, s=9 if marker == "+" else 7, marker=marker, linewidths=0.6)
+            a.set_title(f"{pd.Timestamp(t):%H:%M:%S}  n={len(g)}", fontsize=8)
+        cb = fig.colorbar(sc, ax=axes, shrink=0.5, pad=0.02)
+        cb.set_label("Doppler line number (+ cross, - circle)", fontsize=8)
+        fig.suptitle(f"{station} {day.date()}  skymaps (filtered echoes)  page {page + 1}/{n_pages}", fontsize=10)
+        fig.savefig(out_dir / f"skymaps_{page + 1:02d}.png", dpi=90)
+        plt.close(fig)
+    return n_pages
+
+
+def plot_zenith_azimuth(ech, tilt, station, day, events, terms, out):
+    """Echo-count histograms of zenith and azimuth vs time (all soundings) + echo-centre lines."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    times = np.sort(ech.file_time.unique())
+    fig, ax = plt.subplots(2, 1, figsize=(11, 7), sharex=True, constrained_layout=True)
+    c = scfg()
+    for a, col, bins, lab in ((ax[0], "zenith", np.arange(0, c["max_zenith_deg"] + 0.5, 0.5), "zenith [deg]"),
+                              (ax[1], "azimuth", np.arange(0, 365, 5), "azimuth [deg from N, cw]")):
+        H = np.array([np.histogram(ech.loc[ech.file_time == t, col], bins=bins)[0] for t in times]).T
+        m = a.pcolormesh(times, 0.5 * (bins[:-1] + bins[1:]), H, shading="nearest", cmap="viridis")
+        a.set_ylabel(lab)
+        fig.colorbar(m, ax=a, pad=0.01, label="echoes")
+    cz = np.hypot(tilt.ew, tilt.ns)
+    ca = np.degrees(np.arctan2(tilt.ew, tilt.ns)) % 360.0
+    ax[0].plot(tilt.index, cz, "w.", ms=2.5)
+    ax[1].plot(tilt.index, ca, "w.", ms=2.5)
+    ax[0].set_title(f"{station} {day.date()}  echo zenith / azimuth distribution (white: echo centre)", fontsize=9, loc="left")
+    _decorate(ax, day, events, terms)
+    fig.savefig(out, dpi=110)
+    plt.close(fig)
+
+
+def plot_periods(tilt, station, day, events, terms, out, c):
+    """Morse-wavelet scalograms of E-W / N-S tilt (+ Lomb-Scargle periodogram on the right)."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.dates as mdates
     import matplotlib.pyplot as plt
-
-    c = scfg()
-    day = pd.Timestamp(day)
-    raw = load_day(station, day)
-    ech = filter_echoes(raw, c)
-    tilt = tilt_series(ech, c)
-    logger.info(f"{station} {day.date()}: {raw.file_time.nunique()} soundings, {len(raw)} echoes -> {len(ech)} kept; "
-                f"{int(tilt.ew.notna().sum())} tilt samples")
-
-    events = pd.DataFrame()
-    ev_path = OUT_DIR / "mstid_events.csv"
-    if ev_path.is_file():
-        e = pd.read_csv(ev_path, parse_dates=["date", "start", "end"])
-        events = e[(e.station == station) & (e.date == day)]
-
-    fig, ax = plt.subplots(7, 1, figsize=(10, 17), sharex=True, constrained_layout=True)
-    x0 = day
-    # (0) foF2 against the quiet baseline, for context
-    try:
-        import mstid
-        path = quality.DATA_DIR / str(day.year) / station / f"{day.date().isoformat()}.csv"
-        seg, _ = quality.clean_day(quality.load_day(path, ["foF2"]), "foF2", quality.cfg())
-        base = mstid.load_baseline(station, "foF2")
-        b = mstid.baseline_at(base[base.month == day.month], seg["datetime"])
-        ax[0].scatter(seg.datetime, seg.foF2, s=6, color="grey", alpha=0.6, lw=0)
-        ax[0].fill_between(seg.datetime, b["q25"], b["q75"], color="red", alpha=0.2, lw=0)
-        ax[0].plot(seg.datetime, b["median"], color="red", lw=1.4)
-    except Exception as exc:
-        logger.warning(f"foF2 context panel skipped: {exc}")
-    ax[0].set_ylabel("foF2 [MHz]")
-    # (1) echo counts
-    ax[1].plot(tilt.index, tilt.n_echoes, color="tab:green")
-    ax[1].plot(tilt.index, raw.groupby("file_time").size().reindex(tilt.index), color="grey", lw=0.8)
-    ax[1].set_ylabel("echoes/sounding\n(green kept, grey all)")
-    # (2,3) zenith / azimuth histograms vs time (Pradipta et al. 2015 style)
-    for a, col, bins, lab in ((ax[2], "zenith", np.arange(0, c["max_zenith_deg"] + 0.5, 0.5), "zenith [deg]"),
-                              (ax[3], "azimuth", np.arange(0, 365, 5), "azimuth [deg]")):
-        times = np.sort(ech.file_time.unique())
-        H = np.array([np.histogram(ech.loc[ech.file_time == t, col], bins=bins)[0] for t in times]).T
-        a.pcolormesh(times, 0.5 * (bins[:-1] + bins[1:]), H, shading="nearest", cmap="viridis")
-        a.set_ylabel(lab)
-    # (4) tilt time series
-    ax[4].plot(tilt.index, tilt.ew, color="tab:blue", lw=1.0, label="E-W (x)")
-    ax[4].plot(tilt.index, tilt.ns, color="tab:orange", lw=1.0, label="N-S (y)")
-    ax[4].axhline(0, color="k", lw=0.5)
-    ax[4].set_ylabel("echo centre [deg]")
-    ax[4].legend(fontsize=7, ncol=2)
-    # (5,6) wavelets
+    fig, axes = plt.subplots(2, 2, figsize=(12, 7), sharey="row", constrained_layout=True,
+                             gridspec_kw=dict(width_ratios=[4, 1]))
     ridges = []
-    for a, col in ((ax[5], "ew"), (ax[6], "ns")):
+    for row, col, lab in ((0, "ew", "E-W tilt"), (1, "ns", "N-S tilt")):
+        a, b = axes[row]
         grid, periods, power, coi, _ = wavelet_of(tilt[col], c)
-        t = mdates.date2num(grid.to_pydatetime())
-        a.contourf(t, periods, power, levels=20, cmap="turbo")
+        a.contourf(mdates.date2num(grid.to_pydatetime()), periods, power, levels=20, cmap="turbo")
         a.set_yscale("log")
-        a.set_ylabel(f"period [min]\n{'E-W' if col == 'ew' else 'N-S'} tilt")
-        left = mdates.date2num((grid[0] + pd.to_timedelta(coi, "min")).to_pydatetime())
-        right = mdates.date2num((grid[-1] - pd.to_timedelta(coi, "min")).to_pydatetime())
-        a.plot(left, periods, "w--", lw=0.8)
-        a.plot(right, periods, "w--", lw=0.8)
+        a.set_ylabel(f"period [min]\n{lab}")
+        a.plot(mdates.date2num((grid[0] + pd.to_timedelta(coi, "min")).to_pydatetime()), periods, "w--", lw=0.8)
+        a.plot(mdates.date2num((grid[-1] - pd.to_timedelta(coi, "min")).to_pydatetime()), periods, "w--", lw=0.8)
+        for lo, hi in ((15, 60),):
+            a.axhline(lo, color="w", lw=0.5, ls=":")
+            a.axhline(hi, color="w", lw=0.5, ls=":")
+        _decorate([a], day, events, terms, xlabel=(row == 1))
+        if row == 0:
+            a.set_title(f"{station} {day.date()}  Morse wavelet (gamma={c['morse_gamma']:g}, beta={c['morse_beta']:g}) | "
+                        f"Lomb-Scargle   (dotted: 15-60 min MSTID band)", fontsize=8, loc="left")
+        ls = lomb_scargle(tilt[col], periods)
+        b.plot(ls, periods, color="k")
+        b.set_xlabel("LS power")
+        b.grid(ls=":", alpha=0.4)
         for r in events.itertuples():
             P, pw = ridge_in_window(grid, periods, power, coi, r.start, r.end)
             ridges.append(dict(component=col, param=r.param, start=r.start, end=r.end,
                                mstid_period_min=r.period_min, wavelet_period_min=P, wavelet_power=pw))
-    colours = {"foF2": "tab:blue", "hmF2": "tab:orange", "foE": "tab:green", "hE": "tab:red"}
-    for a in ax:
-        for r in events.itertuples():
-            a.axvspan(r.start, r.end, color=colours.get(r.param, "k"), alpha=0.18, lw=0)
-        a.grid(ls=":", alpha=0.4)
-        a.tick_params(labelsize=8)
-    ax[0].set_title(f"{station} {day.date()} skymap tilt + Morse wavelet  |  mstid events shaded: "
-                    + ", ".join(f"{p}" for p in sorted(events.param.unique())) if len(events) else
-                    f"{station} {day.date()} skymap tilt + Morse wavelet (no mstid events)", fontsize=9, loc="left")
-    ax[-1].set_xlim(x0, x0 + pd.Timedelta(days=1))
-    ax[-1].xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-    ax[-1].xaxis.set_major_locator(mdates.HourLocator(interval=3))
-    ax[-1].set_xlabel("UT   (white dashed: cone of influence)")
-    out_path = out_path or FIG_DIR / station / f"skymap_{station}_{day:%Y%m%d}.png"
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=110)
+        ridges.append(dict(component=col, param="whole-day LS peak", start=grid[0], end=grid[-1],
+                           mstid_period_min=np.nan, wavelet_period_min=float(periods[int(np.nanargmax(ls))]) if np.isfinite(ls).any() else np.nan,
+                           wavelet_power=float(np.nanmax(ls)) if np.isfinite(ls).any() else np.nan))
+    fig.savefig(out, dpi=110)
     plt.close(fig)
-    logger.info(f"Saved: {out_path}")
-    tilt.to_csv(OUT_DIR / f"skymap_tilt_{station}_{day:%Y%m%d}.csv")
-    return dict(tilt=tilt, ridges=pd.DataFrame(ridges))
+    return pd.DataFrame(ridges)
+
+
+def analyse_event_day(station: str, day, base_dir: Path | None = None) -> Path:
+    """Write the full figure set for one event day into ``figures/skymap/<station>/<date>/``."""
+    import mstid
+    c = scfg()
+    day = pd.Timestamp(day)
+    folder = (base_dir or FIG_DIR) / station / day.date().isoformat()
+    folder.mkdir(parents=True, exist_ok=True)
+    raw = load_day(station, day)
+    ech = filter_echoes(raw, c)
+    tilt = tilt_series(ech, c)
+    lat, lon = mstid.station_coords(station)
+    terms = solar_terminators(day, lat, lon)
+    events = _event_table(station, day)
+    logger.info(f"{station} {day.date()}: {raw.file_time.nunique()} soundings, {len(raw)} echoes -> {len(ech)} kept; "
+                f"{int(tilt.ew.notna().sum())} tilt samples; sunrise/sunset "
+                + ", ".join(f"{k} {t:%H:%M}" for k, t in terms))
+    plot_ionosonde(station, day, events, terms, folder / "01_ionosonde_foF2_hmF2.png")
+    n_pages = plot_skymaps(ech, station, day, folder)
+    plot_zenith_azimuth(ech, tilt, station, day, events, terms, folder / "02_zenith_azimuth.png")
+    ridges = plot_periods(tilt, station, day, events, terms, folder / "03_periods_wavelet_LS.png", c)
+    tilt.to_csv(folder / "tilt.csv")
+    ridges.to_csv(folder / "event_periods.csv", index=False)
+    logger.info(f"Saved {n_pages} skymap pages + 3 figures in {folder}")
+    return folder
 
 
 if __name__ == "__main__":
-    res = plot_event_day(sys.argv[1], pd.Timestamp(sys.argv[2]))
-    print(res["ridges"].to_string(index=False) if not res["ridges"].empty else "no events")
+    folder = analyse_event_day(sys.argv[1], pd.Timestamp(sys.argv[2]))
+    print(pd.read_csv(folder / "event_periods.csv").to_string(index=False))

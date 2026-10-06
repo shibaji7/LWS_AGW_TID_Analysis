@@ -226,7 +226,10 @@ range_min_km = 150.0      # keep F-region echoes only (reject lower-layer and mu
 range_max_km = 450.0
 max_zenith_deg = 25.0     # echoes farther than this from zenith are dropped (Kouba et al. 2008)
 doppler_mad_k = 3.5       # per-file Doppler distribution filter: |dop - median| <= k * scaled MAD
-min_echoes = 30           # minimum filtered echoes per sounding to define a tilt sample
+min_echoes = 150          # minimum filtered echoes per sounding to define a tilt sample
+despike_window = 5        # Hampel window [soundings] for the tilt series
+despike_k = 4.0
+despike_min_scale_deg = 0.3
 cadence_min = 7.5         # DDM sounding cadence used for the uniform wavelet grid
 morse_gamma = 3.0         # Morse wavelet parameters (Lilly & Olhede 2012), as in the reference paper
 morse_beta = 20.0
