@@ -62,6 +62,20 @@ class BandpassTests(unittest.TestCase):
         self.assertEqual(quality.effective_band(15.0), (33.0, 60.0))
         self.assertEqual(quality.effective_band(7.5), (16.5, 60.0))
 
+    def test_masks_output_inside_long_gap_only(self):
+        seg = make_day(cadence=5, fn=lambda x: 8 + 0.3 * np.sin(2 * np.pi * x / 30))
+        seg = seg.drop(index=range(100, 112))  # 60-min hole (> 30-min mask limit)
+        f, _ = quality.bandpass(seg, "foF2", 5.0)
+        hole = f[(f.index > seg.datetime.iloc[99]) & (f.index < seg.datetime.iloc[100])]
+        self.assertTrue(len(hole) > 0 and hole.isna().all())
+        self.assertTrue(f[f.index <= seg.datetime.iloc[99]].notna().all())
+        self.assertTrue(f[f.index >= seg.datetime.iloc[100]].notna().all())
+
+    def test_short_gap_not_masked(self):
+        seg = make_day(cadence=5, fn=lambda x: 8 + 0.3 * np.sin(2 * np.pi * x / 30))
+        f, _ = quality.bandpass(seg.drop(index=[100, 101]), "foF2", 5.0)  # 15-min hole
+        self.assertTrue(f.notna().all())
+
     def test_too_short_segment_returns_none(self):
         f, _ = quality.bandpass(make_day(cadence=15, hours=3), "foF2", 15.0)
         self.assertIsNone(f)

@@ -196,6 +196,7 @@ def bandpass(seg: pd.DataFrame, param: str, cadence: float, c: dict | None = Non
     are at most 2.5 samples), then applies a Butterworth band-pass over
     ``effective_band``. Returns ``(Series indexed by time, (short, long))`` or
     ``(None, band)`` when the segment is too short for the filter to be valid.
+    Output is NaN inside gaps wider than ``bandpass.mask_gap_min`` (default 30 min).
     """
     c = c or utils.load_config()
     b = c["bandpass"]
@@ -207,10 +208,19 @@ def bandpass(seg: pd.DataFrame, param: str, cadence: float, c: dict | None = Non
     # sosfiltfilt needs len > padlen (3*(2*sections+1)); also want >= ~3 long periods.
     if len(grid) <= max(3 * (2 * b["order"] + 1) + 1, 3 * band[1] / cadence):
         return None, band
-    y = np.interp(grid.astype("int64"), s.index.astype("int64"), s.to_numpy())
+    t = s.index.astype("int64").to_numpy()
+    y = np.interp(grid.astype("int64"), t, s.to_numpy())
     fs = 1.0 / cadence  # cycles per minute
     sos = butter(b["order"], [1.0 / band[1], 1.0 / band[0]], btype="band", fs=fs, output="sos")
-    return pd.Series(sosfiltfilt(sos, y - y.mean()), index=grid), band
+    out = pd.Series(sosfiltfilt(sos, y - y.mean()), index=grid)
+    # Mask output where it rests on interpolation: grid points lying inside a gap
+    # between real samples wider than mask_gap_min carry no real TID-band information.
+    mask_ns = b.get("mask_gap_min", 30.0) * 60e9
+    g = grid.astype("int64").to_numpy()
+    nxt = np.searchsorted(t, g, side="right")  # first sample after each grid point
+    nxt_c, prv_c = np.minimum(nxt, len(t) - 1), np.maximum(nxt - 1, 0)
+    out[((t[nxt_c] - t[prv_c]) > mask_ns) & (g > t[prv_c])] = np.nan  # strictly inside the gap
+    return out, band
 
 
 if __name__ == "__main__":

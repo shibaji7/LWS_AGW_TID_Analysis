@@ -34,6 +34,7 @@ from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from loguru import logger
 
@@ -254,6 +255,17 @@ def plot_day_ts(df: pd.DataFrame, day: date, out_path: Path | None = None,
     return fig
 
 
+def _break_at_gaps(s: pd.Series) -> pd.Series:
+    """Insert a NaN inside every gap wider than ``bandpass.mask_gap_min`` so a
+    plotted line breaks there instead of bridging missing data."""
+    limit = pd.Timedelta(minutes=utils.load_config()["bandpass"].get("mask_gap_min", 30.0))
+    breaks = s.index[1:][s.index.to_series().diff().iloc[1:] > limit]
+    if len(breaks) == 0:
+        return s
+    gaps = pd.Series(np.nan, index=breaks - pd.Timedelta(seconds=1))
+    return pd.concat([s, gaps]).sort_index()
+
+
 def plot_qc_day(raw: pd.DataFrame, seg: pd.DataFrame, filtered, band, day: date,
                 out_path: Path, station: str, param: str, font_size: int = 9,
                 smooth_window: str = SMOOTH_WINDOW) -> plt.Figure:
@@ -268,7 +280,7 @@ def plot_qc_day(raw: pd.DataFrame, seg: pd.DataFrame, filtered, band, day: date,
     sub = raw.dropna(subset=[param])
     ax.scatter(sub["datetime"], sub[param], s=6, color="grey", alpha=0.6, lw=0,
                label="raw", zorder=2)
-    smoothed = smooth_series(seg, param, smooth_window)
+    smoothed = _break_at_gaps(smooth_series(seg, param, smooth_window))
     if not smoothed.empty:
         ax.plot(smoothed.index, smoothed.values, color="red", lw=1.6,
                 label=f"{smooth_window} mean (QC segment)", zorder=3)
