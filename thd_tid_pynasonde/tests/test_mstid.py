@@ -9,8 +9,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import mstid
 
-C = dict(min_event_min=60.0, edge_min=30.0, min_ls_power=0.5, min_cycles=2.5)
-BAND = (20.0, 60.0)
+C = dict(min_event_min=60.0, edge_min=30.0)
 
 
 def curve(values):
@@ -41,32 +40,21 @@ class EventTests(unittest.TestCase):
         return pd.Series(amp * env * np.sin(2 * np.pi * m / period), index=idx)
 
     def test_detects_wave_packet_and_period(self):
-        ev = mstid.detect_events(self.packet(1.0), amp_thr=0.5, cadence=5.0, c=C, band=BAND)
+        ev = mstid.detect_events(self.packet(1.0), amp_thr=0.5, cadence=5.0, c=C)
         self.assertEqual(len(ev), 1)
         self.assertAlmostEqual(ev[0]["period_min"], 30.0, delta=2.0)
         self.assertAlmostEqual(ev[0]["duration_min"], 180.0, delta=30.0)
         self.assertGreater(ev[0]["amplitude"], 0.8)
 
     def test_below_threshold_or_too_short_gives_nothing(self):
-        self.assertEqual(mstid.detect_events(self.packet(0.3), 0.5, 5.0, C, BAND), [])
-        self.assertEqual(mstid.detect_events(self.packet(1.0, dur_h=0.5), 0.5, 5.0, C, BAND), [])
-
-    def test_rejects_sample_to_sample_jitter(self):
-        idx = pd.date_range("2025-06-01", periods=144, freq="5min")
-        jitter = pd.Series(np.where(np.arange(144) % 2 == 0, 1.0, -1.0), index=idx)  # 10-min period, large
-        self.assertEqual(mstid.detect_events(jitter, 0.5, 5.0, C, BAND), [])
-
-    def test_rejects_isolated_step(self):
-        idx = pd.date_range("2025-06-01", periods=144, freq="5min")
-        step = pd.Series(0.0, index=idx)
-        step.iloc[60:90] = 1.0  # 2.5-h plateau: large envelope, no in-band oscillation
-        self.assertEqual(mstid.detect_events(step, 0.5, 5.0, C, BAND), [])
+        self.assertEqual(mstid.detect_events(self.packet(0.3), 0.5, 5.0, C), [])
+        self.assertEqual(mstid.detect_events(self.packet(1.0, dur_h=0.5), 0.5, 5.0, C), [])
 
     def test_nan_gap_splits_events_and_edges_are_ignored(self):
         s = self.packet(1.0, hours=14.0, start_h=2.0, dur_h=10.0)
-        self.assertEqual(mstid.detect_events(s, np.nan, 5.0, C, BAND), [])  # NaN threshold is safe
+        self.assertEqual(mstid.detect_events(s, np.nan, 5.0, C), [])  # NaN threshold is safe
         s.iloc[72:84] = np.nan  # blank 06:00-07:00 in the middle of the packet
-        ev = mstid.detect_events(s, 0.5, 5.0, C, BAND)
+        ev = mstid.detect_events(s, 0.5, 5.0, C)
         self.assertEqual(len(ev), 2)  # one event each side of the blanked hour
         self.assertTrue(all(e["end"] <= pd.Timestamp("2025-06-01 06:00") or e["start"] >= pd.Timestamp("2025-06-01 07:00") for e in ev))
 

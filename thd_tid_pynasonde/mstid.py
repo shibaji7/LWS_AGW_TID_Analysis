@@ -4,23 +4,19 @@ For every QC-passed station/day/parameter:
 
 A. Residual: the day's cleaned samples minus the station's quiet-day median
    curve (``quiet_curve.py``) for that month, interpolated (24 h periodic) onto
-   the sample times (NaN where the baseline is NaN). The residual is then
-   de-spiked (Hampel, ``despike_*``) so isolated jumps/jitter cannot ring the filter.
-B. MSTID band: ``quality.bandpass`` with the short-period edge raised to
-   ``max(band_short_min, nyquist_margin * cadence)`` (so it stays well clear of the
-   Nyquist period where scaler jitter lives) up to 60 min; output blanked inside
-   gaps wider than ``bandpass.mask_gap_min``.
-C. Metrics: band-pass RMS, peak-to-peak, ``amp90`` (90th percentile of |band-pass|,
-   an amplitude that single spikes cannot dominate), dominant period
-   (Lomb-Scargle), and wave-packet events: runs where the Hilbert envelope exceeds
-   the null amplitude for >= ``min_event_min`` AND that are a coherent wave
-   (Lomb-Scargle power >= ``min_ls_power`` at a period within the band, and
-   duration >= ``min_cycles`` periods). Each event has start/end, amplitude,
-   period, local solar time and a flag for being near the solar terminator.
-D. Significance: the null is the ``null_percentile``-th percentile of ``amp90``
-   over the *quiet* days of the same station x parameter x month. A day's
-   ``amp_percentile`` is its rank within that distribution. ``enhanced`` =
-   ``amp90`` above the null AND at least one non-terminator event.
+   the sample times. Not computed where the baseline is NaN.
+B. MSTID band: the residual is band-passed with ``quality.bandpass`` (default
+   15-60 min; the short edge is raised for coarse cadence; output blanked
+   inside gaps wider than ``bandpass.mask_gap_min``).
+C. Metrics: band-pass RMS and peak-to-peak (absolute and % of baseline),
+   dominant period (Lomb-Scargle), and wave-packet events: runs where the
+   Hilbert envelope exceeds ``sqrt(2) * RMS_null`` for at least ``min_event_min``,
+   each with start/end, amplitude, period, local solar time and a flag for
+   events near the solar terminator (sunrise/sunset variability mimics MSTIDs).
+D. Significance: RMS_null is the ``null_percentile``-th percentile of band-pass
+   RMS over the *quiet* days of the same station x parameter x month. A day's
+   ``rms_percentile`` is its rank within that quiet-day distribution.
+   ``enhanced`` = RMS above the null percentile AND at least one event.
 
 Outputs (``Data/analysis/``): ``mstid_days.csv``, ``mstid_events.csv``, summary
 figure per station, and per-day figures in ``Data/figures/mstid/<station>/``.
@@ -44,14 +40,6 @@ import utils
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = quiet_curve.OUT_DIR
 FIG_DIR = Path(os.environ.get("MSTID_FIG_DIR", str(ROOT / "Data" / "figures" / "mstid")))
-
-
-def band_config(c: dict) -> dict:
-    """Full config with the MSTID band's short-period limits swapped in for quality.bandpass."""
-    full = dict(utils.load_config())
-    full["bandpass"] = {**full["bandpass"], "period_min_short": c["band_short_min"],
-                        "nyquist_margin": c["nyquist_margin"]}
-    return full
 
 
 def mcfg() -> dict:
@@ -114,22 +102,17 @@ def mean_period(t_min: np.ndarray, y: np.ndarray) -> float:
     return float(2 * np.mean(np.diff(tz)))
 
 
-def detect_events(filtered: pd.Series, amp_thr: float, cadence: float, c: dict,
-                  band: tuple[float, float] | None = None) -> list[dict]:
-    """Coherent wave packets: runs of the Hilbert envelope above ``amp_thr``.
+def detect_events(filtered: pd.Series, amp_thr: float, cadence: float, c: dict) -> list[dict]:
+    """Runs of the Hilbert envelope above ``amp_thr`` lasting >= ``min_event_min``.
 
     ``filtered`` is the band-passed series on a uniform grid with NaN in masked
     gaps; each NaN-free chunk is analysed separately and its edges (``edge_min``)
-    are ignored. A run is kept only if it lasts >= ``min_event_min``, its
-    Lomb-Scargle peak (within ``band``) has normalised power >= ``min_ls_power``,
-    and it spans >= ``min_cycles`` periods -- this rejects one-sample jitter and
-    isolated jumps, which have no coherent period inside the band.
+    are ignored.
     """
     events = []
     valid = filtered.notna().to_numpy()
     if not valid.any() or not np.isfinite(amp_thr):
         return events
-    band = band or (15.0, 60.0)
     cuts = np.flatnonzero(np.diff(valid.astype(int)) != 0) + 1
     for chunk in np.split(np.arange(len(filtered)), cuts):
         if not valid[chunk[0]] or len(chunk) < 8:
@@ -148,12 +131,9 @@ def detect_events(filtered: pd.Series, amp_thr: float, cadence: float, c: dict,
                 continue
             t = filtered.index[chunk[a:b]]
             tmin = (t - t[0]).total_seconds().to_numpy() / 60.0
-            period, power = dominant_period(tmin, y[a:b], band)
-            if not (power >= c["min_ls_power"]) or dur < c["min_cycles"] * period:
-                continue
             events.append(dict(start=t[0], end=t[-1], duration_min=dur,
-                               amplitude=float(np.nanmax(env[a:b])), period_min=period,
-                               ls_power=power, n_cycles=dur / period))
+                               amplitude=float(np.nanmax(env[a:b])),
+                               period_min=mean_period(tmin, y[a:b])))
     return events
 
 
@@ -185,7 +165,6 @@ def analyse_station_param(station: str, param: str, qc: pd.DataFrame, quiet: pd.
         logger.warning(f"{station} {param}: no quiet curve (run quiet_curve.py); skipping")
         return pd.DataFrame(), pd.DataFrame(), {}
     qcfg = quality.cfg()
-    band_cfg = band_config(c)
     lat, lon = station_coords(station)
     rows, store = [], {}
     for day in sorted(qc.date):
@@ -200,11 +179,7 @@ def analyse_station_param(station: str, param: str, qc: pd.DataFrame, quiet: pd.
         resid = seg.assign(**{param: seg[param].to_numpy() - b["median"]}).dropna(subset=[param])
         if len(resid) < 8:
             continue
-        window = max(3, int(round(c["despike_window_min"] / m["cadence_min"])) | 1)
-        spike = quality.hampel_mask(resid[param].to_numpy(), window, c["despike_k"], qcfg["min_scale"]["km" if param.lower().startswith("h") else "MHz"])
-        n_despiked = int(spike.sum())
-        resid = resid[~spike].reset_index(drop=True)
-        filt, band = quality.bandpass(resid, param, m["cadence_min"], band_cfg)
+        filt, band = quality.bandpass(resid, param, m["cadence_min"])
         if filt is None:
             continue
         v = filt.dropna()
@@ -214,10 +189,9 @@ def analyse_station_param(station: str, param: str, qc: pd.DataFrame, quiet: pd.
         period, power = dominant_period(tmin, v.to_numpy(), band)
         med_base = float(np.nanmedian(b["median"]))
         rms = float(np.sqrt(np.mean(v.to_numpy() ** 2)))
-        amp90 = float(np.percentile(np.abs(v.to_numpy()), 90))
         rows.append(dict(station=station, param=param, date=day, month=day.month, quiet=bool(quiet.get(day, False)),
                          cadence_min=m["cadence_min"], band_short_min=band[0], band_long_min=band[1],
-                         rms=rms, amp90=amp90, n_despiked=n_despiked, p2p=float(v.max() - v.min()), rms_pct_of_baseline=100 * rms / med_base, amp90_pct_of_baseline=100 * amp90 / med_base,
+                         rms=rms, p2p=float(v.max() - v.min()), rms_pct_of_baseline=100 * rms / med_base,
                          dominant_period_min=period, ls_power=power,
                          resid_mean=float(resid[param].mean()), n_baseline_days=int(month_curve.n_days.max())))
         store[day] = dict(seg=seg, base=b, resid=resid, filt=filt, band=band, cadence=m["cadence_min"])
@@ -228,20 +202,20 @@ def analyse_station_param(station: str, param: str, qc: pd.DataFrame, quiet: pd.
     # D. significance against quiet days of the same month
     thr, pct, nnull = {}, [], {}
     for month, g in days.groupby("month"):
-        null = g.loc[g.quiet, "amp90"].to_numpy()
+        null = g.loc[g.quiet, "rms"].to_numpy()
         nnull[month] = len(null)
         thr[month] = np.percentile(null, c["null_percentile"]) if len(null) >= c["min_null_days"] else np.nan
     for r in days.itertuples():
-        null = days.loc[(days.month == r.month) & days.quiet, "amp90"].to_numpy()
-        pct.append(float((null <= r.amp90).mean()) if len(null) >= c["min_null_days"] else np.nan)
-    days["amp_percentile"] = pct
-    days["null_amp_thr"] = days.month.map(thr)
+        null = days.loc[(days.month == r.month) & days.quiet, "rms"].to_numpy()
+        pct.append(float((null <= r.rms).mean()) if len(null) >= c["min_null_days"] else np.nan)
+    days["rms_percentile"] = pct
+    days["null_rms_thr"] = days.month.map(thr)
     days["n_null_days"] = days.month.map(nnull)
 
     events = []
     for r in days.itertuples():
-        amp_thr = r.null_amp_thr  # amp90 ~ sinusoid amplitude, so compare the envelope to it directly
-        for ev in detect_events(store[r.date]["filt"], amp_thr, r.cadence_min, c, band=store[r.date]["band"]):
+        amp_thr = np.sqrt(2.0) * r.null_rms_thr
+        for ev in detect_events(store[r.date]["filt"], amp_thr, r.cadence_min, c):
             mid = ev["start"] + (ev["end"] - ev["start"]) / 2
             events.append(dict(station=station, param=param, date=r.date, quiet=r.quiet, **ev,
                                local_hour=local_hour(mid, lon), sza_deg=utils._solar_zenith_angle(mid.to_pydatetime(), lat, lon),
@@ -252,7 +226,7 @@ def analyse_station_param(station: str, param: str, qc: pd.DataFrame, quiet: pd.
     nev_clean = events[~events.near_terminator].groupby("date").size() if not events.empty else pd.Series(dtype=int)
     days["n_events"] = days.date.map(nev).fillna(0).astype(int)
     days["n_events_non_terminator"] = days.date.map(nev_clean).fillna(0).astype(int)
-    days["enhanced"] = (days.amp90 > days.null_amp_thr) & (days.n_events_non_terminator > 0)
+    days["enhanced"] = (days.rms > days.null_rms_thr) & (days.n_events_non_terminator > 0)
     return days, events, store
 
 
@@ -273,7 +247,7 @@ def plot_day(station: str, param: str, row, events: pd.DataFrame, st: dict, out_
     ax.plot(t, b["median"], color="red", lw=1.6, label="quiet median")
     ax.set_ylabel(f"{param} [{units}]")
     ax.legend(fontsize=7, loc="best", framealpha=0.7, edgecolor="none")
-    ax.set_title(f"{station} {param} {day.date()} | amp90 {row.amp90:.3g} ({row.amp_percentile:.0%} of quiet) | "
+    ax.set_title(f"{station} {param} {day.date()} | RMS {row.rms:.3g} ({row.rms_percentile:.0%} of quiet) | "
                  f"P={row.dominant_period_min:.0f} min | {'ENHANCED' if row.enhanced else 'not enhanced'}",
                  fontsize=8, loc="left")
     axes[1].plot(st["resid"]["datetime"], st["resid"][param], color="tab:blue", lw=0.8)
@@ -325,9 +299,9 @@ def plot_summary(station: str, days: pd.DataFrame, events: pd.DataFrame, quiet_t
     for p in params:
         d = days[days.param == p].set_index("date")
         kp = quiet_tbl.kp_max.reindex(d.index)
-        ax[2].scatter(kp, d.amp90_pct_of_baseline, s=8, alpha=0.5, label=p)
+        ax[2].scatter(kp, d.rms_pct_of_baseline, s=8, alpha=0.5, label=p)
     ax[2].set_xlabel("max Kp of the day")
-    ax[2].set_ylabel("band-pass amp90 [% of baseline]")
+    ax[2].set_ylabel("band-pass RMS [% of baseline]")
     ax[2].legend(fontsize=7)
     for a in ax:
         a.grid(ls=":", alpha=0.5)

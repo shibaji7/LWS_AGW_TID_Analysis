@@ -216,10 +216,4 @@ min_null_days = 8         # minimum quiet days (station x param x month) needed 
 min_event_min = 60.0      # an event is an envelope excursion above threshold lasting at least this long
 edge_min = 30.0           # ignore envelope within this long of a data-chunk edge (filter/Hilbert edge effects)
 terminator_margin_min = 60.0  # flag events whose window +/- this margin spans the solar terminator (SZA=90)
-band_short_min = 20.0     # MSTID band short-period edge [min] (raised further to nyquist_margin * cadence)
-nyquist_margin = 3.0      # short edge >= this x cadence (7.5-min cadence -> 22.5 min), clear of jitter near Nyquist
-despike_window_min = 45.0 # Hampel window for de-spiking the baseline residual before filtering
-despike_k = 3.0           # spike if |resid - rolling median| > k scaled MADs
-min_ls_power = 0.5        # event must have a Lomb-Scargle peak with at least this normalised power in-band
-min_cycles = 2.5          # ... and span at least this many periods
 plot = "flagged"          # per-day figures: "flagged" | "all" | "none"  (env MSTID_PLOT overrides)
