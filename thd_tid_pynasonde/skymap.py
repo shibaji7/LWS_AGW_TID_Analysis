@@ -211,7 +211,7 @@ def plot_event_day(station: str, day: pd.Timestamp, out_path: Path | None = None
                               (ax[3], "azimuth", np.arange(0, 365, 5), "azimuth [deg]")):
         times = np.sort(ech.file_time.unique())
         H = np.array([np.histogram(ech.loc[ech.file_time == t, col], bins=bins)[0] for t in times]).T
-        a.pcolormesh(times, bins, H, shading="auto", cmap="viridis")
+        a.pcolormesh(times, 0.5 * (bins[:-1] + bins[1:]), H, shading="nearest", cmap="viridis")
         a.set_ylabel(lab)
     # (4) tilt time series
     ax[4].plot(tilt.index, tilt.ew, color="tab:blue", lw=1.0, label="E-W (x)")
