@@ -22,6 +22,7 @@ Outputs under ``Data/analysis/``: ``quiet_days.csv``,
 
     python analysis.py                      # all stations
     ANALYSIS_STATIONS=AL945 python analysis.py
+    ANALYSIS_STATIONS=AL945 ANALYSIS_BY_YEAR=1 python analysis.py   # one curve per month per year
 """
 from __future__ import annotations
 
@@ -53,7 +54,13 @@ DEFAULTS = dict(
 
 
 def acfg() -> dict:
-    return {**DEFAULTS, **utils.load_config().get("analysis", {})}
+    """DEFAULTS < config.toml [analysis] < env (ANALYSIS_BY_YEAR=1, ANALYSIS_MIN_DAYS=n)."""
+    c = {**DEFAULTS, **utils.load_config().get("analysis", {})}
+    if os.environ.get("ANALYSIS_BY_YEAR"):
+        c["by_year"] = os.environ["ANALYSIS_BY_YEAR"].strip().lower() in {"1", "true", "yes", "y", "on"}
+    if os.environ.get("ANALYSIS_MIN_DAYS"):
+        c["min_days"] = int(os.environ["ANALYSIS_MIN_DAYS"])
+    return c
 
 
 # ---------------------------------------------------------------------------
