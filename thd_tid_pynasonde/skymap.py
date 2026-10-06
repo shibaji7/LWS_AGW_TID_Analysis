@@ -6,9 +6,12 @@ For one station/day, from the SKY files downloaded by ``didbase_pipeline.py --sk
 2. Filter echoes to the bulk F-region plasma: range window, zenith angle <= 25 deg
    and a per-sounding Doppler outlier filter (``[skymap]`` in config.toml).
 3. Per sounding: echo count, zenith/azimuth histograms and the echo *centre*
-   (median x/y position) as the ionospheric tilt. ASSUMPTION: SKY ``x_coord`` is
-   East-West (+East) and ``y_coord`` North-South (+North), in degrees from zenith.
-4. Continuous Morse wavelet transform (gamma=3, beta=20) of the E-W and N-S tilt.
+   (median position) as the ionospheric tilt. Axis convention (that of
+   ``pynasonde.digisonde.digi_plots.convert_to_rt``): SKY ``x_coord`` is positive
+   toward NORTH and ``y_coord`` positive toward WEST (right-handed with z up), in
+   degrees from zenith; so North = x, East = -y, azimuth = atan2(-y, x) clockwise from N.
+4. Continuous Morse wavelet transform (gamma=3, beta=20) of the E-W and N-S tilt,
+   with a 95% red-noise (AR(1) Monte-Carlo) significance contour.
 5. Overlay the ``mstid.py`` events for the day.
 
     python skymap.py AL945 2024-04-02
@@ -76,10 +79,12 @@ def load_day(station: str, day: pd.Timestamp, data_dir: Path | None = None, use_
 # ---------------------------------------------------------------------------
 
 def add_geometry(df: pd.DataFrame) -> pd.DataFrame:
-    """zenith [deg] = radius of (x, y); azimuth [deg, clockwise from North] assuming x=East, y=North."""
+    """zenith [deg] = radius of (x, y); azimuth [deg, clockwise from North]; x = North, y = West."""
     out = df.copy()
+    out["north"] = out.x_coord
+    out["east"] = -out.y_coord
     out["zenith"] = np.hypot(out.x_coord, out.y_coord)
-    out["azimuth"] = np.degrees(np.arctan2(out.x_coord, out.y_coord)) % 360.0
+    out["azimuth"] = np.degrees(np.arctan2(out.east, out.north)) % 360.0
     return out
 
 
@@ -94,10 +99,10 @@ def filter_echoes(df: pd.DataFrame, c: dict | None = None) -> pd.DataFrame:
 
 
 def tilt_series(echoes: pd.DataFrame, c: dict | None = None) -> pd.DataFrame:
-    """Per-sounding echo count and centre (median x = E-W, median y = N-S) [deg], de-spiked."""
+    """Per-sounding echo count and centre (E-W = -y positive East, N-S = x positive North) [deg], de-spiked."""
     c = c or scfg()
     g = echoes.groupby("file_time")
-    t = pd.DataFrame({"n_echoes": g.size(), "ew": g.x_coord.median(), "ns": g.y_coord.median(),
+    t = pd.DataFrame({"n_echoes": g.size(), "ew": -g.y_coord.median(), "ns": g.x_coord.median(),
                       "mean_dop": g.spect_dop.mean(), "mean_range": g.group_range.mean()})
     t.loc[t.n_echoes < c["min_echoes"], ["ew", "ns", "mean_dop"]] = np.nan
     for col in ("ew", "ns"):  # drop isolated bad soundings (Hampel) so one outlier cannot dominate the wavelet
@@ -150,6 +155,30 @@ def wavelet_of(series: pd.Series, c: dict | None = None):
     periods = np.geomspace(c["period_min"], c["period_max"], 60)
     W, coi = morse_cwt(y, c["cadence_min"], periods, c["morse_gamma"], c["morse_beta"])
     return grid, periods, np.abs(W) ** 2, coi, y
+
+
+def red_noise_threshold(y: np.ndarray, c: dict | None = None, quantile: float = 95.0, n_surr: int = 200, seed: int = 0):
+    """Per-period power threshold from AR(1) red-noise surrogates (Monte Carlo, cf. Torrence & Compo 1998).
+
+    The lag-1 autocorrelation and variance of ``y`` set the surrogates; the threshold at each period is
+    the ``quantile``-th percentile of the surrogate wavelet power pooled over time and realisations.
+    """
+    c = c or scfg()
+    y = np.asarray(y, float) - np.mean(y)
+    alpha = float(np.clip(np.corrcoef(y[:-1], y[1:])[0, 1], 0.0, 0.99)) if len(y) > 3 else 0.0
+    sigma = float(np.std(y))
+    rng = np.random.default_rng(seed)
+    periods = np.geomspace(c["period_min"], c["period_max"], 60)
+    pool = []
+    for _ in range(n_surr):
+        e = rng.normal(0.0, sigma * np.sqrt(1 - alpha ** 2), len(y))
+        x = np.empty(len(y))
+        x[0] = rng.normal(0.0, sigma)
+        for i in range(1, len(y)):
+            x[i] = alpha * x[i - 1] + e[i]
+        W, _ = morse_cwt(x, c["cadence_min"], periods, c["morse_gamma"], c["morse_beta"])
+        pool.append(np.abs(W) ** 2)
+    return np.percentile(np.concatenate(pool, axis=1), quantile, axis=1), alpha
 
 
 def ridge_in_window(grid, periods, power, coi, start, end):
@@ -276,11 +305,11 @@ def plot_skymaps(ech, station, day, out_dir, per_page=9):
             a.tick_params(labelsize=6)
             th = np.radians(g.azimuth.to_numpy())
             for mask, marker in ((g.spect_dop >= 0, "+"), (g.spect_dop < 0, "o")):
-                sc = a.scatter(th[mask.to_numpy()], g.zenith[mask], c=g.spect_dop[mask], cmap="coolwarm", vmin=-vmax,
+                sc = a.scatter(th[mask.to_numpy()], g.zenith[mask], c=g.spect_dop[mask], cmap="RdBu", vmin=-vmax,
                                vmax=vmax, s=9 if marker == "+" else 7, marker=marker, linewidths=0.6)
             a.set_title(f"{pd.Timestamp(t):%H:%M:%S}  n={len(g)}", fontsize=8)
         cb = fig.colorbar(sc, ax=axes, shrink=0.5, pad=0.02)
-        cb.set_label("Doppler line number (+ cross, - circle)", fontsize=8)
+        cb.set_label("Doppler line number (blue + cross, red - circle)", fontsize=8)
         fig.suptitle(f"{station} {day.date()}  skymaps (filtered echoes)  page {page + 1}/{n_pages}", fontsize=10)
         fig.savefig(out_dir / f"skymaps_{page + 1:02d}.png", dpi=90)
         plt.close(fig)
@@ -322,10 +351,12 @@ def plot_periods(tilt, station, day, events, terms, out, c):
     ridges = []
     for row, col, lab in ((0, "ew", "E-W tilt"), (1, "ns", "N-S tilt")):
         a, b = axes[row]
-        grid, periods, power, coi, _ = wavelet_of(tilt[col], c)
+        grid, periods, power, coi, yy = wavelet_of(tilt[col], c)
+        thr, alpha = red_noise_threshold(yy, c)
         a.contourf(mdates.date2num(grid.to_pydatetime()), periods, power, levels=20, cmap="turbo")
+        a.contour(mdates.date2num(grid.to_pydatetime()), periods, power / thr[:, None], levels=[1.0], colors="w", linewidths=1.6)
         a.set_yscale("log")
-        a.set_ylabel(f"period [min]\n{lab}")
+        a.set_ylabel(f"period [min]\n{lab}  (AR1 a={alpha:.2f})")
         a.plot(mdates.date2num((grid[0] + pd.to_timedelta(coi, "min")).to_pydatetime()), periods, "w--", lw=0.8)
         a.plot(mdates.date2num((grid[-1] - pd.to_timedelta(coi, "min")).to_pydatetime()), periods, "w--", lw=0.8)
         for lo, hi in ((15, 60),):
@@ -334,7 +365,7 @@ def plot_periods(tilt, station, day, events, terms, out, c):
         _decorate([a], day, events, terms, xlabel=(row == 1))
         if row == 0:
             a.set_title(f"{station} {day.date()}  Morse wavelet (gamma={c['morse_gamma']:g}, beta={c['morse_beta']:g}) | "
-                        f"Lomb-Scargle   (dotted: 15-60 min MSTID band)", fontsize=8, loc="left")
+                        f"Lomb-Scargle   (white contour: 95% red-noise significance; dotted: 15-60 min band)", fontsize=8, loc="left")
         ls = lomb_scargle(tilt[col], periods)
         b.plot(ls, periods, color="k")
         b.set_xlabel("LS power")
@@ -342,7 +373,8 @@ def plot_periods(tilt, station, day, events, terms, out, c):
         for r in events.itertuples():
             P, pw = ridge_in_window(grid, periods, power, coi, r.start, r.end)
             ridges.append(dict(component=col, param=r.param, start=r.start, end=r.end,
-                               mstid_period_min=r.period_min, wavelet_period_min=P, wavelet_power=pw))
+                               mstid_period_min=r.period_min, wavelet_period_min=P, wavelet_power=pw,
+                               signif_ratio=(pw / float(np.interp(P, periods, thr))) if np.isfinite(P) else np.nan))
         ridges.append(dict(component=col, param="whole-day LS peak", start=grid[0], end=grid[-1],
                            mstid_period_min=np.nan, wavelet_period_min=float(periods[int(np.nanargmax(ls))]) if np.isfinite(ls).any() else np.nan,
                            wavelet_power=float(np.nanmax(ls)) if np.isfinite(ls).any() else np.nan))

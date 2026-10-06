@@ -53,8 +53,26 @@ class SunTests(unittest.TestCase):
             rows.append(pd.DataFrame(dict(file_time=T + pd.Timedelta(minutes=7.5 * i), x_coord=xs, y_coord=rng.normal(0, 1, 400),
                                           spect_dop=0.0, group_range=300.0)))
         t = skymap.tilt_series(pd.concat(rows), C)
-        self.assertTrue(np.isnan(t.ew.iloc[30]))
-        self.assertEqual(int(t.ew.isna().sum()), 1)
+        self.assertTrue(np.isnan(t.ns.iloc[30]))  # outlier was put in x_coord = North
+        self.assertEqual(int(t.ns.isna().sum()), 1)
+
+
+class SignificanceTests(unittest.TestCase):
+    def test_threshold_exceeded_by_signal_not_by_noise(self):
+        rng = np.random.default_rng(3)
+        n = 190
+        t = np.arange(n) * 7.5
+        noise = rng.normal(0, 1, n)
+        sig = noise + 4 * np.sin(2 * np.pi * t / 40.0) * (t > 400) * (t < 900)
+        thr, alpha = skymap.red_noise_threshold(noise, C, n_surr=80)
+        periods = np.geomspace(C["period_min"], C["period_max"], 60)
+        W_n, _ = skymap.morse_cwt(noise, 7.5, periods, 3.0, 20.0)
+        W_s, _ = skymap.morse_cwt(sig, 7.5, periods, 3.0, 20.0)
+        frac = lambda W: (np.abs(W) ** 2 > thr[:, None]).mean()
+        self.assertLess(frac(W_n), 0.15)           # pure noise: few exceedances (threshold is the 95th pct)
+        self.assertGreater(frac(W_s), frac(W_n) + 0.02)
+        i40 = int(np.argmin(np.abs(periods - 40)))
+        self.assertTrue((np.abs(W_s[i40]) ** 2 > thr[i40]).any())
 
 
 class FilterTests(unittest.TestCase):
@@ -79,14 +97,16 @@ class FilterTests(unittest.TestCase):
     def test_tilt_is_echo_centre_and_needs_min_echoes(self):
         kept = skymap.filter_echoes(self.echoes(), C)
         t = skymap.tilt_series(kept, C)
-        self.assertAlmostEqual(t.ew.iloc[0], 2.0, delta=0.8)
-        self.assertAlmostEqual(t.ns.iloc[0], -1.0, delta=0.8)
+        self.assertAlmostEqual(t.ns.iloc[0], 2.0, delta=0.8)   # x_coord is North
+        self.assertAlmostEqual(t.ew.iloc[0], 1.0, delta=0.8)   # East = -y_coord
         t2 = skymap.tilt_series(kept.head(10), C)
         self.assertTrue(np.isnan(t2.ew.iloc[0]))
 
-    def test_azimuth_from_north_clockwise(self):
-        g = skymap.add_geometry(pd.DataFrame(dict(x_coord=[0.0, 5.0, 0.0], y_coord=[5.0, 0.0, -5.0])))
-        np.testing.assert_allclose(g.azimuth, [0.0, 90.0, 180.0])
+    def test_azimuth_from_north_clockwise_x_north_y_west(self):
+        # x = +North, y = +West (pynasonde convention): (x,y) = N, W, S, E
+        g = skymap.add_geometry(pd.DataFrame(dict(x_coord=[5.0, 0.0, -5.0, 0.0], y_coord=[0.0, 5.0, 0.0, -5.0])))
+        np.testing.assert_allclose(g.azimuth, [0.0, 270.0, 180.0, 90.0])
+        np.testing.assert_allclose(g.zenith, 5.0)
 
 
 if __name__ == "__main__":
