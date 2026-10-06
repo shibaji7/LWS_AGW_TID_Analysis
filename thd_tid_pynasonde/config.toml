@@ -196,9 +196,9 @@ order = 4
 mask_gap_min = 30.0    # band-pass (and red smooth) is blanked inside gaps wider than this
 
 # ---------------------------------------------------------------------------
-# Quiet-day curves (analysis.py)
+# Quiet-day curves (quiet_curve.py)
 # ---------------------------------------------------------------------------
-[analysis]
+[quiet_curve]
 kp_max = 3.0             # max 3-hourly Kp on the day and the previous day (<=)
 symh_min = -30.0         # min SYM-H [nT] on the day and the previous day (>)
 ae_max = 500.0           # max AE [nT] on the day and the previous day (<)
@@ -206,3 +206,14 @@ min_omni_coverage = 0.8  # fraction of a day's 5-min OMNI samples that must be f
 bin_min = 15.0           # UT time-of-day bin width [min]
 min_days = 5             # minimum quiet days contributing to a bin, else NaN
 by_year = false          # false: pool years per calendar month; true: curve per month per year
+
+# ---------------------------------------------------------------------------
+# MSTID signatures vs. the quiet-day baseline (mstid.py)
+# ---------------------------------------------------------------------------
+[mstid]
+null_percentile = 95.0    # a day is "enhanced" if its band-pass RMS exceeds this percentile of the quiet-day RMS
+min_null_days = 8         # minimum quiet days (station x param x month) needed to form that reference
+min_event_min = 60.0      # an event is an envelope excursion above threshold lasting at least this long
+edge_min = 30.0           # ignore envelope within this long of a data-chunk edge (filter/Hilbert edge effects)
+terminator_margin_min = 60.0  # flag events whose window +/- this margin spans the solar terminator (SZA=90)
+plot = "flagged"          # per-day figures: "flagged" | "all" | "none"  (env MSTID_PLOT overrides)

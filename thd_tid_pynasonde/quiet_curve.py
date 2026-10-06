@@ -1,7 +1,7 @@
 """Statistical quiet-day curves from QC-passed DIDBASE parameters.
 
 Pipeline (all thresholds in ``DEFAULTS`` below; override any of them with an
-``[analysis]`` table in config.toml):
+``[quiet_curve]`` table in config.toml):
 
 1. Good data: station/day/parameter rows with ``passed == True`` in
    ``Data/quality/day_quality.csv`` (run ``quality.py`` first); samples come
@@ -20,9 +20,9 @@ Outputs under ``Data/analysis/``: ``quiet_days.csv``,
 ``quiet_curve_<station>_<param>.csv`` and figures in
 ``Data/figures/quiet_curve/``. Run from this directory:
 
-    python analysis.py                      # all stations
-    ANALYSIS_STATIONS=AL945 python analysis.py
-    ANALYSIS_STATIONS=AL945 ANALYSIS_BY_YEAR=1 python analysis.py   # one curve per month per year
+    python quiet_curve.py                      # all stations
+    ANALYSIS_STATIONS=AL945 python quiet_curve.py
+    ANALYSIS_STATIONS=AL945 ANALYSIS_BY_YEAR=1 python quiet_curve.py   # one curve per month per year
 """
 from __future__ import annotations
 
@@ -54,8 +54,8 @@ DEFAULTS = dict(
 
 
 def acfg() -> dict:
-    """DEFAULTS < config.toml [analysis] < env (ANALYSIS_BY_YEAR=1, ANALYSIS_MIN_DAYS=n)."""
-    c = {**DEFAULTS, **utils.load_config().get("analysis", {})}
+    """DEFAULTS < config.toml [quiet_curve] < env (ANALYSIS_BY_YEAR=1, ANALYSIS_MIN_DAYS=n)."""
+    c = {**DEFAULTS, **utils.load_config().get("quiet_curve", {})}
     if os.environ.get("ANALYSIS_BY_YEAR"):
         c["by_year"] = os.environ["ANALYSIS_BY_YEAR"].strip().lower() in {"1", "true", "yes", "y", "on"}
     if os.environ.get("ANALYSIS_MIN_DAYS"):
