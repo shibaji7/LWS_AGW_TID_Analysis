@@ -217,3 +217,18 @@ min_event_min = 60.0      # an event is an envelope excursion above threshold la
 edge_min = 30.0           # ignore envelope within this long of a data-chunk edge (filter/Hilbert edge effects)
 terminator_margin_min = 60.0  # flag events whose window +/- this margin spans the solar terminator (SZA=90)
 plot = "flagged"          # per-day figures: "flagged" | "all" | "none"  (env MSTID_PLOT overrides)
+
+# ---------------------------------------------------------------------------
+# Skymap tilt + wavelet analysis of event days (skymap.py)
+# ---------------------------------------------------------------------------
+[skymap]
+range_min_km = 150.0      # keep F-region echoes only (reject lower-layer and multi-hop ranges)
+range_max_km = 450.0
+max_zenith_deg = 25.0     # echoes farther than this from zenith are dropped (Kouba et al. 2008)
+doppler_mad_k = 3.5       # per-file Doppler distribution filter: |dop - median| <= k * scaled MAD
+min_echoes = 30           # minimum filtered echoes per sounding to define a tilt sample
+cadence_min = 7.5         # DDM sounding cadence used for the uniform wavelet grid
+morse_gamma = 3.0         # Morse wavelet parameters (Lilly & Olhede 2012), as in the reference paper
+morse_beta = 20.0
+period_min = 10.0         # wavelet period range [min]
+period_max = 120.0
