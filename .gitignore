@@ -12,6 +12,9 @@ pyrt/dataset*
 *figures/*
 *.mat
 
+# thd_tid_pynasonde downloads/outputs (scaled+raw DIDBASE, RSF scaling, diagnostic plots)
+thd_tid_pynasonde/Data/
+
 
 # Distribution / packaging
 .Python
