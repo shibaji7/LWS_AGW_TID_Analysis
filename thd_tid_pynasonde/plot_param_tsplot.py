@@ -296,7 +296,8 @@ def plot_qc_day(raw: pd.DataFrame, seg: pd.DataFrame, filtered, band, day: date,
 
 
 def plot_all_daily(params: list[str] = ALL_PARAMS, output_dir: Path = ALL_OUTPUT_DIR,
-                    data_dir: Path = DATA_DIR) -> None:
+                    data_dir: Path = DATA_DIR, stations: list[str] | None = None,
+                    start: str | None = None, end: str | None = None) -> None:
     """One figure per QC-passed (station, day, param): raw grey scatter + smoothed QC segment (red), with band-pass below.
 
     Days are selected from ``Data/quality/day_quality.csv`` (run ``quality.py``
@@ -306,6 +307,12 @@ def plot_all_daily(params: list[str] = ALL_PARAMS, output_dir: Path = ALL_OUTPUT
         raise SystemExit(f"{quality.QC_PATH} not found; run quality.py first.")
     table = quality.load_quality()
     qc = table[table.param.isin(params)]
+    if stations:
+        qc = qc[qc.station.isin(stations)]
+    if start:
+        qc = qc[qc.date >= start]
+    if end:
+        qc = qc[qc.date <= end]
     passed = qc[qc.passed]
     logger.info(f"QC: {len(passed)}/{len(qc)} station-day-params passed; plotting those")
     c = quality.cfg()
@@ -356,7 +363,10 @@ def plot_all(params: list[str] = ALL_PARAMS, output_dir: Path = ALL_OUTPUT_DIR,
 
 if __name__ == "__main__":
     if RUN_DAILY:
-        plot_all_daily()
+        plot_all_daily(
+            stations=[x.strip() for x in os.environ.get("RSF_TSPLOT_DAILY_STATIONS", "").split(",") if x.strip()] or None,
+            start=os.environ.get("RSF_TSPLOT_DAILY_START") or None,
+            end=os.environ.get("RSF_TSPLOT_DAILY_END") or None)
     elif RUN_ALL:
         plot_all()
     else:
