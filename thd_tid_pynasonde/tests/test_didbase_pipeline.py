@@ -69,6 +69,27 @@ class DownloadTests(unittest.TestCase):
                 download(dt.date(2024, 4, 3))
             self.assertFalse((root / '2024/AU930/2024-04-03.json').exists())
 
+    def test_sky_download_cache_and_event_days(self):
+        now = dt.datetime(2026, 10, 6, 12)
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            db = Mock()
+            db.fetch_sky_files.return_value = [root / 'a.SKY', root / 'b.SKY']
+            day = dt.date(2024, 4, 2)
+            self.assertEqual(pipeline.download_day_sky(db, 'AL945', day, root, now=now), 'saved')
+            self.assertEqual(pipeline.download_day_sky(db, 'AL945', day, root, now=now), 'cached')
+            self.assertEqual(db.fetch_sky_files.call_count, 1)
+            self.assertEqual(json.loads((root / '2024/AL945/sky/2024-04-02.json').read_text())['files'], 2)
+            db.fetch_sky_files.return_value = []
+            self.assertEqual(pipeline.download_day_sky(db, 'AL945', dt.date(2024, 4, 3), root, now=now), 'empty')
+
+            csv = root / 'days.csv'
+            pd.DataFrame(dict(station=['AL945', 'AL945', 'AL945', 'MHJ45', 'AL945'],
+                              date=['2024-04-02', '2024-04-02', '2024-04-05', '2024-05-01', '2024-11-01'],
+                              enhanced=[True, True, False, True, True])).to_csv(csv, index=False)
+            self.assertEqual(pipeline.event_station_days(csv), [('AL945', dt.date(2024, 4, 2)), ('MHJ45', dt.date(2024, 5, 1))])
+            self.assertEqual(pipeline.event_station_days(csv, stations=['AL945']), [('AL945', dt.date(2024, 4, 2))])
+
 
 if __name__ == '__main__':
     unittest.main()

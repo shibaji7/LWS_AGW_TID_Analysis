@@ -6,6 +6,8 @@ Outputs (relative to this script), default settings from ``config.toml``:
     Data/didbase_giro_scaled/<year>/<station>/<YYYY-MM-DD>.json         (completion record)
     Data/didbase_giro_scaled/<year>/<station>/raw/<YYYY-MM-DD>/*.RSF    (--raw only)
     Data/didbase_giro_scaled/<year>/<station>/raw/<YYYY-MM-DD>.json     (--raw only)
+    Data/didbase_giro_scaled/<year>/<station>/sky/<YYYY-MM-DD>/*.SKY    (--sky only)
+    Data/didbase_giro_scaled/<year>/<station>/sky/<YYYY-MM-DD>.json     (--sky only)
 
 Scaled downloads request every catalogued parameter, quality flag and
 provenance field. The connector selects one scaler per measurement,
@@ -21,6 +23,12 @@ Geography is discovered from the Digisonde instrument catalogue and
 intersected with DIDBASE's live station list. --station-catalog supplies an
 alternative CSV with URSI, Country, Lat, Long columns. Unknown stations are
 reported for review.
+
+``--sky`` downloads raw DDM skymap files (SKY) from GIRO DriftBase instead (via
+``pynasonde.digisonde.driftbase``; env ``DRIFTBASE_URL/USER/PASSWORD/ROLE``).
+Combine with ``--stations`` and ``--days-csv`` (e.g. ``Data/analysis/mstid_days.csv``,
+using its ``station``/``date`` columns and, if present, only rows with
+``enhanced == True``) to fetch skymaps just for event days.
 """
 from __future__ import annotations
 
@@ -234,6 +242,83 @@ def download_day_raw(db, station, day, output_dir, *, now, overwrite=False, form
     return result
 
 
+def download_day_sky(db, station, day, output_dir, *, now, overwrite=False):
+    """Fetch raw skymap (SKY) files for one station-day from DriftBase."""
+    day_dir = output_dir / str(day.year) / station / 'sky' / day.isoformat()
+    status_path = day_dir.with_suffix('.json')
+    if not overwrite and day < now.date() and status_path.is_file():
+        try:
+            status = json.loads(status_path.read_text())
+            if (status.get('complete') and status.get('station') == station
+                    and status.get('date') == day.isoformat()):
+                return 'cached'
+        except (OSError, ValueError):
+            pass
+    start = dt.datetime.combine(day, dt.time.min)
+    end = min(dt.datetime.combine(day, dt.time.max), now)
+    day_dir.mkdir(parents=True, exist_ok=True)
+    paths = db.fetch_sky_files(station=station, start=start, end=end, out_dir=day_dir)
+    result = 'empty' if not paths else 'saved'
+    _atomic_json(dict(station=station, date=day.isoformat(), status=result, files=len(paths),
+        complete=day < now.date(), queried_through_utc=end.isoformat()), status_path)
+    logger.debug('{} {} (sky): {} ({} files)', station, day, result, len(paths))
+    return result
+
+
+def event_station_days(csv_path, stations=None, years=None, month_start=DEFAULT_MONTH_START, month_end=DEFAULT_MONTH_END):
+    """(station, date) pairs from a CSV with ``date`` (and optionally ``station``/``enhanced``) columns."""
+    frame = pd.read_csv(csv_path, parse_dates=['date'])
+    if 'enhanced' in frame:
+        frame = frame[frame.enhanced.astype(bool)]
+    if 'station' in frame and stations:
+        frame = frame[frame.station.isin(stations)]
+    if years:
+        frame = frame[frame.date.dt.year.isin(years)]
+    frame = frame[frame.date.dt.month.between(month_start, month_end)]
+    cols = ['station', 'date'] if 'station' in frame else ['date']
+    pairs = frame[cols].drop_duplicates().sort_values(cols)
+    if 'station' not in pairs:
+        if not stations:
+            raise ValueError('days CSV has no station column; pass --stations')
+        return [(s, d.date()) for s in stations for d in pairs.date]
+    return [(r.station, r.date.date()) for r in pairs.itertuples()]
+
+
+def run_sky(years=DEFAULT_YEARS, stations=None, output_dir=DATA_DIR, days_csv=None,
+            overwrite=False, retries=DEFAULT_RETRIES):
+    from pynasonde.digisonde.driftbase import DriftBaseConnector
+
+    if not stations and not days_csv:
+        raise ValueError('--sky needs --stations and/or --days-csv (skymaps are large)')
+    now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+    stations = [s.strip().upper() for s in stations] if stations else None
+    if days_csv:
+        pairs = event_station_days(days_csv, stations, years)
+    else:
+        pairs = [(s, d) for s in stations for d in requested_dates(years, now.date())]
+    pairs = [(s, d) for s, d in pairs if d <= now.date()]
+    if not pairs:
+        logger.info('No station-days to download.')
+        return
+    output_dir = Path(output_dir)
+    logger.info('Skymap download: {} station-days ({})', len(pairs), ', '.join(sorted({s for s, _ in pairs})))
+    with DriftBaseConnector(
+        os.environ.get('DRIFTBASE_URL', 'jdbc:firebirdsql://129.63.134.45/drift'),
+        os.environ.get('DRIFTBASE_USER', os.environ.get('DIDBASE_USER', 'ERAU')),
+        os.environ.get('DRIFTBASE_PASSWORD', os.environ.get('DIDBASE_PASSWORD', 'eraucar')),
+        os.environ.get('DRIFTBASE_ROLE', os.environ.get('DIDBASE_ROLE', 'COMMON')),
+    ) as db:
+        counts, failures = _download_with_progress(
+            None, None, retries, desc=f'{output_dir.name} (sky)', pairs=pairs,
+            fetch_one=lambda station, day: download_day_sky(db, station, day, output_dir, now=now, overwrite=overwrite),
+            label=lambda station, day: f'{station} {day} (sky)',
+        )
+    _atomic_csv(pd.DataFrame(failures, columns=['station', 'date', 'error']), output_dir / 'sky_failures.csv')
+    logger.info('Skymap download summary: {}', counts)
+    if failures:
+        raise RuntimeError(f"{len(failures)} skymap station-days failed; see {output_dir / 'sky_failures.csv'}")
+
+
 def _select_stations(db, station_catalog, stations):
     catalog = load_station_catalog(station_catalog)
     available = db.stations()
@@ -251,7 +336,10 @@ def _select_stations(db, station_catalog, stations):
 
 def run(years=DEFAULT_YEARS, stations=None, output_dir=DATA_DIR,
         station_catalog=None, overwrite=False, retries=DEFAULT_RETRIES,
-        list_stations=False, raw=False):
+        list_stations=False, raw=False, sky=False, days_csv=None):
+    if sky:
+        return run_sky(years=years, stations=stations, output_dir=output_dir,
+                       days_csv=days_csv, overwrite=overwrite, retries=retries)
     from pynasonde.digisonde.didbase import DidBaseConnector
 
     now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
@@ -302,14 +390,14 @@ def run(years=DEFAULT_YEARS, stations=None, output_dir=DATA_DIR,
             raise RuntimeError(f"{len(failures)} station-days failed; see {output_dir / 'failures.csv'}")
 
 
-def _download_with_progress(stations, days, retries, *, desc, fetch_one, label):
+def _download_with_progress(stations, days, retries, *, desc, fetch_one, label, pairs=None):
     """Run (station, day) downloads behind a single updating tqdm bar.
 
     ``fetch_one(station, day)`` should call the actual downloader and return
     its result string ('saved'/'empty'/'cached'); this handles retries,
     per-day progress, and the running saved/empty/cached/failed postfix.
     """
-    stations = list(stations)
+    pairs = list(pairs) if pairs is not None else list(product(list(stations), days))
     counts = dict(saved=0, empty=0, cached=0, failed=0)
     failures = []
     # pynasonde's own DidBaseConnector logs an INFO line per station-day
@@ -318,9 +406,9 @@ def _download_with_progress(stations, days, retries, *, desc, fetch_one, label):
     # duration of the loop only -- our own warnings/errors still show.
     logger.disable('pynasonde')
     try:
-        with tqdm(total=len(stations) * len(days), desc=desc, unit='day',
+        with tqdm(total=len(pairs), desc=desc, unit='day',
                   dynamic_ncols=True, mininterval=0.2) as bar:
-            for station, day in product(stations, days):
+            for station, day in pairs:
                 for attempt in range(retries):
                     try:
                         counts[fetch_one(station, day)] += 1
@@ -349,6 +437,11 @@ def parse_args():
     parser.add_argument('--list-stations', action='store_true', help='Discover stations without downloading observations')
     parser.add_argument('--raw', action='store_true',
                          help='Fetch raw ionogram files (RSF/MMM) instead of scaled parameters; feeds plot_viterbi.py')
+    parser.add_argument('--sky', action='store_true',
+                         help='Fetch raw DDM skymap (SKY) files from DriftBase; use with --stations/--days-csv')
+    parser.add_argument('--days-csv', type=Path,
+                         help='CSV with date (and optional station/enhanced) columns restricting --sky downloads, '
+                              'e.g. Data/analysis/mstid_days.csv (enhanced rows only)')
     parser.add_argument('--retries', type=int, default=DEFAULT_RETRIES)
     args = parser.parse_args()
     if args.retries < 1:
