@@ -25,7 +25,7 @@ help:
 	@echo "  make download-raw  - raw RSF/MMM ionograms (feeds plot_viterbi.py)"
 	@echo "  make download-sky  - DDM skymaps for MSTID event days (STATIONS=$(STATIONS) DAYS_CSV=$(DAYS_CSV))"
 	@echo "  make quality       - QC scaled params -> Data/quality/day_quality.csv (pass/fail + reason)"
-	@echo "  make plot-ts       - QC-passed foF2/hmF2/foE/hE + 15-60 min band-pass, per station per DAY -> Data/figures/giro_scaled/<station>/"
+	@echo "  make plot-ts       - QC-passed foF2/hmF2/foE/hE + band-pass per station per DAY -> Data/figures/giro_scaled/<station>/ (all stations; STATIONS=AU930,AL945 to restrict)"
 	@echo "  make quiet-curve   - Kp/SYM-H/AE quiet days + monthly median curves (STATIONS=$(STATIONS)) -> Data/analysis/, Data/figures/quiet_curve/"
 	@echo "  make mstid         - per-day MSTID signatures vs quiet baseline (STATIONS=$(STATIONS)) -> Data/analysis/mstid_*.csv, Data/figures/mstid/"
 	@echo "  make skymap-day    - skymap tilt/wavelet figure set for one event day (STATION=$(STATION) DATE=YYYY-MM-DD) -> Data/figures/skymap/<station>/<date>/"
@@ -59,8 +59,12 @@ skymap-day:
 	@test -n "$(DATE)" || (echo "usage: make skymap-day STATION=AL945 DATE=YYYY-MM-DD" && exit 1)
 	$(PY) skymap.py $(STATION) $(DATE)
 
+# STATIONS restricts plot-ts only when given explicitly (command line or environment);
+# otherwise every station is plotted. Dates: RSF_TSPLOT_DAILY_START / RSF_TSPLOT_DAILY_END (YYYY-MM-DD).
+PLOT_STATIONS := $(if $(filter-out file default,$(origin STATIONS)),$(STATIONS),)
+
 plot-ts: quality
-	RSF_TSPLOT_DAILY=1 $(PY) plot_param_tsplot.py
+	RSF_TSPLOT_DAILY=1 $(if $(PLOT_STATIONS),RSF_TSPLOT_DAILY_STATIONS=$(PLOT_STATIONS)) $(PY) plot_param_tsplot.py
 
 test:
 	$(PY) -B -m unittest discover -s tests -v
