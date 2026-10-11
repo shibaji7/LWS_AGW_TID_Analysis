@@ -206,6 +206,7 @@ min_omni_coverage = 0.8  # fraction of a day's 5-min OMNI samples that must be f
 bin_min = 15.0           # UT time-of-day bin width [min]
 min_days = 5             # minimum quiet days contributing to a bin, else NaN
 by_year = false          # false: pool years per calendar month; true: curve per month per year
+smooth_min = 30.0        # rolling-median smoothing of the per-bin curve [min]; 0 disables (adds *_smooth columns)
 
 # ---------------------------------------------------------------------------
 # MSTID signatures vs. the quiet-day baseline (mstid.py)

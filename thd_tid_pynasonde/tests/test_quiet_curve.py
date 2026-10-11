@@ -40,5 +40,25 @@ class BinTests(unittest.TestCase):
         self.assertTrue(cv.loc[cv.ut_hour > 7, "median"].isna().all())
 
 
+class SmoothTests(unittest.TestCase):
+    def test_median_smooth_removes_spike_and_keeps_nan_bins(self):
+        v = np.array([1.0, 1.0, 9.0, 1.0, 1.0, np.nan, 2.0, 2.0])
+        out = qcurve.smooth_median_circular(v, 15.0, 30.0)  # 3-bin window
+        self.assertEqual(out[2], 1.0)            # spike replaced by neighbours' median
+        self.assertTrue(np.isnan(out[5]))        # NaN bin not filled
+        self.assertEqual(out[6], 2.0)            # window skips the NaN neighbour
+
+    def test_wraps_around_midnight(self):
+        v = np.array([5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        self.assertEqual(qcurve.smooth_median_circular(v, 15.0, 30.0)[0], 1.0)  # spike at bin 0 vs bins 7,0,1
+
+    def test_disabled_and_columns(self):
+        v = np.arange(8, dtype=float)
+        np.testing.assert_array_equal(qcurve.smooth_median_circular(v, 15.0, 0.0), v)
+        series = {i: qcurve.bin_day(day(0), "foF2", 15.0) for i in range(4)}
+        cv = qcurve.quiet_curve(series, dict(C, smooth_min=30.0))
+        self.assertTrue({"median_smooth", "q25_smooth", "q75_smooth"} <= set(cv.columns))
+
+
 if __name__ == "__main__":
     unittest.main()

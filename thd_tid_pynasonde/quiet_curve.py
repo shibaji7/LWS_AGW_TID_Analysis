@@ -50,6 +50,7 @@ DEFAULTS = dict(
     bin_min=15.0,          # UT time-of-day bin width [min]
     min_days=5,            # minimum quiet days contributing to a bin
     by_year=False,         # False: pool all years per calendar month
+    smooth_min=30.0,       # median-smooth the per-bin curve over this window [min]; 0 disables
 )
 
 
@@ -137,10 +138,31 @@ def bin_day(seg: pd.DataFrame, param: str, bin_min: float) -> pd.Series:
     return seg[param].groupby(b.to_numpy()).mean()
 
 
+def smooth_median_circular(values: np.ndarray, bin_min: float, smooth_min: float) -> np.ndarray:
+    """Centred rolling median over ``smooth_min`` minutes on a 24 h periodic bin grid.
+
+    The window is the odd number of bins covering at least ``smooth_min`` (30 min on 15-min
+    bins -> 3 bins). NaN bins are ignored inside the window and stay NaN in the output, so
+    bins that failed ``min_days`` are never filled in by their neighbours.
+    """
+    v = np.asarray(values, float)
+    w = max(1, int(round(smooth_min / bin_min)) | 1)
+    if smooth_min <= 0 or w < 3:
+        return v.copy()
+    half = w // 2
+    ext = np.concatenate([v[-half:], v, v[:half]])
+    out = np.array([np.nanmedian(ext[i:i + w]) if np.isfinite(ext[i:i + w]).any() else np.nan
+                    for i in range(len(v))])
+    out[~np.isfinite(v)] = np.nan
+    return out
+
+
 def quiet_curve(day_series: dict, c: dict | None = None) -> pd.DataFrame:
     """Per-bin distribution over days: median (the curve), quartiles, n_days.
 
-    ``day_series`` maps a label (date) -> Series from ``bin_day``.
+    ``day_series`` maps a label (date) -> Series from ``bin_day``. ``median`` /
+    ``q25`` / ``q75`` are the raw per-bin statistics; ``*_smooth`` are the same after a
+    ``smooth_min`` rolling median along time of day.
     """
     c = c or acfg()
     edges = np.arange(0, 24, c["bin_min"] / 60.0)
@@ -150,6 +172,8 @@ def quiet_curve(day_series: dict, c: dict | None = None) -> pd.DataFrame:
                         "median": mat.median(axis=1), "q25": mat.quantile(0.25, axis=1),
                         "q75": mat.quantile(0.75, axis=1), "n_days": n.to_numpy()})
     out.loc[out.n_days < c["min_days"], ["median", "q25", "q75"]] = np.nan
+    for col in ("median", "q25", "q75"):
+        out[f"{col}_smooth"] = smooth_median_circular(out[col].to_numpy(), c["bin_min"], c["smooth_min"])
     return out.reset_index(drop=True)
 
 
@@ -192,8 +216,9 @@ def plot_curves(station: str, param: str, groups: dict, c: dict, out_path: Path)
         curve, sel = groups[key]
         for s in sel.values():
             ax.plot(s.index + c["bin_min"] / 120.0, s.values, color="grey", alpha=0.25, lw=0.6)
-        ax.fill_between(curve.ut_hour, curve.q25, curve.q75, color="red", alpha=0.2, lw=0)
-        ax.plot(curve.ut_hour, curve["median"], color="red", lw=2)
+        ax.fill_between(curve.ut_hour, curve.q25_smooth, curve.q75_smooth, color="red", alpha=0.2, lw=0)
+        ax.plot(curve.ut_hour, curve["median"], color="darkred", lw=0.8, alpha=0.7)
+        ax.plot(curve.ut_hour, curve["median_smooth"], color="red", lw=2)
         label = f"{pd.Timestamp(2000, key[1], 1):%B}" + (f" {key[0]}" if c["by_year"] else "")
         ax.set_title(f"{station} {param} - {label} ({len(sel)} quiet days)", fontsize=9, loc="left")
         ax.grid(ls=":", alpha=0.5)
