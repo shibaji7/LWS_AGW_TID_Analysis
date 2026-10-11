@@ -284,7 +284,7 @@ def event_station_days(csv_path, stations=None, years=None, month_start=DEFAULT_
     return [(r.station, r.date.date()) for r in pairs.itertuples()]
 
 
-def run_sky(years=DEFAULT_YEARS, stations=None, output_dir=DATA_DIR, days_csv=None,
+def run_sky(years=None, stations=None, output_dir=DATA_DIR, days_csv=None,
             overwrite=False, retries=DEFAULT_RETRIES):
     from pynasonde.digisonde.driftbase import DriftBaseConnector
 
@@ -293,9 +293,9 @@ def run_sky(years=DEFAULT_YEARS, stations=None, output_dir=DATA_DIR, days_csv=No
     now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
     stations = [s.strip().upper() for s in stations] if stations else None
     if days_csv:
-        pairs = event_station_days(days_csv, stations, years)
+        pairs = event_station_days(days_csv, stations, years)  # years=None: use the CSV dates as given
     else:
-        pairs = [(s, d) for s in stations for d in requested_dates(years, now.date())]
+        pairs = [(s, d) for s in stations for d in requested_dates(years or DEFAULT_YEARS, now.date())]
     pairs = [(s, d) for s, d in pairs if d <= now.date()]
     if not pairs:
         logger.info('No station-days to download.')
@@ -334,12 +334,13 @@ def _select_stations(db, station_catalog, stations):
     return catalog, available, selected
 
 
-def run(years=DEFAULT_YEARS, stations=None, output_dir=DATA_DIR,
+def run(years=None, stations=None, output_dir=DATA_DIR,
         station_catalog=None, overwrite=False, retries=DEFAULT_RETRIES,
         list_stations=False, raw=False, sky=False, days_csv=None):
     if sky:
         return run_sky(years=years, stations=stations, output_dir=output_dir,
                        days_csv=days_csv, overwrite=overwrite, retries=retries)
+    years = years or DEFAULT_YEARS
     from pynasonde.digisonde.didbase import DidBaseConnector
 
     now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
@@ -429,7 +430,9 @@ def _download_with_progress(stations, days, retries, *, desc, fetch_one, label, 
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--years', type=int, nargs='+', choices=DEFAULT_YEARS, default=list(DEFAULT_YEARS))
+    parser.add_argument('--years', type=int, nargs='+', default=None,
+                         help='Years to download (default: config.toml [download] years). With --sky --days-csv the CSV '
+                              'dates are used as given unless --years is passed.')
     parser.add_argument('--stations', nargs='+', help='Optional subset of discovered CONUS URSI codes')
     parser.add_argument('--output-dir', type=Path, default=DATA_DIR)
     parser.add_argument('--station-catalog', type=Path, help='Alternate URSI/Country/Lat/Long CSV')
