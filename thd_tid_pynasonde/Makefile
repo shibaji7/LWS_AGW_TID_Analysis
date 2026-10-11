@@ -8,18 +8,28 @@ CONDA_ENV := apep
 # Invoking the env's python binary directly avoids that wrapper entirely.
 PY        := /home/chakras4/anaconda3/envs/$(CONDA_ENV)/bin/python -u
 DATA_DIR  := Data
+# Defaults for the analysis / event-day targets; override on the command line, e.g.
+#   make mstid STATIONS=AL945,MHJ45
+#   make skymap-day STATION=AL945 DATE=2024-04-02
+STATIONS  ?= AL945
+STATION   ?= AL945
+DAYS_CSV  ?= Data/analysis/mstid_days.csv
 
 .DEFAULT_GOAL := help
 
-.PHONY: help download download-raw download-sky quality plot-ts clean clean-pyc clean-data test
+.PHONY: help download download-raw download-sky quality plot-ts quiet-curve mstid skymap-day analysis clean clean-pyc clean-data test
 
 help:
 	@echo "Targets:"
 	@echo "  make download      - scaled DIDBASE params, all CONUS stations, config.toml years/months"
 	@echo "  make download-raw  - raw RSF/MMM ionograms (feeds plot_viterbi.py)"
-	@echo "  make download-sky  - DDM skymaps for event days: STATIONS=AL945 DAYS_CSV=Data/analysis/mstid_days.csv"
+	@echo "  make download-sky  - DDM skymaps for MSTID event days (STATIONS=$(STATIONS) DAYS_CSV=$(DAYS_CSV))"
 	@echo "  make quality       - QC scaled params -> Data/quality/day_quality.csv (pass/fail + reason)"
 	@echo "  make plot-ts       - QC-passed foF2/hmF2/foE/hE + 15-60 min band-pass, per station per DAY -> Data/figures/giro_scaled/<station>/"
+	@echo "  make quiet-curve   - Kp/SYM-H/AE quiet days + monthly median curves (STATIONS=$(STATIONS)) -> Data/analysis/, Data/figures/quiet_curve/"
+	@echo "  make mstid         - per-day MSTID signatures vs quiet baseline (STATIONS=$(STATIONS)) -> Data/analysis/mstid_*.csv, Data/figures/mstid/"
+	@echo "  make skymap-day    - skymap tilt/wavelet figure set for one event day (STATION=$(STATION) DATE=YYYY-MM-DD) -> Data/figures/skymap/<station>/<date>/"
+	@echo "  make analysis      - quality -> quiet-curve -> mstid in order (STATIONS=$(STATIONS))"
 	@echo "  make test          - offline unit tests (tests/)"
 	@echo "  make clean         - remove __pycache__ / .pyc (safe, no downloaded data)"
 	@echo "  make clean-data    - DESTRUCTIVE: remove $(DATA_DIR)/ (all downloads + plots)"
@@ -35,6 +45,19 @@ download-sky:
 
 quality:
 	$(PY) quality.py
+
+# STATIONS: comma-separated URSI list for the analysis scripts (e.g. STATIONS=AL945,MHJ45)
+quiet-curve: quality
+	ANALYSIS_STATIONS=$(STATIONS) $(PY) quiet_curve.py
+
+mstid: quiet-curve
+	ANALYSIS_STATIONS=$(STATIONS) $(PY) mstid.py
+
+analysis: mstid
+
+skymap-day:
+	@test -n "$(DATE)" || (echo "usage: make skymap-day STATION=AL945 DATE=YYYY-MM-DD" && exit 1)
+	$(PY) skymap.py $(STATION) $(DATE)
 
 plot-ts: quality
 	RSF_TSPLOT_DAILY=1 $(PY) plot_param_tsplot.py
