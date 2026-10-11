@@ -12,7 +12,9 @@ DATA_DIR  := Data
 #   make mstid STATIONS=AL945,MHJ45
 #   make skymap-day STATION=AL945 DATE=2024-04-02
 STATIONS  ?= AL945
-STATION   ?= AL945
+# skymap-day takes one station: STATION=..., or the first entry of STATIONS=...
+comma     := ,
+STATION   ?= $(word 1,$(subst $(comma), ,$(STATIONS)))
 DAYS_CSV  ?= Data/analysis/mstid_days.csv
 
 .DEFAULT_GOAL := help
