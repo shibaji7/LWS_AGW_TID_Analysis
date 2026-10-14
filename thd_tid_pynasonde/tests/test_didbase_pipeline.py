@@ -90,6 +90,27 @@ class DownloadTests(unittest.TestCase):
             self.assertEqual(pipeline.event_station_days(csv), [('AL945', dt.date(2024, 4, 2)), ('MHJ45', dt.date(2024, 5, 1))])
             self.assertEqual(pipeline.event_station_days(csv, stations=['AL945']), [('AL945', dt.date(2024, 4, 2))])
 
+    def test_sky_explicit_dates_ignore_season_and_years(self):
+        calls = []
+        class FakeDb:
+            def __init__(self, *a): pass
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+        import sys, types
+        mod = types.ModuleType('pynasonde.digisonde.driftbase')
+        mod.DriftBaseConnector = FakeDb
+        orig = pipeline.download_day_sky
+        pipeline.download_day_sky = lambda db, st, day, out, **k: (calls.append((st, day)) or 'saved')
+        old = {k: sys.modules.get(k) for k in ('pynasonde.digisonde.driftbase',)}
+        sys.modules['pynasonde.digisonde.driftbase'] = mod
+        try:
+            with TemporaryDirectory() as tmp:
+                pipeline.run_sky(stations=['mhj45'], output_dir=tmp, dates=['2023-01-15', '2023-04-24'], retries=1)
+        finally:
+            pipeline.download_day_sky = orig
+            sys.modules['pynasonde.digisonde.driftbase'] = old['pynasonde.digisonde.driftbase']
+        self.assertEqual(calls, [('MHJ45', dt.date(2023, 1, 15)), ('MHJ45', dt.date(2023, 4, 24))])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -285,14 +285,19 @@ def event_station_days(csv_path, stations=None, years=None, month_start=DEFAULT_
 
 
 def run_sky(years=None, stations=None, output_dir=DATA_DIR, days_csv=None,
-            overwrite=False, retries=DEFAULT_RETRIES):
+            overwrite=False, retries=DEFAULT_RETRIES, dates=None):
     from pynasonde.digisonde.driftbase import DriftBaseConnector
 
-    if not stations and not days_csv:
-        raise ValueError('--sky needs --stations and/or --days-csv (skymaps are large)')
+    if not stations and not days_csv and not dates:
+        raise ValueError('--sky needs --stations and/or --days-csv/--dates (skymaps are large)')
+    if dates and not stations and not days_csv:
+        raise ValueError('--dates needs --stations')
     now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
     stations = [s.strip().upper() for s in stations] if stations else None
-    if days_csv:
+    if dates:
+        days = sorted({dt.date.fromisoformat(str(d)) for d in dates})
+        pairs = [(s, d) for s in stations for d in days]  # explicit dates: no season/year filtering
+    elif days_csv:
         pairs = event_station_days(days_csv, stations, years)  # years=None: use the CSV dates as given
     else:
         pairs = [(s, d) for s in stations for d in requested_dates(years or DEFAULT_YEARS, now.date())]
@@ -339,7 +344,7 @@ def run(years=None, stations=None, output_dir=DATA_DIR,
         list_stations=False, raw=False, sky=False, days_csv=None):
     if sky:
         return run_sky(years=years, stations=stations, output_dir=output_dir,
-                       days_csv=days_csv, overwrite=overwrite, retries=retries)
+                       days_csv=days_csv, overwrite=overwrite, retries=retries, dates=dates)
     years = years or DEFAULT_YEARS
     from pynasonde.digisonde.didbase import DidBaseConnector
 
@@ -442,6 +447,8 @@ def parse_args():
                          help='Fetch raw ionogram files (RSF/MMM) instead of scaled parameters; feeds plot_viterbi.py')
     parser.add_argument('--sky', action='store_true',
                          help='Fetch raw DDM skymap (SKY) files from DriftBase; use with --stations/--days-csv')
+    parser.add_argument('--dates', nargs='+', metavar='YYYY-MM-DD',
+                         help='With --sky: download exactly these dates for --stations (e.g. one event day)')
     parser.add_argument('--days-csv', type=Path,
                          help='CSV with date (and optional station/enhanced) columns restricting --sky downloads, '
                               'e.g. Data/analysis/mstid_days.csv (enhanced rows only)')

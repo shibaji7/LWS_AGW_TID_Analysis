@@ -25,7 +25,7 @@ help:
 	@echo "Targets:"
 	@echo "  make download      - scaled DIDBASE params, all CONUS stations, config.toml years/months"
 	@echo "  make download-raw  - raw RSF/MMM ionograms (feeds plot_viterbi.py)"
-	@echo "  make download-sky  - DDM skymaps for MSTID event days (STATIONS=$(STATIONS) DAYS_CSV=$(DAYS_CSV))"
+	@echo "  make download-sky  - DDM skymaps: one event day (STATIONS=MHJ45 DATE=2023-04-24) or all enhanced days in DAYS_CSV=$(DAYS_CSV)"
 	@echo "  make quality       - QC scaled params -> Data/quality/day_quality.csv (pass/fail + reason)"
 	@echo "  make plot-ts       - QC-passed foF2/hmF2/foE/hE + band-pass per station per DAY -> Data/figures/giro_scaled/<station>/ (all stations; STATIONS=AU930,AL945 to restrict)"
 	@echo "  make quiet-curve   - Kp/SYM-H/AE quiet days + monthly median curves (STATIONS=$(STATIONS)) -> Data/analysis/, Data/figures/quiet_curve/"
@@ -42,8 +42,10 @@ download:
 download-raw:
 	$(PY) didbase_pipeline.py --raw
 
+# DATE=YYYY-MM-DD (or several, space-separated and quoted) downloads just those event days;
+# without DATE, every enhanced day in DAYS_CSV for STATIONS is fetched.
 download-sky:
-	$(PY) didbase_pipeline.py --sky --stations $(STATIONS) --days-csv $(DAYS_CSV)
+	$(PY) didbase_pipeline.py --sky --stations $(subst $(comma), ,$(STATIONS)) $(if $(DATE),--dates $(DATE),--days-csv $(DAYS_CSV))
 
 quality:
 	$(PY) quality.py
