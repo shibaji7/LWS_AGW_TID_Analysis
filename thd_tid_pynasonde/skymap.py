@@ -351,6 +351,16 @@ def plot_periods(tilt, station, day, events, terms, out, c):
     ridges = []
     for row, col, lab in ((0, "ew", "E-W tilt"), (1, "ns", "N-S tilt")):
         a, b = axes[row]
+        n_ok = int(tilt[col].notna().sum())
+        if n_ok < c["min_tilt_samples"]:  # sparse skymaps (few echoes/sounding): no meaningful wavelet
+            for ax_ in (a, b):
+                ax_.text(0.5, 0.5, f"{lab}: only {n_ok} tilt samples (< {c['min_tilt_samples']}; "
+                         f"min_echoes={c['min_echoes']}) - wavelet skipped", ha="center", va="center",
+                         transform=ax_.transAxes, fontsize=9)
+            _decorate([a], day, events, terms, xlabel=(row == 1))
+            ridges.append(dict(component=col, param="skipped: too few tilt samples", start=pd.NaT, end=pd.NaT,
+                               mstid_period_min=np.nan, wavelet_period_min=np.nan, wavelet_power=np.nan, n_tilt_samples=n_ok))
+            continue
         grid, periods, power, coi, yy = wavelet_of(tilt[col], c)
         thr, alpha = red_noise_threshold(yy, c)
         a.contourf(mdates.date2num(grid.to_pydatetime()), periods, power, levels=20, cmap="turbo")
