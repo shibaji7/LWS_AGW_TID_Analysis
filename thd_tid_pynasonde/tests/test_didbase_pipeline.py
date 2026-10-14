@@ -105,7 +105,7 @@ class DownloadTests(unittest.TestCase):
         sys.modules['pynasonde.digisonde.driftbase'] = mod
         try:
             with TemporaryDirectory() as tmp:
-                pipeline.run_sky(stations=['mhj45'], output_dir=tmp, dates=['2023-01-15', '2023-04-24'], retries=1)
+                pipeline.run(sky=True, stations=['mhj45'], output_dir=tmp, dates=['2023-01-15', '2023-04-24'], retries=1)
         finally:
             pipeline.download_day_sky = orig
             sys.modules['pynasonde.digisonde.driftbase'] = old['pynasonde.digisonde.driftbase']

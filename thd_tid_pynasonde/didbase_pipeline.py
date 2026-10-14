@@ -341,7 +341,7 @@ def _select_stations(db, station_catalog, stations):
 
 def run(years=None, stations=None, output_dir=DATA_DIR,
         station_catalog=None, overwrite=False, retries=DEFAULT_RETRIES,
-        list_stations=False, raw=False, sky=False, days_csv=None):
+        list_stations=False, raw=False, sky=False, days_csv=None, dates=None):
     if sky:
         return run_sky(years=years, stations=stations, output_dir=output_dir,
                        days_csv=days_csv, overwrite=overwrite, retries=retries, dates=dates)
