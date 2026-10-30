@@ -339,17 +339,37 @@ def _select_stations(db, station_catalog, stations):
     return catalog, available, selected
 
 
+def combine_scaled(output_dir, stations, years):
+    """Concatenate each station-year's daily scaled CSVs into ``<year>/<station>/<station>_<year>_scaled.csv``."""
+    written = []
+    for year in sorted(set(years)):
+        for station in stations:
+            files = sorted((Path(output_dir) / str(year) / station).glob('????-??-??.csv'))
+            frames = [f for f in (pd.read_csv(p) for p in files) if not f.empty]
+            if not frames:
+                logger.warning('{} {}: no non-empty daily CSVs to combine', station, year)
+                continue
+            out = Path(output_dir) / str(year) / station / f'{station}_{year}_scaled.csv'
+            combined = pd.concat(frames, ignore_index=True)
+            _atomic_csv(combined, out)
+            logger.info('{} {}: {} rows from {} days -> {}', station, year, len(combined), len(frames), out)
+            written.append(out)
+    return written
+
+
 def run(years=None, stations=None, output_dir=DATA_DIR,
         station_catalog=None, overwrite=False, retries=DEFAULT_RETRIES,
-        list_stations=False, raw=False, sky=False, days_csv=None, dates=None):
+        list_stations=False, raw=False, sky=False, days_csv=None, dates=None,
+        months=None, combine=False):
     if sky:
         return run_sky(years=years, stations=stations, output_dir=output_dir,
                        days_csv=days_csv, overwrite=overwrite, retries=retries, dates=dates)
     years = years or DEFAULT_YEARS
+    month_start, month_end = months or (DEFAULT_MONTH_START, DEFAULT_MONTH_END)
     from pynasonde.digisonde.didbase import DidBaseConnector
 
     now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
-    days = list(requested_dates(years, now.date()))
+    days = list(requested_dates(years, now.date(), month_start, month_end))
     if not days:
         logger.info('No requested dates have occurred yet.')
         return
@@ -392,6 +412,8 @@ def run(years=None, stations=None, output_dir=DATA_DIR,
         )
         _atomic_csv(pd.DataFrame(failures, columns=['station', 'date', 'error']), output_dir / 'failures.csv')
         logger.info('Download summary: {}', counts)
+        if combine:
+            combine_scaled(output_dir, list(selected.URSI), years)
         if failures:
             raise RuntimeError(f"{len(failures)} station-days failed; see {output_dir / 'failures.csv'}")
 
@@ -452,10 +474,16 @@ def parse_args():
     parser.add_argument('--days-csv', type=Path,
                          help='CSV with date (and optional station/enhanced) columns restricting --sky downloads, '
                               'e.g. Data/analysis/mstid_days.csv (enhanced rows only)')
+    parser.add_argument('--months', type=int, nargs=2, metavar=('START', 'END'),
+                         help='Month range to download instead of config.toml [download] (e.g. --months 1 12 for a whole year)')
+    parser.add_argument('--combine', action='store_true',
+                         help='After a scaled download, also write one <station>_<year>_scaled.csv per station-year')
     parser.add_argument('--retries', type=int, default=DEFAULT_RETRIES)
     args = parser.parse_args()
     if args.retries < 1:
         parser.error('--retries must be at least 1')
+    if args.months and not (1 <= args.months[0] <= args.months[1] <= 12):
+        parser.error('--months needs 1 <= START <= END <= 12')
     return args
 
 

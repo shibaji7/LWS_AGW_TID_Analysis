@@ -111,6 +111,19 @@ class DownloadTests(unittest.TestCase):
             sys.modules['pynasonde.digisonde.driftbase'] = old['pynasonde.digisonde.driftbase']
         self.assertEqual(calls, [('MHJ45', dt.date(2023, 1, 15)), ('MHJ45', dt.date(2023, 4, 24))])
 
+    def test_months_override_and_combine(self):
+        days = list(pipeline.requested_dates([2026], dt.date(2026, 10, 25), 1, 12))
+        self.assertEqual((days[0], days[-1]), (dt.date(2026, 1, 1), dt.date(2026, 10, 25)))
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp) / '2026' / 'MHJ45'
+            root.mkdir(parents=True)
+            pd.DataFrame(dict(station='MHJ45', datetime=['2026-01-01 00:00', '2026-01-01 00:07'], foF2=[5.0, 5.1])).to_csv(root / '2026-01-01.csv', index=False)
+            pd.DataFrame(dict(station=[], datetime=[], foF2=[])).to_csv(root / '2026-01-02.csv', index=False)  # empty day
+            pd.DataFrame(dict(station='MHJ45', datetime=['2026-01-03 00:00'], foF2=[6.0])).to_csv(root / '2026-01-03.csv', index=False)
+            out = pipeline.combine_scaled(tmp, ['MHJ45', 'XX000'], [2026])
+            self.assertEqual([p.name for p in out], ['MHJ45_2026_scaled.csv'])
+            self.assertEqual(len(pd.read_csv(out[0])), 3)
+
 
 if __name__ == '__main__':
     unittest.main()
