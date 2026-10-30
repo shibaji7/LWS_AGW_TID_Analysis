@@ -15,6 +15,10 @@ pyrt/dataset*
 # thd_tid_pynasonde downloads/outputs (scaled+raw DIDBASE, RSF scaling, diagnostic plots)
 thd_tid_pynasonde/Data/
 
+# credentials (use .env.example as the template)
+.env
+!.env.example
+
 
 # Distribution / packaging
 .Python

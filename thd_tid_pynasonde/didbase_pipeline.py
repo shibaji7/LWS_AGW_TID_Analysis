@@ -52,6 +52,35 @@ from tqdm import tqdm
 
 from utils import load_config
 
+
+def load_env(path: Path | None = None) -> None:
+    """Load KEY=VALUE lines from ``.env`` (next to this file, else the cwd) into ``os.environ``.
+
+    Variables already set in the shell win. The GIRO credentials are never stored in code:
+    put DIDBASE_USER / DIDBASE_PASSWORD / DIDBASE_ROLE in ``.env`` (see ``.env.example``).
+    """
+    for f in ([Path(path)] if path else [Path(__file__).resolve().parent / '.env', Path('.env')]):
+        if not f.is_file():
+            continue
+        for line in f.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                k, v = line.split('=', 1)
+                os.environ.setdefault(k.strip().removeprefix('export ').strip(), v.strip().strip('\'"'))
+        return
+
+
+def credentials(prefix: str = 'DIDBASE') -> tuple[str, str, str]:
+    """(user, password, role) from ``<prefix>_USER/PASSWORD/ROLE``, falling back to ``DIDBASE_*``."""
+    load_env()
+    out = []
+    for key in ('USER', 'PASSWORD', 'ROLE'):
+        val = os.environ.get(f'{prefix}_{key}') or os.environ.get(f'DIDBASE_{key}')
+        if not val:
+            raise RuntimeError(f'Missing {prefix}_{key}: set it in the environment or in .env (copy .env.example)')
+        out.append(val)
+    return tuple(out)
+
 # loguru's default handler level is DEBUG, so logger.debug(...) calls (used
 # for the per-station-day success lines that would otherwise tear the tqdm
 # progress bar apart) print by default just like INFO. Raise the default
@@ -307,11 +336,10 @@ def run_sky(years=None, stations=None, output_dir=DATA_DIR, days_csv=None,
         return
     output_dir = Path(output_dir)
     logger.info('Skymap download: {} station-days ({})', len(pairs), ', '.join(sorted({s for s, _ in pairs})))
+    load_env()
     with DriftBaseConnector(
         os.environ.get('DRIFTBASE_URL', 'jdbc:firebirdsql://129.63.134.45/drift'),
-        os.environ.get('DRIFTBASE_USER', os.environ.get('DIDBASE_USER', 'ERAU')),
-        os.environ.get('DRIFTBASE_PASSWORD', os.environ.get('DIDBASE_PASSWORD', 'eraucar')),
-        os.environ.get('DRIFTBASE_ROLE', os.environ.get('DIDBASE_ROLE', 'COMMON')),
+        *credentials('DRIFTBASE'),
     ) as db:
         counts, failures = _download_with_progress(
             None, None, retries, desc=f'{output_dir.name} (sky)', pairs=pairs,
@@ -374,10 +402,10 @@ def run(years=None, stations=None, output_dir=DATA_DIR,
         logger.info('No requested dates have occurred yet.')
         return
     output_dir = Path(output_dir)
+    load_env()
     with DidBaseConnector(
         os.environ.get('DIDBASE_URL', 'jdbc:firebirdsql://didbase.giro.uml.edu/didb'),
-        os.environ.get('DIDBASE_USER', 'ERAU'), os.environ.get('DIDBASE_PASSWORD', 'eraucar'),
-        os.environ.get('DIDBASE_ROLE', 'COMMON'),
+        *credentials('DIDBASE'),
     ) as db:
         catalog, available, selected = _select_stations(db, station_catalog, stations)
         logger.info('Selected {} stations: {}', len(selected), ', '.join(selected.URSI))

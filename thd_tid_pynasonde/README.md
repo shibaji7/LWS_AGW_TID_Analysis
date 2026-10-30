@@ -48,7 +48,8 @@ in `failures.csv`, and cause a nonzero exit status; rerunning resumes.
 
 Optional flags: `--years 2024`, `--stations AU930 BC840`, `--retries 5`,
 `--output-dir PATH`. Connections use `DIDBASE_USER`, `DIDBASE_PASSWORD`,
-`DIDBASE_URL`, and `DIDBASE_ROLE`.
+`DIDBASE_ROLE` and optionally `DIDBASE_URL` (`DRIFTBASE_*` for `--sky`). Credentials are
+not in the code: copy `.env.example` to `.env` (gitignored) and fill it in, or export them in the shell.
 
 ### Raw ionograms: `--raw`
 
