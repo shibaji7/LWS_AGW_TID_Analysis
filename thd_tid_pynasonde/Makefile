@@ -60,7 +60,7 @@ mstid: quiet-curve
 analysis: mstid
 
 skymap-day:
-	@test -n "$(DATE)" || (echo "usage: make skymap-day STATION=AL945 DATE=YYYY-MM-DD" && exit 1)
+	@test -n "$(DATE)" || (echo "usage: make skymap-day STATION=AL945 DATE=YYYY-MM-DD   (several consecutive days: DATE=\"2026-04-14 2026-04-15\")" && exit 1)
 	$(PY) skymap.py $(STATION) $(DATE)
 
 # STATIONS restricts plot-ts only when given explicitly (command line or environment);
