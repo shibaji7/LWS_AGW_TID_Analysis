@@ -9,7 +9,8 @@ matrix Dlm -> MUSIC k-array -> signal detection. Every step's figure is written 
 
     python music_simulate.py --download-testdata                 # fetch the 2011-05-09 Wallops sample
     python music_simulate.py --simulate custom                   # two injected MSTIDs + noise (notebook)
-    python music_simulate.py --simulate off --radar bks --data-dir /sd-data ...   # real data, same chain
+    python music_simulate.py --preset bpk --download-testdata    # real data: Buckland Park (BPK) 2017-01-15 (MUSICWORKING-BPK.ipynb)
+    python music_simulate.py --simulate off --radar bks --data-dir /sd-data ...   # your own real data, same chain
 
 References: Samson et al. (1990), Bristow et al. (1994), Schmidt (1986).
 """
@@ -38,12 +39,30 @@ CUSTOM_SIGS = [
 ]
 
 
+# Test files shipped in pyDARNmusic/TestData: <year>/fitacf/<radar>/<day>.<HHMM>.00.<radar>.fitacf.bz2
+TESTSETS = {
+    "wal": dict(year=2011, day="20110509", hhmm=("0601", "0801", "1001", "1201", "1401", "1601", "1801")),
+    "bpk": dict(year=2017, day="20170115", hhmm=("0001", "0201", "0401", "0601")),  # enough for 02-08 UT
+}
+
+# Notebook settings. "wal-sim" = MUSIC-Simulate.ipynb (the argparse defaults); "bpk" = MUSICWORKING-BPK.ipynb
+# (real data, no simulation, RTP beam 13; loads 02-08 UT instead of the notebook's whole day: same result
+# for the 04-06 UT window, 4 files instead of 12).
+PRESETS = {
+    "wal-sim": {},
+    "bpk": dict(radar="bpk", start=dt.datetime(2017, 1, 15, 2), end=dt.datetime(2017, 1, 15, 8),
+                interest=[dt.datetime(2017, 1, 15, 4), dt.datetime(2017, 1, 15, 6)],
+                plot_time=dt.datetime(2017, 1, 15, 6), gates=[25, 43], beam=13, simulate="off"),
+}
+
+
 def parse_time(s: str) -> dt.datetime:
     return dt.datetime.fromisoformat(s)
 
 
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--preset", choices=sorted(PRESETS), default="wal-sim", help="notebook settings to start from (other options override)")
     p.add_argument("--radar", default="wal", help="3-letter radar code (default wal)")
     p.add_argument("--start", type=parse_time, default=dt.datetime(2011, 5, 9, 8), help="data window start (ISO)")
     p.add_argument("--end", type=parse_time, default=dt.datetime(2011, 5, 9, 19), help="data window end (ISO)")
@@ -53,6 +72,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("--data-dir", type=Path, default=DATA_ROOT / "sd_music" / "TestData",
                    help="FITACF tree: <dir>/<year>/fitacf/<radar>/<YYYYMMDD>.HHMM.*.<radar>.fitacf.bz2")
     p.add_argument("--gates", nargs=2, type=int, default=[30, 45], metavar=("LO", "HI"), help="range-gate limits")
+    p.add_argument("--beam", type=int, default=7, help="beam shown in the RTP plots")
     p.add_argument("--timeres", type=int, default=120, help="time resolution of the interpolated data [s]")
     p.add_argument("--numtaps", type=int, default=101, help="FIR filter taps")
     p.add_argument("--cutoff-low", type=float, default=0.0003, help="band-pass low cut-off [Hz]")
@@ -62,21 +82,30 @@ def parse_args(argv=None) -> argparse.Namespace:
     p.add_argument("--noise", type=float, default=4.0, help="noise factor for --simulate custom")
     p.add_argument("--kmax", type=float, default=0.05, help="MUSIC k-array extent kx,ky [rad/km]")
     p.add_argument("--dk", type=float, default=0.001, help="MUSIC k-array step [rad/km]")
+    p.add_argument("--add-signal", nargs=2, type=float, action="append", default=[], metavar=("KX", "KY"),
+                   help="after detection, add a signal at this wavenumber [rad/km] (repeatable)")
+    p.add_argument("--del-signal", type=int, action="append", default=[], metavar="ORDER",
+                   help="after detection, delete the signal with this order (repeatable)")
     p.add_argument("--out-dir", type=Path, default=None, help="figure/CSV folder")
     p.add_argument("--download-testdata", action="store_true", help="fetch the 2011-05-09 Wallops FITACF sample if missing")
+    pre, _ = p.parse_known_args(argv)  # a preset only changes defaults, explicit options still win
+    p.set_defaults(**PRESETS[pre.preset])
     return p.parse_args(argv)
 
 
 def download_testdata(data_dir: Path, radar: str = "wal") -> None:
-    """The notebook's sample: pyDARNmusic TestData/2011/fitacf/wal, 2-hourly files 06:01-18:01 UT."""
-    folder = data_dir / "2011" / "fitacf" / radar
+    """pyDARNmusic's sample files for ``radar`` (see TESTSETS): 2-hourly FITACF, bz2."""
+    if radar not in TESTSETS:
+        raise ValueError(f"no bundled test data for radar {radar!r}; available: {sorted(TESTSETS)}")
+    t = TESTSETS[radar]
+    folder = data_dir / str(t["year"]) / "fitacf" / radar
     folder.mkdir(parents=True, exist_ok=True)
-    for hhmm in ("0601", "0801", "1001", "1201", "1401", "1601", "1801"):
-        name = f"20110509.{hhmm}.00.{radar}.fitacf.bz2"
+    for hhmm in t["hhmm"]:
+        name = f"{t['day']}.{hhmm}.00.{radar}.fitacf.bz2"
         if (folder / name).is_file() and (folder / name).stat().st_size > 0:
             continue
         print(f"downloading {name}")
-        urllib.request.urlretrieve(f"{TESTDATA_URL}/2011/fitacf/{radar}/{name}", folder / name)
+        urllib.request.urlretrieve(f"{TESTDATA_URL}/{t['year']}/fitacf/{radar}/{name}", folder / name)
 
 
 def load_fitacf_records(radar: str, start: dt.datetime, end: dt.datetime, data_dir: Path, fit_sfx: str = "fitacf") -> list[dict]:
@@ -139,7 +168,7 @@ def run(args: argparse.Namespace) -> Path:
     from pyDARNmusic import (beamInterpolation, calculateDlm, calculateFFT, calculateKarr, defineLimits,
                              detectSignals, determineRelativePosition, filterTimes, musicFan,
                              musicRTP, plotDlm, plotFullSpectrum, plotKarr, plotKarrDetected,
-                             plotRelativeRanges, simulator, spectrumMultiPlot, timeInterpolation,
+                             plotRelativeRanges, simulator, add_signal, del_signal, spectrumMultiPlot, timeInterpolation,
                              timeSeriesMultiPlot, music)
 
     if args.download_testdata:
@@ -156,14 +185,14 @@ def run(args: argparse.Namespace) -> Path:
     data = music.musicArray(fitacf, sTime=args.start, eTime=args.end, fovModel="GS")
     print("data sets:", data.get_data_sets())
 
-    figs.save(musicRTP(data), "rtp_original")
+    figs.save(musicRTP(data, beam=args.beam), "rtp_original")
     figs.save(musicFan(data, time=args.plot_time), "fan_original")
 
     # --- selection: gate + time limits (the FIR filter eats numtaps/2 samples at each end) ----
     defineLimits(data, gateLimits=list(args.gates))
     defineLimits(data, timeLimits=filterTimes(args.interest[0], args.interest[1], args.timeres, args.numtaps))
     data.active.applyLimits()
-    figs.save(musicRTP(data), "rtp_limited")
+    figs.save(musicRTP(data, beam=args.beam), "rtp_limited")
 
     # --- interpolation to a gap-free beam x gate x time cube ------------------------------------
     beamInterpolation(data)
@@ -187,7 +216,7 @@ def run(args: argparse.Namespace) -> Path:
     elif args.simulate == "custom":
         simulator(data, sigs=CUSTOM_SIGS, noiseFactor=args.noise)
     if args.simulate != "off":
-        figs.save(musicRTP(data), f"rtp_simulated_{args.simulate}")
+        figs.save(musicRTP(data, beam=args.beam), f"rtp_simulated_{args.simulate}")
         figs.save(musicFan(data, time=args.plot_time), f"fan_simulated_{args.simulate}")
 
     # --- FIR band-pass --------------------------------------------------------------------------
@@ -195,7 +224,7 @@ def run(args: argparse.Namespace) -> Path:
     figs.save(filt.plotTransferFunction(xmax=0.004), "filter_transfer")
     figs.save(filt.plotImpulseResponse(), "filter_impulse")
     data.active.applyLimits()  # drop the filter-edge samples
-    figs.save(musicRTP(data, autoScale=True), "rtp_filtered")
+    figs.save(musicRTP(data, beam=args.beam, autoScale=True), "rtp_filtered")
     figs.save(musicFan(data, time=args.plot_time, autoScale=True), "fan_filtered")
 
     # --- spectra, cross-spectral matrix, MUSIC k-array -------------------------------------------
@@ -214,6 +243,13 @@ def run(args: argparse.Namespace) -> Path:
     detectSignals(data)
     figs.save(plotKarr(data), "karr_detected")
     figs.save(plotKarrDetected(data), "karr_detection_groups")
+    # manual editing of the detected peaks, as in the BPK notebook
+    for kx, ky in args.add_signal:
+        add_signal(kx, ky, data)
+    for order in args.del_signal:
+        del_signal(order, data)
+    if args.add_signal or args.del_signal:
+        figs.save(plotKarr(data), "karr_edited")
     data.active.printHistory()
 
     info = data.active.sigDetect.info
